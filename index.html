@@ -792,21 +792,13 @@ function checkPw(){
 
 
 function loadTasks(){
-  const s=localStorage.getItem('hh-socios-v3');
-  if(s){tasks=JSON.parse(s);}
-  else{
-    tasks=[
-      {id:'d1',title:'Revisar informe ambiental cliente norte',who:'Anderson',pri:'urgente',date:'2026-03-30',status:'p',biz:0},
-      {id:'d2',title:'Actualizar base de datos de clientes',who:'Raul',pri:'normal',date:'2026-04-05',status:'e',biz:0},
-      {id:'d3',title:'Enviar cotización pendiente',who:'Anderson',pri:'alta',date:'2026-04-02',status:'p',biz:0},
-      {id:'d4',title:'Diseñar rutas semana 15',who:'Raul',pri:'alta',date:'2026-04-01',status:'p',biz:1},
-      {id:'d5',title:'Confirmar inventario dark stores',who:'Anderson',pri:'normal',date:'2026-04-08',status:'e',biz:1},
-      {id:'d6',title:'Pedido carnicería martes',who:'Raul',pri:'urgente',date:'2026-03-31',status:'p',biz:2},
-      {id:'d7',title:'Registrar fiados de la semana',who:'Anderson',pri:'normal',date:'2026-04-04',status:'c',biz:2},
-    ];
-    persist();
-  }
+  const local = localStorage.getItem('hh-socios-v3');
+  if(local){ tasks = JSON.parse(local); }
   setBiz(0);
+  setTimeout(checkRecurringOnLoad, 1500);
+  window.tasks = tasks;
+  window.dispatchEvent(new Event('app-ready'));
+  setInterval(()=>window.dispatchEvent(new Event('app-ready')), 10000);
 }
 
 // ── RECURRING TASKS ──────────────────────────────────────────
@@ -979,6 +971,7 @@ function saveTask(){
   document.getElementById('fa-freq').value='none';
   document.getElementById('fa-times-wrap').style.display='none';
   document.getElementById('fa-preview').style.display='none';
+  window.tasks = tasks;
   document.getElementById('form-area').style.display='none';
   renderCurrent();
 }
@@ -1040,6 +1033,7 @@ function delTask(id){
   tasks=tasks.filter(x=>x.id!==id);persist();renderCurrent();
 }
 function persist(){
+  window.tasks = tasks;
   localStorage.setItem('hh-socios-v3',JSON.stringify(tasks));
   localStorage.setItem('hh-socios-updated', Date.now());
   if(window.persistToFirebase) window.persistToFirebase(tasks);
@@ -1092,7 +1086,7 @@ function getFiltered(){
 }
 
 window.renderCurrent=function renderCurrent(){
-  if(window.tasks) tasks=window.tasks;
+  if(window.tasks && window.tasks.length > 0) tasks = window.tasks;
   populateMonthFilter();
   // hide all panels first
   document.getElementById('board').style.display='none';
@@ -1220,12 +1214,52 @@ function renderGlobal(){
   document.getElementById('global-view').innerHTML=html;
 }
 
+let dashFilter = {who:'', month:'', biz:''};
+
+function setDashFilter(key, val){
+  dashFilter[key] = val;
+  if(key==='who'){
+    ['all','anderson','raul','ambos'].forEach(k=>{
+      const el=document.getElementById('db-rb-'+k);
+      if(el) el.classList.toggle('act',(k==='all'&&val==='')||(k===val.toLowerCase()));
+    });
+  }
+  renderDashboard();
+}
+
+function getTasksForDash(){
+  if(window.tasks && window.tasks.length > 0) tasks = window.tasks;
+  return tasks.filter(t=>{
+    if(dashFilter.who && t.who!==dashFilter.who) return false;
+    if(dashFilter.month && t.date && !t.date.startsWith(dashFilter.month)) return false;
+    if(dashFilter.biz!=='' && t.biz!==parseInt(dashFilter.biz)) return false;
+    return true;
+  });
+}
+
+function populateDashMonthFilter(){
+  const sel = document.getElementById('db-month');
+  if(!sel) return;
+  const cur = sel.value;
+  const months = new Set();
+  tasks.forEach(t=>{ if(t.date) months.add(t.date.substring(0,7)); });
+  const now = new Date();
+  months.add(`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`);
+  const sorted = [...months].sort();
+  const MES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  sel.innerHTML = '<option value="">Todos los meses</option>' +
+    sorted.map(m=>{ const[y,mo]=m.split('-'); return `<option value="${m}">${MES[parseInt(mo)-1]} ${y}</option>`; }).join('');
+  sel.value = cur;
+}
+
 function renderDashboard(){
-  tasks = window.tasks || tasks;
-  const totP=tasks.filter(t=>t.status==='p').length;
-  const totE=tasks.filter(t=>t.status==='e').length;
-  const totC=tasks.filter(t=>t.status==='c').length;
-  const tot=tasks.length;
+  if(window.tasks && window.tasks.length > 0) tasks = window.tasks;
+  populateDashMonthFilter();
+  const filtered = getTasksForDash();
+  const totP=filtered.filter(t=>t.status==='p').length;
+  const totE=filtered.filter(t=>t.status==='e').length;
+  const totC=filtered.filter(t=>t.status==='c').length;
+  const tot=filtered.length;
   let html=`<div class="dash-h">Dashboard</div>
   <div class="dash-sub">Resumen de tareas por unidad de negocio</div>
   <div class="global-box">
@@ -1239,7 +1273,7 @@ function renderDashboard(){
   </div>
   <div class="biz-grid">`;
   [0,1,2].forEach(bi=>{
-    const bt=tasks.filter(t=>t.biz===bi);
+    const bt=filtered.filter(t=>t.biz===bi);
     const bp=bt.filter(t=>t.status==='p').length;
     const be=bt.filter(t=>t.status==='e').length;
     const bc=bt.filter(t=>t.status==='c').length;
@@ -1303,9 +1337,7 @@ window.addEventListener('app-ready', () => {
     if (snap.exists()) {
       const data = snap.data();
       if (data.tasks && Array.isArray(data.tasks)) {
-        // Only update if data is newer than what we have locally
-        const localUpdated = parseInt(localStorage.getItem('hh-socios-updated') || '0');
-        if (data.updatedAt > localUpdated) {
+        if (true) {
           window.tasks = data.tasks;
           localStorage.setItem('hh-socios-v3', JSON.stringify(data.tasks));
           localStorage.setItem('hh-socios-updated', data.updatedAt);
