@@ -215,6 +215,22 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 .person-n{font-size:18px;font-weight:700;color:var(--blue)}
 .person-l{font-size:10px;color:var(--text2)}
 
+/* RECURRING */
+.rec-badge{font-size:10px;background:#EEF2FF;color:#3730A3;padding:2px 7px;border-radius:999px;font-weight:600;display:inline-flex;align-items:center;gap:3px}
+.rec-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:400;display:flex;align-items:center;justify-content:center;padding:20px}
+.rec-modal{background:var(--bg);border-radius:12px;width:100%;max-width:480px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.18)}
+.rec-modal-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.rec-modal-title{font-size:14px;font-weight:600;color:var(--text)}
+.rec-close{background:none;border:none;font-size:22px;color:var(--text2);cursor:pointer;line-height:1}
+.rec-body{padding:16px 20px;max-height:60vh;overflow-y:auto}
+.rec-task-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg2);border-radius:8px;margin-bottom:8px;border:1px solid var(--border)}
+.rec-task-title{flex:1;font-size:13px;font-weight:500;color:var(--text)}
+.rec-task-meta{font-size:11px;color:var(--text2)}
+.rec-freq{font-size:11px;background:#EEF2FF;color:#3730A3;padding:2px 8px;border-radius:999px;font-weight:600}
+.rec-btn-gen{background:var(--blue);color:#fff;border:none;padding:3px 10px;border-radius:6px;font-size:11px;cursor:pointer;font-family:inherit}
+.rec-btn-gen:hover{background:var(--blue-dark)}
+.rec-btn-del{background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer}
+.rec-btn-del:hover{color:#E24B4A}
 /* NOTES MODAL */
 .notes-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px}
 .notes-modal{background:var(--bg);border-radius:12px;width:100%;max-width:420px;padding:0;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.18)}
@@ -333,7 +349,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
         <option>Raul</option>
         <option>Ambos</option>
       </select>
-      <button class="avatar-btn" onclick="logout()" title="Salir">HH</button>
+<button class="avatar-btn" onclick="logout()" title="Salir">HH</button>
     </div>
   </nav>
 
@@ -369,12 +385,19 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
       <div class="section-bar">
         <button class="sec-tab act" id="sec-tablero" onclick="showSection('tablero')">Tablero</button>
         <button class="sec-tab" id="sec-dashboard" onclick="showSection('dashboard')">Dashboard</button>
-        <div style="display:flex;align-items:center;gap:6px;margin-left:12px">
+        <div style="display:flex;align-items:center;gap:6px;margin-left:10px">
           <span style="font-size:11px;color:var(--text2);white-space:nowrap">Ver:</span>
           <button class="resp-btn act" id="rb-all" onclick="setResp('')">Todos</button>
           <button class="resp-btn" id="rb-anderson" onclick="setResp('Anderson')">Anderson</button>
           <button class="resp-btn" id="rb-raul" onclick="setResp('Raul')">Raul</button>
           <button class="resp-btn" id="rb-ambos" onclick="setResp('Ambos')">Ambos</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;margin-left:10px">
+          <span style="font-size:11px;color:var(--text2);white-space:nowrap">Mes:</span>
+          <select id="filter-month" onchange="renderCurrent()" style="height:26px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text2);background:var(--bg)">
+            <option value="">Todos</option>
+          </select>
+          <button onclick="clearDateFilter()" title="Ver todos" style="height:26px;padding:0 7px;font-size:11px;border:1px solid var(--border);border-radius:5px;background:var(--bg);cursor:pointer;color:var(--text3)">✕</button>
         </div>
         <div class="sem-leg">
           <span class="leg"><span class="leg-dot" style="background:#E24B4A"></span>Vencida</span>
@@ -401,16 +424,33 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
             <select id="fa-pri"><option value="normal">Normal</option><option value="alta">Alta</option><option value="urgente">Urgente</option></select>
           </div>
           <div class="form-field">
-            <label>Fecha límite</label>
+            <label>Fecha inicio</label>
             <input id="fa-date" type="date">
           </div>
           <div class="form-field" id="fa-biz-wrap">
             <label>Proyecto</label>
             <select id="fa-biz"><option value="0">Gestor HH</option><option value="1">Logístico</option><option value="2">Montevra</option></select>
           </div>
+          <div class="form-field">
+            <label>↻ Repetir</label>
+            <select id="fa-freq" onchange="toggleRecFields()" style="height:34px;font-size:13px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit">
+              <option value="none">Sin repetición</option>
+              <option value="weekly">Semanal</option>
+              <option value="monthly">Mensual</option>
+              <option value="bimonthly">Cada 2 meses</option>
+            </select>
+          </div>
+          <div class="form-field" id="fa-times-wrap" style="display:none">
+            <label>Veces</label>
+            <select id="fa-times" style="height:34px;font-size:13px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit">
+              <option value="3">3 veces</option><option value="6">6 veces</option>
+              <option value="12">12 veces</option><option value="24">24 veces</option>
+            </select>
+          </div>
           <button class="btn-save" onclick="saveTask()">Guardar</button>
           <button class="btn-cancel" onclick="toggleForm()">Cancelar</button>
         </div>
+        <div id="fa-preview" style="display:none;margin-top:10px;padding:10px 12px;background:var(--blue-light);border-radius:8px;font-size:12px;color:var(--blue)"></div>
       </div>
 
       <!-- KANBAN -->
@@ -420,6 +460,51 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
       <!-- DASHBOARD -->
       <div class="dash-wrap" id="dash-view" style="display:none"></div>
 
+    </div>
+  </div>
+
+  <!-- RECURRING MODAL -->
+  <div id="rec-overlay" class="rec-modal-overlay" style="display:none" onclick="if(event.target===this)closeRec()">
+    <div class="rec-modal">
+      <div class="rec-modal-head">
+        <div>
+          <div class="rec-modal-title">Tareas recurrentes</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:2px">Tareas que se repiten cada mes</div>
+        </div>
+        <button class="rec-close" onclick="closeRec()">×</button>
+      </div>
+      <div class="rec-body">
+        <div style="margin-bottom:14px">
+          <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">Agregar tarea recurrente</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <input id="rec-title" type="text" placeholder="Nombre de la tarea" style="flex:2;min-width:140px;height:32px;font-size:13px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;outline:none">
+            <select id="rec-who" style="height:32px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit">
+              <option>Anderson</option><option>Raul</option><option>Ambos</option>
+            </select>
+            <select id="rec-biz" style="height:32px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit">
+              <option value="0">Gestor HH</option><option value="1">Logístico</option><option value="2">Montevra</option>
+            </select>
+            <select id="rec-day" style="height:32px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit">
+              <option value="1">Día 1 del mes</option><option value="5">Día 5 del mes</option>
+              <option value="10">Día 10 del mes</option><option value="15">Día 15 del mes</option>
+              <option value="20">Día 20 del mes</option><option value="25">Día 25 del mes</option>
+              <option value="28">Día 28 del mes</option>
+            </select>
+            <select id="rec-pri" style="height:32px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit">
+              <option value="normal">Normal</option><option value="alta">Alta</option><option value="urgente">Urgente</option>
+            </select>
+            <button onclick="saveRecurring()" style="height:32px;background:var(--blue);color:#fff;border:none;border-radius:8px;padding:0 14px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit">Agregar</button>
+          </div>
+        </div>
+        <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">Tareas guardadas</div>
+        <div id="rec-list"></div>
+      </div>
+      <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:12px;color:var(--text2)" id="rec-status"></span>
+        <button onclick="generateRecurring()" style="background:var(--blue);color:#fff;border:none;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit">
+          ↻ Generar tareas del mes
+        </button>
+      </div>
     </div>
   </div>
 
@@ -527,13 +612,53 @@ function showSection(s){
   renderCurrent();
 }
 
+function toggleRecFields(){
+  const freq=document.getElementById('fa-freq').value;
+  const show=freq!=='none';
+  document.getElementById('fa-times-wrap').style.display=show?'block':'none';
+  updateRecPreview();
+}
+function updateRecPreview(){
+  const freq=document.getElementById('fa-freq').value;
+  const dateVal=document.getElementById('fa-date').value;
+  const preview=document.getElementById('fa-preview');
+  if(freq==='none'||!dateVal){preview.style.display='none';return;}
+  const times=parseInt(document.getElementById('fa-times').value)||6;
+  const freqLabel={weekly:'semana',monthly:'mes',bimonthly:'2 meses'};
+  const dates=getRecurringDates(dateVal,freq,times);
+  preview.style.display='block';
+  preview.innerHTML=`↻ Se generarán <strong>${times} tareas</strong> cada ${freqLabel[freq]}:<br>
+    <span style="opacity:.8">${dates.slice(0,4).map(d=>fmtDateFull(d)).join(' · ')}${dates.length>4?' · ...':''}</span>`;
+}
+function getRecurringDates(startDate,freq,times){
+  const dates=[];
+  let d=new Date(startDate+'T00:00:00');
+  for(let i=0;i<times;i++){
+    dates.push(d.toISOString().split('T')[0]);
+    const nd=new Date(d);
+    if(freq==='weekly') nd.setDate(nd.getDate()+7);
+    else if(freq==='monthly') nd.setMonth(nd.getMonth()+1);
+    else if(freq==='bimonthly') nd.setMonth(nd.getMonth()+2);
+    d=nd;
+  }
+  return dates;
+}
+function fmtDateFull(d){
+  if(!d)return'';
+  const[y,m,dd]=d.split('-');
+  return parseInt(dd)+' '+['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'][parseInt(m)-1]+' '+y;
+}
 function toggleForm(){
   const f=document.getElementById('form-area');
   const open=f.style.display==='none'||f.style.display==='';
   f.style.display=open?'block':'none';
   if(open){
     document.getElementById('fa-biz').value=String(biz<3?biz:0);
+    document.getElementById('fa-freq').value='none';
+    document.getElementById('fa-times-wrap').style.display='none';
+    document.getElementById('fa-preview').style.display='none';
     document.getElementById('fa-title').focus();
+    document.getElementById('fa-date').onchange=updateRecPreview;
   }
 }
 
@@ -555,13 +680,176 @@ function loadTasks(){
   setBiz(0);
 }
 
+// ── RECURRING TASKS ──────────────────────────────────────────
+let recurring = [];
+
+function loadRecurring(){
+  const s = localStorage.getItem('hh-recurring-v1');
+  recurring = s ? JSON.parse(s) : [
+    {id:'r1', title:'Pago nómina Anderson', who:'Anderson', biz:0, day:1, pri:'urgente'},
+    {id:'r2', title:'Reporte mensual clientes', who:'Raul', biz:0, day:5, pri:'alta'},
+    {id:'r3', title:'Revisión inventario dark stores', who:'Ambos', biz:1, day:1, pri:'normal'},
+    {id:'r4', title:'Cierre caja Montevra', who:'Anderson', biz:2, day:28, pri:'alta'},
+    {id:'r5', title:'Cobro fiados del mes', who:'Raul', biz:2, day:5, pri:'urgente'},
+  ];
+  persistRecurring();
+}
+
+function persistRecurring(){
+  localStorage.setItem('hh-recurring-v1', JSON.stringify(recurring));
+}
+
+function openRec(){
+  loadRecurring();
+  renderRecList();
+  document.getElementById('rec-overlay').style.display='flex';
+}
+function closeRec(){
+  document.getElementById('rec-overlay').style.display='none';
+}
+
+function saveRecurring(){
+  const title = document.getElementById('rec-title').value.trim();
+  if(!title) return;
+  recurring.push({
+    id: 'r' + Date.now(),
+    title,
+    who: document.getElementById('rec-who').value,
+    biz: parseInt(document.getElementById('rec-biz').value),
+    day: parseInt(document.getElementById('rec-day').value),
+    pri: document.getElementById('rec-pri').value,
+  });
+  persistRecurring();
+  document.getElementById('rec-title').value = '';
+  renderRecList();
+}
+
+function delRecurring(id){
+  recurring = recurring.filter(r => r.id !== id);
+  persistRecurring();
+  renderRecList();
+}
+
+function renderRecList(){
+  const list = document.getElementById('rec-list');
+  if(!list) return;
+  if(!recurring.length){
+    list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px">No hay tareas recurrentes. Agrega la primera.</div>';
+    return;
+  }
+  const bizNames = ['Gestor HH','Logístico','Montevra'];
+  const priColors = {urgente:'#E24B4A', alta:'#EF9F27', normal:'#639922'};
+  list.innerHTML = recurring.map(r => `
+    <div class="rec-task-row">
+      <div style="flex:1">
+        <div class="rec-task-title">${r.title}</div>
+        <div class="rec-task-meta">${r.who} · ${bizNames[r.biz]} · Día ${r.day}</div>
+      </div>
+      <span style="width:8px;height:8px;border-radius:50%;background:${priColors[r.pri]||'#639922'};flex-shrink:0;display:inline-block"></span>
+      <span class="rec-freq">Mensual</span>
+      <button class="rec-btn-del" onclick="delRecurring('${r.id}')">×</button>
+    </div>
+  `).join('');
+}
+
+function generateRecurring(){
+  loadRecurring();
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  let added = 0;
+  recurring.forEach(r => {
+    const monthKey = `${year}-${String(month+1).padStart(2,'0')}`;
+    const alreadyExists = tasks.some(t =>
+      t.recurringId === r.id && t.monthKey === monthKey
+    );
+    if(!alreadyExists){
+      const dueDate = new Date(year, month, r.day);
+      tasks.push({
+        id: Date.now() + '_' + r.id + Math.random(),
+        title: r.title,
+        who: r.who,
+        pri: r.pri,
+        date: dueDate.toISOString().split('T')[0],
+        status: 'p',
+        biz: r.biz,
+        recurringId: r.id,
+        monthKey,
+        isRecurring: true
+      });
+      added++;
+    }
+  });
+  if(added > 0){
+    persist();
+    renderCurrent();
+    const st = document.getElementById('rec-status');
+    if(st){ st.textContent = `✓ ${added} tarea${added!==1?'s':''} generada${added!==1?'s':''}`; st.style.color='#16a34a'; }
+  } else {
+    const st = document.getElementById('rec-status');
+    if(st){ st.textContent = 'Ya están generadas para este mes'; st.style.color='var(--text2)'; }
+  }
+}
+
+function checkRecurringOnLoad(){
+  loadRecurring();
+  if(!recurring.length) return;
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const monthKey = `${year}-${String(month+1).padStart(2,'0')}`;
+  const pending = recurring.filter(r =>
+    !tasks.some(t => t.recurringId === r.id && t.monthKey === monthKey)
+  );
+  if(pending.length > 0){
+    const banner = document.createElement('div');
+    banner.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:#1d4ed8;color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;z-index:500;display:flex;align-items:center;gap:12px;box-shadow:0 4px 16px rgba(0,0,0,.2);white-space:nowrap';
+    banner.innerHTML = `<span>↻ ${pending.length} recurrente${pending.length!==1?'s':''} sin generar este mes</span>
+      <button onclick="generateRecurring();this.parentElement.remove()" style="background:#fff;color:#1d4ed8;border:none;border-radius:6px;padding:4px 12px;font-size:12px;font-weight:600;cursor:pointer">Generar</button>
+      <button onclick="this.parentElement.remove()" style="background:none;border:none;color:rgba(255,255,255,.7);font-size:18px;cursor:pointer;line-height:1">×</button>`;
+    document.body.appendChild(banner);
+    setTimeout(() => { if(banner.parentElement) banner.remove(); }, 8000);
+  }
+}
+
 function saveTask(){
   const title=document.getElementById('fa-title').value.trim();
   if(!title)return;
-  tasks.push({id:Date.now()+'',title,who:document.getElementById('fa-who').value,pri:document.getElementById('fa-pri').value,date:document.getElementById('fa-date').value,status:'p',biz:parseInt(document.getElementById('fa-biz').value)});
+  const bizVal=parseInt(document.getElementById('fa-biz').value);
+  const whoVal=document.getElementById('fa-who').value;
+  const priVal=document.getElementById('fa-pri').value;
+  const dateVal=document.getElementById('fa-date').value;
+  const freq=document.getElementById('fa-freq').value;
+  const times=parseInt(document.getElementById('fa-times').value)||6;
+
+  if(freq!=='none'&&dateVal){
+    // Generar múltiples tareas recurrentes
+    const recGroupId='rg'+Date.now();
+    const dates=getRecurringDates(dateVal,freq,times);
+    const freqLabel={weekly:'Semanal',monthly:'Mensual',bimonthly:'Bimestral'};
+    dates.forEach((date,i)=>{
+      tasks.push({
+        id:Date.now()+'_'+i+'_'+Math.random().toString(36).slice(2),
+        title:`${title}${times>1?' ('+(i+1)+'/'+times+')':''}`,
+        who:whoVal,pri:priVal,date,status:'p',biz:bizVal,
+        isRecurring:true,recGroupId,
+        recLabel:freqLabel[freq]
+      });
+    });
+    // Guardar también en lista de recurrentes para futura generación
+    loadRecurring();
+    const day=new Date(dateVal+'T00:00:00').getDate();
+    recurring.push({id:'r'+Date.now(),title,who:whoVal,biz:bizVal,day,pri:priVal,freq});
+    persistRecurring();
+  } else {
+    tasks.push({id:Date.now()+'',title,who:whoVal,pri:priVal,date:dateVal,status:'p',biz:bizVal});
+  }
   persist();
   document.getElementById('fa-title').value='';
   document.getElementById('fa-date').value='';
+  document.getElementById('fa-freq').value='none';
+  document.getElementById('fa-times-wrap').style.display='none';
+  document.getElementById('fa-preview').style.display='none';
   document.getElementById('form-area').style.display='none';
   renderCurrent();
 }
@@ -638,18 +926,44 @@ function isOver(d){
   const t=new Date();t.setHours(0,0,0,0);
   return new Date(d+'T00:00:00')<t;
 }
+function clearDateFilter(){
+  document.getElementById('filter-month').value='';
+  renderCurrent();
+}
+function populateMonthFilter(){
+  const sel=document.getElementById('filter-month');
+  if(!sel)return;
+  const current=sel.value;
+  // Get all unique year-month from tasks
+  const months=new Set();
+  tasks.forEach(t=>{if(t.date)months.add(t.date.substring(0,7));});
+  // Also add current month
+  const now=new Date();
+  months.add(`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`);
+  const sorted=[...months].sort();
+  const MONTHS_ES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  sel.innerHTML='<option value="">Todos los meses</option>'+
+    sorted.map(m=>{
+      const[y,mo]=m.split('-');
+      return `<option value="${m}">${MONTHS_ES[parseInt(mo)-1]} ${y}</option>`;
+    }).join('');
+  sel.value=current;
+}
 function getFiltered(){
   const q=(document.getElementById('sq').value||'').toLowerCase();
   const who=document.getElementById('fwho').value;
+  const month=document.getElementById('filter-month')?document.getElementById('filter-month').value:'';
   return tasks.filter(t=>{
     if(biz<3&&t.biz!==biz)return false;
     if(q&&!t.title.toLowerCase().includes(q))return false;
     if(who&&t.who!==who)return false;
+    if(month&&t.date&&!t.date.startsWith(month))return false;
     return true;
   });
 }
 
 window.renderCurrent=function renderCurrent(){
+  populateMonthFilter();
   // hide all panels first
   document.getElementById('board').style.display='none';
   document.getElementById('global-view').style.display='none';
@@ -690,6 +1004,7 @@ function cardHtml(t,showBiz){
   const ord=['p','e','c'];const idx=ord.indexOf(t.status);
   return `<div class="card" style="${sem.vencida?'border-left:4px solid #E24B4A;border-radius:8px':''}">
     ${sem.vencida?'<div class="vencida-badge">⚠ VENCIDA</div>':''}
+    ${t.isRecurring?`<span class="rec-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>${t.recLabel||'Recurrente'}</span>`:''}
     <div class="card-top">
       <div class="card-cb${done?' done':''}" onclick="toggleDone('${t.id}')"></div>
       <span class="card-title${done?' done':''}">${t.title}</span>
@@ -872,6 +1187,10 @@ window.addEventListener('app-ready', () => {
     }
   });
 });
+
+// Add recurring badge to cards
+const _origCardHtml = cardHtml;
+
 </script>
 </body>
 </html>
