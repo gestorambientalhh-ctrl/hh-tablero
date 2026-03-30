@@ -775,7 +775,12 @@ function initDragDrop(){
       const label = col.closest('.col-wrap').querySelector('.col-label').textContent.trim();
       const newStatus = colLabels[label] || 'p';
       const t = tasks.find(x=>x.id===touchTask);
-      if(t && t.status!==newStatus){ t.status=newStatus; persist(); renderCurrent(); }
+      if(t && t.status!==newStatus){
+        // Vencidas solo pueden ir a completada
+        const over=t.date&&isOver(t.date)&&t.status!=='c';
+        if(over && newStatus!=='c') return;
+        t.status=newStatus; persist(); renderCurrent();
+      }
     }
     touchClone.remove(); touchClone=null; touchTask=null;
   },{passive:true});
@@ -1002,6 +1007,9 @@ let pendingMove={id:null,dir:null};
 function moveTask(id,dir){
   const t=tasks.find(x=>x.id===id);if(!t)return;
   const ord=['p','e','c'];const i=ord.indexOf(t.status);
+  // Tareas vencidas solo pueden ir a Completada
+  const over=t.date&&isOver(t.date)&&t.status!=='c';
+  if(over && ord[i+dir]!=='c') return;
   if(i+dir<0||i+dir>2)return;
   // Open notes modal before moving
   pendingMove={id,dir};
@@ -1166,8 +1174,10 @@ function cardHtml(t,showBiz){
       <div class="avatar-sm" style="background:${wa.bg};color:${wa.col}">${wa.init}</div>
     </div>
     <div class="card-actions" style="${isViewer?'display:none':''}">
-      ${idx>0?`<button class="ca-btn" onclick="moveTask('${t.id}',-1)">← Atrás</button>`:''}
-      ${idx<2?`<button class="ca-btn" onclick="moveTask('${t.id}',1)">Avanzar →</button>`:`<span style="font-size:11px;color:var(--text3)">Completada ✓</span>`}
+      ${sem.vencida
+        ? `<button class="ca-btn" style="background:#E24B4A;color:#fff;border-color:#E24B4A" onclick="moveTask('${t.id}',2-idx)">✓ Completar</button>`
+        : `${idx>0?`<button class="ca-btn" onclick="moveTask('${t.id}',-1)">← Atrás</button>`:''} ${idx<2?`<button class="ca-btn" onclick="moveTask('${t.id}',1)">Avanzar →</button>`:`<span style="font-size:11px;color:var(--text3)">Completada ✓</span>`}`
+      }
       <button class="ca-del" onclick="delTask('${t.id}')" title="Eliminar">×</button>
     </div>
   </div>`;
