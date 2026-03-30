@@ -215,6 +215,16 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 .person-n{font-size:18px;font-weight:700;color:var(--blue)}
 .person-l{font-size:10px;color:var(--text2)}
 
+
+
+/* VIEWER MODE */
+.viewer-banner{background:#fef3c7;border-bottom:2px solid #f59e0b;padding:8px 16px;font-size:12px;color:#92400e;display:flex;align-items:center;gap:8px;font-weight:500}
+
+/* DRAG AND DROP */
+.card{cursor:grab}
+.card.dragging{opacity:.4;cursor:grabbing;transform:scale(.98)}
+.col-body.drag-over{background:var(--blue-mid);border-radius:8px;outline:2px dashed var(--blue)}
+
 /* RECURRING */
 .rec-badge{font-size:10px;background:#EEF2FF;color:#3730A3;padding:2px 7px;border-radius:999px;font-weight:600;display:inline-flex;align-items:center;gap:3px}
 .rec-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:400;display:flex;align-items:center;justify-content:center;padding:20px}
@@ -564,17 +574,7 @@ const SEM={urgente:{c:'#E24B4A',bg:'#FCEBEB',tc:'#791F1F'},alta:{c:'#EF9F27',bg:
 const MONTHS=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 window.tasks=[];let biz=0,tasks=window.tasks,curSection='tablero';
 
-function checkPw(){
-  if(document.getElementById('pw-input').value===PW){
-    document.getElementById('lock-screen').style.display='none';
-    document.getElementById('app').style.display='block';
-    loadTasks();
-  } else {
-    document.getElementById('pw-err').style.display='block';
-    document.getElementById('pw-input').value='';
-    document.getElementById('pw-input').focus();
-  }
-}
+// checkPw moved to viewer mode section
 function logout(){
   document.getElementById('app').style.display='none';
   document.getElementById('lock-screen').style.display='flex';
@@ -604,6 +604,7 @@ function setBiz(i){
   document.getElementById('btn-add').style.display=(curSection==='tablero'&&isBoard)?'flex':'none';
   document.getElementById('form-area').style.display='none';
   renderCurrent();
+  setTimeout(initDragDrop,100);
 }
 
 function showSection(s){
@@ -669,14 +670,143 @@ function toggleForm(){
   }
 }
 
+
+// ── DRAG AND DROP ─────────────────────────────────────────────
+function initDragDrop(){
+  document.addEventListener('dragstart', e=>{
+    const card = e.target.closest('.card');
+    if(!card) return;
+    card.classList.add('dragging');
+    e.dataTransfer.setData('text/plain', card.dataset.taskId || '');
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  document.addEventListener('dragend', e=>{
+    const card = e.target.closest('.card');
+    if(card) card.classList.remove('dragging');
+    document.querySelectorAll('.col-body').forEach(c=>c.classList.remove('drag-over'));
+  });
+  document.addEventListener('dragover', e=>{
+    e.preventDefault();
+    const col = e.target.closest('.col-body');
+    if(col){
+      document.querySelectorAll('.col-body').forEach(c=>c.classList.remove('drag-over'));
+      col.classList.add('drag-over');
+    }
+  });
+  document.addEventListener('dragleave', e=>{
+    const col = e.target.closest('.col-body');
+    if(col && !col.contains(e.relatedTarget)) col.classList.remove('drag-over');
+  });
+  document.addEventListener('drop', e=>{
+    e.preventDefault();
+    const col = e.target.closest('.col-body');
+    if(!col) return;
+    col.classList.remove('drag-over');
+    const colWrap = col.closest('.col-wrap');
+    if(!colWrap) return;
+    const colIndex = [...document.querySelectorAll('.col-wrap')].indexOf(colWrap);
+    const statusMap = ['v','p','e','c'];
+    // adjust for vencidas column
+    const visibleCols = document.querySelectorAll('.col-wrap');
+    const colLabels = [...visibleCols].map(w=>w.querySelector('.col-label').textContent.trim());
+    const statusByLabel = {'Vencidas':'p','Pendiente':'p','En progreso':'e','Completada':'c'};
+    const newStatus = statusByLabel[colLabels[colIndex]] || 'p';
+    const taskId = e.dataTransfer.getData('text/plain');
+    if(!taskId) return;
+    const t = tasks.find(x=>x.id===taskId);
+    if(!t || t.status===newStatus) return;
+    // Open notes modal before moving
+    pendingMove = {id: taskId, dir: newStatus==='e'?1:newStatus==='c'?2:0};
+    // Direct move without notes for drag
+    t.status = newStatus;
+    persist();
+    renderCurrent();
+  });
+  // Touch drag for mobile
+  let touchTask = null, touchClone = null;
+  document.addEventListener('touchstart', e=>{
+    const card = e.target.closest('.card');
+    if(!card) return;
+    touchTask = card.dataset.taskId;
+    touchClone = card.cloneNode(true);
+    touchClone.style.cssText = 'position:fixed;opacity:.7;pointer-events:none;z-index:1000;width:'+card.offsetWidth+'px;top:0;left:0;transform:scale(1.05)';
+    document.body.appendChild(touchClone);
+  },{passive:true});
+  document.addEventListener('touchmove', e=>{
+    if(!touchClone) return;
+    const touch = e.touches[0];
+    touchClone.style.left = (touch.clientX - touchClone.offsetWidth/2)+'px';
+    touchClone.style.top = (touch.clientY - 30)+'px';
+    document.querySelectorAll('.col-body').forEach(c=>c.classList.remove('drag-over'));
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    const col = el && el.closest('.col-body');
+    if(col) col.classList.add('drag-over');
+  },{passive:true});
+  document.addEventListener('touchend', e=>{
+    if(!touchClone) return;
+    const touch = e.changedTouches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    const col = el && el.closest('.col-body');
+    document.querySelectorAll('.col-body').forEach(c=>c.classList.remove('drag-over'));
+    if(col && touchTask){
+      const colLabels = {'Vencidas':'p','Pendiente':'p','En progreso':'e','Completada':'c'};
+      const label = col.closest('.col-wrap').querySelector('.col-label').textContent.trim();
+      const newStatus = colLabels[label] || 'p';
+      const t = tasks.find(x=>x.id===touchTask);
+      if(t && t.status!==newStatus){ t.status=newStatus; persist(); renderCurrent(); }
+    }
+    touchClone.remove(); touchClone=null; touchTask=null;
+  },{passive:true});
+}
+
+
+// ── VIEWER MODE ───────────────────────────────────────────────
+const VIEWER_PW = 'ver2026';
+let isViewer = false;
+
+function checkPw(){
+  const val = document.getElementById('pw-input').value;
+  if(val === PW){
+    isViewer = false;
+    document.getElementById('lock-screen').style.display='none';
+    document.getElementById('app').style.display='block';
+    loadTasks();
+  } else if(val === VIEWER_PW){
+    isViewer = true;
+    document.getElementById('lock-screen').style.display='none';
+    document.getElementById('app').style.display='block';
+    // Show viewer banner
+    const banner = document.createElement('div');
+    banner.className = 'viewer-banner';
+    banner.innerHTML = '👁 Modo vista — solo lectura. Puedes ver el seguimiento pero no editar tareas.';
+    document.querySelector('.topnav').after(banner);
+    // Hide edit buttons
+    document.getElementById('btn-add').style.display='none';
+    loadTasks();
+  } else {
+    document.getElementById('pw-err').style.display='block';
+    document.getElementById('pw-input').value='';
+    document.getElementById('pw-input').focus();
+  }
+}
+
+
 function loadTasks(){
-  const local = localStorage.getItem('hh-socios-v3');
-  if(local){ tasks = JSON.parse(local); }
+  const s=localStorage.getItem('hh-socios-v3');
+  if(s){tasks=JSON.parse(s);}
+  else{
+    tasks=[
+      {id:'d1',title:'Revisar informe ambiental cliente norte',who:'Anderson',pri:'urgente',date:'2026-03-30',status:'p',biz:0},
+      {id:'d2',title:'Actualizar base de datos de clientes',who:'Raul',pri:'normal',date:'2026-04-05',status:'e',biz:0},
+      {id:'d3',title:'Enviar cotización pendiente',who:'Anderson',pri:'alta',date:'2026-04-02',status:'p',biz:0},
+      {id:'d4',title:'Diseñar rutas semana 15',who:'Raul',pri:'alta',date:'2026-04-01',status:'p',biz:1},
+      {id:'d5',title:'Confirmar inventario dark stores',who:'Anderson',pri:'normal',date:'2026-04-08',status:'e',biz:1},
+      {id:'d6',title:'Pedido carnicería martes',who:'Raul',pri:'urgente',date:'2026-03-31',status:'p',biz:2},
+      {id:'d7',title:'Registrar fiados de la semana',who:'Anderson',pri:'normal',date:'2026-04-04',status:'c',biz:2},
+    ];
+    persist();
+  }
   setBiz(0);
-  setTimeout(checkRecurringOnLoad, 1500);
-  window.tasks = tasks;
- window.dispatchEvent(new Event('app-ready'));
-setInterval(()=>window.dispatchEvent(new Event('app-ready')), 10000);
 }
 
 // ── RECURRING TASKS ──────────────────────────────────────────
@@ -962,6 +1092,7 @@ function getFiltered(){
 }
 
 window.renderCurrent=function renderCurrent(){
+  if(window.tasks) tasks=window.tasks;
   populateMonthFilter();
   // hide all panels first
   document.getElementById('board').style.display='none';
@@ -1001,7 +1132,7 @@ function cardHtml(t,showBiz){
   const sem=semByDate(t);
   const wa=WHO[t.who]||WHO.Anderson;
   const ord=['p','e','c'];const idx=ord.indexOf(t.status);
-  return `<div class="card" style="${sem.vencida?'border-left:4px solid #E24B4A;border-radius:8px':''}">
+  return `<div class="card" draggable="true" data-task-id="${t.id}" style="${sem.vencida?'border-left:4px solid #E24B4A;border-radius:8px':''}">
     ${sem.vencida?'<div class="vencida-badge">⚠ VENCIDA</div>':''}
     ${t.isRecurring?`<span class="rec-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>${t.recLabel||'Recurrente'}</span>`:''}
     <div class="card-top">
@@ -1018,7 +1149,7 @@ function cardHtml(t,showBiz){
       ${showBiz?`<span class="biz-pill" style="background:${BIZ_C[t.biz]}20;color:${BIZ_C[t.biz]}">${BIZ_NAMES[t.biz]||''}</span>`:''}
       <div class="avatar-sm" style="background:${wa.bg};color:${wa.col}">${wa.init}</div>
     </div>
-    <div class="card-actions">
+    <div class="card-actions" style="${isViewer?'display:none':''}">
       ${idx>0?`<button class="ca-btn" onclick="moveTask('${t.id}',-1)">← Atrás</button>`:''}
       ${idx<2?`<button class="ca-btn" onclick="moveTask('${t.id}',1)">Avanzar →</button>`:`<span style="font-size:11px;color:var(--text3)">Completada ✓</span>`}
       <button class="ca-del" onclick="delTask('${t.id}')" title="Eliminar">×</button>
@@ -1090,6 +1221,7 @@ function renderGlobal(){
 }
 
 function renderDashboard(){
+  tasks = window.tasks || tasks;
   const totP=tasks.filter(t=>t.status==='p').length;
   const totE=tasks.filter(t=>t.status==='e').length;
   const totC=tasks.filter(t=>t.status==='c').length;
@@ -1173,7 +1305,7 @@ window.addEventListener('app-ready', () => {
       if (data.tasks && Array.isArray(data.tasks)) {
         // Only update if data is newer than what we have locally
         const localUpdated = parseInt(localStorage.getItem('hh-socios-updated') || '0');
-        if (true) {
+        if (data.updatedAt > localUpdated) {
           window.tasks = data.tasks;
           localStorage.setItem('hh-socios-v3', JSON.stringify(data.tasks));
           localStorage.setItem('hh-socios-updated', data.updatedAt);
