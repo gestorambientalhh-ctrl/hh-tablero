@@ -675,7 +675,8 @@ function loadTasks(){
   setBiz(0);
   setTimeout(checkRecurringOnLoad, 1500);
   window.tasks = tasks;
-  window.dispatchEvent(new Event('app-ready'));
+ window.dispatchEvent(new Event('app-ready'));
+setInterval(()=>window.dispatchEvent(new Event('app-ready')), 10000);
 }
 
 // ── RECURRING TASKS ──────────────────────────────────────────
