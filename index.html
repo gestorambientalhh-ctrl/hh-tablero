@@ -255,6 +255,17 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 .support-badge{font-size:10px;background:#FEF3C7;color:#92400E;padding:2px 7px;border-radius:999px;font-weight:600;border:1px solid #F59E0B}
 .support-done-badge{font-size:10px;background:#DCFCE7;color:#166534;padding:2px 7px;border-radius:999px;font-weight:600;border:1px solid #86EFAC}
 
+
+/* USER SETTINGS MODAL */
+.user-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px}
+.user-modal{background:var(--bg);border-radius:12px;width:100%;max-width:400px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.18)}
+.user-modal-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.user-modal-title{font-size:14px;font-weight:600;color:var(--text)}
+.user-row{display:flex;align-items:center;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border)}
+.user-avatar-sm{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.user-name-input{flex:1;height:32px;font-size:13px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;outline:none;color:var(--text)}
+.user-init-input{width:44px;height:32px;font-size:12px;font-weight:600;border:1px solid var(--border);border-radius:6px;padding:0 6px;font-family:inherit;outline:none;text-align:center;color:var(--text)}
+
 /* USER MANAGEMENT VISUAL */
 .user-section{margin-top:20px}
 .user-section-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
@@ -420,13 +431,9 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 
     <div class="topnav-right">
       <input class="search-top" type="text" placeholder="Buscar..." id="sq" oninput="renderCurrent()">
-      <select class="fsel-top" id="fwho" onchange="renderCurrent()">
-        <option value="">Todos</option>
-        <option>Anderson</option>
-        <option>Raul</option>
-        <option>Ambos</option>
-      </select>
-<button class="avatar-btn" onclick="logout()" title="Salir">HH</button>
+      <select class="fsel-top" id="fwho" onchange="renderCurrent()"><option value="">Total</option></select>
+<button onclick="openUserModal()" title="Configurar usuarios" style="width:32px;height:32px;border-radius:50%;background:var(--bg2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px">👥</button>
+      <button class="avatar-btn" onclick="logout()" title="Salir">HH</button>
     </div>
   </nav>
 
@@ -463,12 +470,11 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
         <button class="sec-tab act" id="sec-tablero" onclick="showSection('tablero')">Tablero</button>
         <button class="sec-tab" id="sec-dashboard" onclick="showSection('dashboard')">Dashboard</button>
         <button class="sec-tab" id="sec-reuniones" onclick="showSection('reuniones')">📋 Reuniones</button>
-        <div style="display:flex;align-items:center;gap:6px;margin-left:10px">
+        <div style="display:flex;align-items:center;gap:4px;margin-left:10px">
           <span style="font-size:11px;color:var(--text2);white-space:nowrap">Ver:</span>
-          <button class="resp-btn act" id="rb-all" onclick="setResp('')">Todos</button>
-          <button class="resp-btn" id="rb-anderson" onclick="setResp('Anderson')">Anderson</button>
-          <button class="resp-btn" id="rb-raul" onclick="setResp('Raul')">Raul</button>
-          <button class="resp-btn" id="rb-ambos" onclick="setResp('Ambos')">Ambos</button>
+          <div id="section-bar-filters" style="display:flex;gap:4px;flex-wrap:wrap">
+            <button class="resp-btn act" data-who="" onclick="setResp('')">Total</button>
+          </div>
         </div>
         <div style="display:flex;align-items:center;gap:5px;margin-left:10px">
           <span style="font-size:11px;color:var(--text2);white-space:nowrap">Mes:</span>
@@ -495,7 +501,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
           </div>
           <div class="form-field">
             <label>Responsable</label>
-            <select id="fa-who"><option>Anderson</option><option>Raul</option><option>Ambos</option></select>
+            <select id="fa-who"></select>
           </div>
           <div class="form-field">
             <label>Prioridad</label>
@@ -568,7 +574,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
           <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">Agregar tarea recurrente</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <input id="rec-title" type="text" placeholder="Nombre de la tarea" style="flex:2;min-width:140px;height:32px;font-size:13px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;outline:none">
-            <select id="rec-who" style="height:32px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit">
+            <select id="rec-who" class="rec-who-dyn" style="height:32px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit">
               <option>Anderson</option><option>Raul</option><option>Ambos</option>
             </select>
             <select id="rec-biz" style="height:32px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit">
@@ -696,6 +702,21 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
   </div>
 
 
+  <!-- USER SETTINGS MODAL -->
+  <div id="user-modal-overlay" class="user-modal-overlay" style="display:none" onclick="if(event.target===this)closeUserModal()">
+    <div class="user-modal">
+      <div class="user-modal-head">
+        <div class="user-modal-title">👥 Configurar usuarios</div>
+        <button onclick="closeUserModal()" style="background:none;border:none;font-size:22px;color:var(--text2);cursor:pointer;line-height:1">×</button>
+      </div>
+      <div id="user-modal-body" style="padding:8px 0"></div>
+      <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px">
+        <button onclick="closeUserModal()" class="btn-cancel">Cancelar</button>
+        <button onclick="saveUserSettings()" class="btn-save" style="background:var(--blue)">Guardar cambios</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MOBILE BOTTOM NAV -->->
   <nav class="mob-nav">
     <button class="mob-nav-btn act" id="mobnav-tablero" onclick="showSection('tablero')">
@@ -723,7 +744,38 @@ const PW='hh2026';
 const BIZS=[{name:'Gestor Ambiental HH'},{name:'Operador Logístico'},{name:'Montevra'},{name:'Vista general'}];
 const BIZ_C=['#639922','#378ADD','#D85A30'];
 const BIZ_NAMES=['Gestor HH','Logístico','Montevra'];
-const WHO={Anderson:{bg:'#E6F1FB',col:'#0C447C',init:'AN'},Raul:{bg:'#EAF3DE',col:'#27500A',init:'RA'},Ambos:{bg:'#FAEEDA',col:'#633806',init:'AM'}};
+// ── DYNAMIC USERS ─────────────────────────────────────────────
+const USER_COLORS = [
+  {bg:'#E6F1FB',col:'#0C447C'},
+  {bg:'#EAF3DE',col:'#27500A'},
+  {bg:'#F3E8FF',col:'#6B21A8'},
+  {bg:'#FEF3C7',col:'#92400E'},
+];
+function getUsers(){
+  const saved = localStorage.getItem('hh-users-v1');
+  if(saved) return JSON.parse(saved);
+  return [
+    {id:'u1',name:'Anderson',init:'AN'},
+    {id:'u2',name:'Raul',init:'RA'},
+    {id:'u3',name:'Usuario 3',init:'U3'},
+    {id:'u4',name:'Usuario 4',init:'U4'},
+  ];
+}
+function saveUsers(users){
+  localStorage.setItem('hh-users-v1', JSON.stringify(users));
+}
+function getWHO(){
+  const users = getUsers();
+  const who = {};
+  users.forEach((u,i)=>{
+    const c = USER_COLORS[i % USER_COLORS.length];
+    who[u.name] = {bg:c.bg, col:c.col, init:u.init, id:u.id};
+  });
+  return who;
+}
+// Keep WHO as backward compat
+let WHO = getWHO();
+function refreshWHO(){ WHO = getWHO(); }
 const SEM={urgente:{c:'#E24B4A',bg:'#FCEBEB',tc:'#791F1F'},alta:{c:'#EF9F27',bg:'#FAEEDA',tc:'#633806'},normal:{c:'#639922',bg:'#EAF3DE',tc:'#27500A'}};
 const MONTHS=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 window.tasks=[];let biz=0,tasks=window.tasks,curSection='tablero';
@@ -1109,12 +1161,75 @@ function togglePayment(){
 }
 
 
+
+// ── USER MANAGEMENT ───────────────────────────────────────────
+function openUserModal(){
+  const users = getUsers();
+  const colors = USER_COLORS;
+  let html = '';
+  users.forEach((u,i)=>{
+    const c = colors[i % colors.length];
+    html += `<div class="user-row">
+      <div class="user-avatar-sm" style="background:${c.bg};color:${c.col}">${u.init}</div>
+      <input class="user-name-input" id="uname-${u.id}" value="${u.name}" placeholder="Nombre del usuario" maxlength="20">
+      <input class="user-init-input" id="uinit-${u.id}" value="${u.init}" placeholder="XX" maxlength="3">
+    </div>`;
+  });
+  document.getElementById('user-modal-body').innerHTML = html;
+  document.getElementById('user-modal-overlay').style.display = 'flex';
+}
+
+function closeUserModal(){
+  document.getElementById('user-modal-overlay').style.display = 'none';
+}
+
+function saveUserSettings(){
+  const users = getUsers();
+  users.forEach(u=>{
+    const nameEl = document.getElementById('uname-'+u.id);
+    const initEl = document.getElementById('uinit-'+u.id);
+    if(nameEl) u.name = nameEl.value.trim() || u.name;
+    if(initEl) u.init = initEl.value.trim().toUpperCase() || u.init;
+  });
+  saveUsers(users);
+  refreshWHO();
+  // Update all selects immediately
+  const fwhoEl=document.getElementById('fwho');
+  if(fwhoEl) fwhoEl.innerHTML='<option value="">Total</option>'+users.map(u=>`<option value="${u.name}">${u.name}</option>`).join('');
+  const faWhoEl=document.getElementById('fa-who');
+  if(faWhoEl) faWhoEl.innerHTML=users.map(u=>`<option value="${u.name}">${u.name}</option>`).join('');
+  buildRespButtons();
+  closeUserModal();
+  renderCurrent();
+  if(curSection==='dashboard') renderDashboard();
+}
+
+function updateAllFilters(){
+  // Kept for compatibility — actual updates done in saveUserSettings
+}
+
+function buildRespButtons(){
+  const users=getUsers();
+  const bar=document.getElementById('section-bar-filters');
+  if(!bar) return;
+  bar.innerHTML=`<button class="resp-btn act" data-who="" onclick="setResp('')">Total</button>`+
+    users.map(u=>`<button class="resp-btn" data-who="${u.name}" onclick="setResp('${u.name}')">${u.name}</button>`).join('');
+}
+
 function loadTasks(){
   const local = localStorage.getItem('hh-socios-v3');
   tasks = local ? JSON.parse(local) : [];
   window.tasks = tasks;
   autoAdvanceTasks();
+  refreshWHO();
+  // Populate ALL user selects on load
+  const us=getUsers();
+  const fwhoEl=document.getElementById('fwho');
+  if(fwhoEl) fwhoEl.innerHTML='<option value="">Total</option>'+us.map(u=>`<option value="${u.name}">${u.name}</option>`).join('');
+  const faWhoEl=document.getElementById('fa-who');
+  if(faWhoEl) faWhoEl.innerHTML=us.map(u=>`<option value="${u.name}">${u.name}</option>`).join('');
   setBiz(0);
+  buildRespButtons();
   setTimeout(checkRecurringOnLoad, 1500);
   window.dispatchEvent(new Event('app-ready'));
   setInterval(()=>window.dispatchEvent(new Event('app-ready')), 10000);
@@ -1397,12 +1512,20 @@ function closeNotes(e){if(e.target===document.getElementById('notes-overlay'))cl
 let curResp='';
 function setResp(v){
   curResp=v;
-  ['all','anderson','raul','ambos'].forEach(k=>{
-    const el=document.getElementById('rb-'+k);
-    if(el)el.classList.toggle('act',(k==='all'&&v==='')||(k===v.toLowerCase()));
+  document.querySelectorAll('#section-bar-filters .resp-btn').forEach(btn=>{
+    btn.classList.toggle('act',(btn.getAttribute('data-who')||'')=== v);
   });
-  document.getElementById('fwho').value=v;
+  const fwho=document.getElementById('fwho');
+  if(fwho) fwho.value=v;
   renderCurrent();
+}
+
+function buildRespButtons(){
+  const users=getUsers();
+  const bar=document.getElementById('section-bar-filters');
+  if(!bar) return;
+  bar.innerHTML=`<button class="resp-btn act" data-who="" onclick="setResp('')">Total</button>`+
+    users.map(u=>`<button class="resp-btn" data-who="${u.name}" onclick="setResp('${u.name}')">${u.name}</button>`).join('');
 }
 function toggleDone(id){
   const t=tasks.find(x=>x.id===id);if(!t)return;
@@ -1527,6 +1650,9 @@ function getMonthFilter(){
   return el?el.value:'';
 }
 function applyDateFilter(t){
+  // Vencidas always show regardless of date filter
+  const over = t.date && isOver(t.date) && t.status!=='c';
+  if(over) return true;
   const weekVal=getWeekFilter();
   const month=getMonthFilter();
   if(weekVal){
@@ -1746,12 +1872,14 @@ function renderGlobal(){
 }
 
 
+let dashFilter = {who:'', month:'', biz:'', week:''};
+
 function setDashFilter(key, val){
   dashFilter[key] = val;
   if(key==='who'){
-    ['all','anderson','raul','ambos'].forEach(k=>{
+    ['all','anderson','raul','total'].forEach(k=>{
       const el=document.getElementById('db-rb-'+k);
-      if(el) el.classList.toggle('act',(k==='all'&&val==='')||(k===val.toLowerCase()));
+      if(el) el.classList.toggle('act',(k==='all'&&val==='')||(k==='total'&&val==='')||(k===val.toLowerCase()));
     });
     // Sync with section-bar who filter
     const fwho=document.getElementById('fwho');
@@ -1765,8 +1893,7 @@ function getTasksForDash(){
   return tasks.filter(t=>{
     if(dashFilter.who && t.who!==dashFilter.who) return false;
     if(dashFilter.biz!=='' && t.biz!==parseInt(dashFilter.biz)) return false;
-    // Use shared date filter (month/week from section-bar)
-    if(!applyDateFilter(t)) return false;
+    if(!applyDashDateFilter(t)) return false;
     return true;
   });
 }
@@ -1786,6 +1913,58 @@ function populateDashMonthFilter(){
   sel.value = cur;
 }
 
+function onDbMonthChange(){
+  const month = document.getElementById('db-month').value;
+  dashFilter.month = month;
+  dashFilter.week = '';
+  const fw = document.getElementById('db-week');
+  if(!fw) return;
+  if(!month){ fw.style.display='none'; fw.value=''; renderDashboard(); return; }
+  // Populate weeks
+  const [y,m] = month.split('-');
+  const year=parseInt(y), mo=parseInt(m)-1;
+  const firstDay=new Date(year,mo,1);
+  const lastDay=new Date(year,mo+1,0);
+  let d=new Date(firstDay);
+  while(d.getDay()!==1) d.setDate(d.getDate()-1);
+  const MES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  let weeks=[], wNum=1;
+  while(d<=lastDay){
+    const wStart=new Date(d), wEnd=new Date(d);
+    wEnd.setDate(wEnd.getDate()+6);
+    weeks.push({label:`Sem ${wNum}: ${wStart.getDate()} ${MES[wStart.getMonth()]} - ${wEnd.getDate()} ${MES[wEnd.getMonth()]}`,
+      val:`${wStart.toISOString().split('T')[0]}|${wEnd.toISOString().split('T')[0]}`});
+    d.setDate(d.getDate()+7); wNum++;
+  }
+  fw.innerHTML='<option value="">Todas las semanas</option>'+weeks.map(w=>`<option value="${w.val}">${w.label}</option>`).join('');
+  fw.style.display='block';
+  fw.value='';
+  renderDashboard();
+}
+
+function clearDashDate(){
+  dashFilter.month=''; dashFilter.week='';
+  const dm=document.getElementById('db-month'); if(dm) dm.value='';
+  const dw=document.getElementById('db-week'); if(dw){dw.value='';dw.style.display='none';}
+  renderDashboard();
+}
+
+function applyDashDateFilter(t){
+  // Vencidas always show
+  const over=t.date&&isOver(t.date)&&t.status!=='c';
+  if(over) return true;
+  // Use dashFilter state (persists across re-renders)
+  const weekVal=dashFilter.week||'';
+  const month=dashFilter.month||'';
+  if(weekVal){
+    const [wStart,wEnd]=weekVal.split('|');
+    if(!t.date||t.date<wStart||t.date>wEnd) return false;
+  } else if(month){
+    if(!t.date||!t.date.startsWith(month)) return false;
+  }
+  return true;
+}
+
 function renderDashboard(){
   if(window.tasks && window.tasks.length > 0) tasks = window.tasks;
   populateDashMonthFilter();
@@ -1794,8 +1973,28 @@ function renderDashboard(){
   const totE=filtered.filter(t=>t.status==='e').length;
   const totC=filtered.filter(t=>t.status==='c').length;
   const tot=filtered.length;
-  let html=`<div class="dash-h">Dashboard</div>
-  <div class="dash-sub">Resumen de tareas por unidad de negocio</div>
+  let html=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+    <div class="dash-h" style="margin-bottom:0">Dashboard</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <div style="display:flex;gap:4px;flex-wrap:wrap" id="db-who-filters">
+        <button class="resp-btn act" data-who="" onclick="setDashFilter('who','')">Total</button>
+      </div>
+      <select id="db-biz" onchange="setDashFilter('biz',this.value)" style="height:28px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text2);background:var(--bg)">
+        <option value="">Todos los proyectos</option>
+        <option value="0">Gestor HH</option>
+        <option value="1">Logístico</option>
+        <option value="2">Montevra</option>
+      </select>
+      <select id="db-month" onchange="onDbMonthChange()" style="height:28px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text2);background:var(--bg)">
+        <option value="">Todos los meses</option>
+      </select>
+      <select id="db-week" onchange="dashFilter.week=this.value;renderDashboard()" style="height:28px;font-size:12px;border:1px solid var(--blue);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--blue);background:var(--blue-light);font-weight:600;display:none">
+        <option value="">Todas las semanas</option>
+      </select>
+      <button onclick="clearDashDate()" style="height:28px;padding:0 8px;font-size:11px;border:1px solid var(--border);border-radius:5px;background:var(--bg);cursor:pointer;color:var(--text3)">✕</button>
+    </div>
+  </div>
+  <div class="dash-sub" style="margin-top:2px">Resumen de tareas por unidad de negocio</div>
   <div class="global-box">
     <div class="global-box-title">Resumen general</div>
     <div class="global-stats">
@@ -1840,10 +2039,9 @@ function renderDashboard(){
   // ── USER SECTION ─────────────────────────────────
   const SEM_C = {urgente:'#E24B4A',alta:'#EF9F27',normal:'#639922'};
   const BIZ_LABELS = ['Gestor HH','Logístico','Montevra'];
-  const USERS = [
-    {name:'Anderson', init:'AN', color:'#2563eb', filterKeys:['Anderson','Ambos']},
-    {name:'Raul',     init:'RA', color:'#0ea5e9', filterKeys:['Raul','Ambos']},
-  ];
+  const dynUsers = getUsers();
+  const uColors = ['#2563eb','#0ea5e9','#7c3aed','#d97706'];
+  const USERS = dynUsers.map((u,i)=>({name:u.name,init:u.init,color:uColors[i%uColors.length],filterKeys:[u.name]}));
 
   html += `<div class="user-section">
     <div class="user-section-title">
@@ -1907,6 +2105,30 @@ function renderDashboard(){
   // ── END USER SECTION ─────────────────────────────
 
   document.getElementById('dash-view').innerHTML=html;
+  // Build and sync dashboard user filter buttons
+  const dbWhoBar=document.getElementById('db-who-filters');
+  if(dbWhoBar){
+    const dUsers=getUsers();
+    dbWhoBar.innerHTML=`<button class="resp-btn${dashFilter.who===''?' act':''}" data-who="" onclick="setDashFilter('who','')">Total</button>`+
+      dUsers.map(u=>`<button class="resp-btn${dashFilter.who===u.name?' act':''}" data-who="${u.name}" onclick="setDashFilter('who','${u.name}')">${u.name}</button>`).join('');
+  }
+  // Restore biz filter
+  const dbBiz=document.getElementById('db-biz');
+  if(dbBiz) dbBiz.value=dashFilter.biz||'';
+  // Restore month and week filters
+  populateDashMonthFilter();
+  const dm=document.getElementById('db-month');
+  const dw=document.getElementById('db-week');
+  if(dm&&dashFilter.month){
+    dm.value=dashFilter.month;
+    // Repopulate weeks for this month
+    onDbMonthChange();
+    // Restore selected week
+    if(dw&&dashFilter.week){
+      dw.value=dashFilter.week;
+      dw.style.display='block';
+    }
+  }
 }
 </script>
 <script type="module">
