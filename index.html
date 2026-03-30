@@ -281,7 +281,14 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
   .col-wrap{width:235px}
   .global-stats{grid-template-columns:repeat(2,1fr)}
   .proj-tabs{display:none}
-  .proj-title-bar-tabs{display:flex!important}
+  .proj-title-bar-tabs{display:flex!important;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .proj-title-bar-tabs::-webkit-scrollbar{display:none}
+  .proj-title{display:none}
+  .section-bar{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;gap:4px;scrollbar-width:none}
+  .section-bar::-webkit-scrollbar{display:none}
+  .section-bar>*{flex-shrink:0}
+  .sem-leg{display:none}
+  .project-bar{padding:0 10px;gap:6px}
 }
 @media(min-width:701px){
   .mob-nav{display:none!important}
@@ -361,17 +368,17 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
       <div class="project-bar">
         <span class="proj-title" id="proj-title">Gestor Ambiental HH</span>
         <!-- Project tabs mobile -->
-        <div class="proj-title-bar-tabs" style="display:none;gap:4px;flex:1;overflow-x:auto;margin:0 8px">
-          <button class="proj-tab act" id="mpt0" onclick="setBiz(0)" style="font-size:12px;padding:4px 10px">
+        <div class="proj-title-bar-tabs" style="display:none;gap:4px;flex:1;overflow-x:auto;margin:0 4px;-webkit-overflow-scrolling:touch">
+          <button class="proj-tab act" id="mpt0" onclick="setBiz(0)" style="font-size:12px;padding:5px 12px;border-width:1.5px">
             <span class="proj-tab-dot" style="background:#639922"></span>Gestor
           </button>
-          <button class="proj-tab" id="mpt1" onclick="setBiz(1)" style="font-size:12px;padding:4px 10px">
+          <button class="proj-tab" id="mpt1" onclick="setBiz(1)" style="font-size:12px;padding:5px 12px;border-width:1.5px">
             <span class="proj-tab-dot" style="background:#378ADD"></span>Log.
           </button>
-          <button class="proj-tab" id="mpt2" onclick="setBiz(2)" style="font-size:12px;padding:4px 10px">
+          <button class="proj-tab" id="mpt2" onclick="setBiz(2)" style="font-size:12px;padding:5px 12px;border-width:1.5px">
             <span class="proj-tab-dot" style="background:#D85A30"></span>Mont.
           </button>
-          <button class="proj-tab" id="mpt3" onclick="setBiz(3)" style="font-size:12px;padding:4px 10px">
+          <button class="proj-tab" id="mpt3" onclick="setBiz(3)" style="font-size:12px;padding:5px 12px;border-width:1.5px">
             <span class="proj-tab-dot" style="background:#7F77DD"></span>General
           </button>
         </div>
