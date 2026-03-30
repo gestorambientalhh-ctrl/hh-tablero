@@ -561,9 +561,16 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
         <textarea class="notes-textarea" id="notes-input" placeholder="Escribe una nota sobre este avance... (opcional)"></textarea>
         <div class="notes-history" id="notes-history"></div>
       </div>
-      <div class="notes-footer">
+      <div class="notes-footer" id="notes-footer-default">
         <button class="btn-save" onclick="saveNoteAndMove()" style="flex:1;background:var(--blue)">Confirmar avance</button>
         <button class="btn-cancel" onclick="closeNotesBtn()">Cancelar</button>
+      </div>
+      <div class="notes-footer" id="notes-footer-vencida" style="display:none;flex-direction:column;gap:8px">
+        <div style="display:flex;gap:8px">
+          <button class="btn-save" onclick="saveNoteAndMove()" style="flex:1;background:#E24B4A">✓ Completar tarea</button>
+          <button class="btn-cancel" onclick="closeNotesBtn()">Cancelar</button>
+        </div>
+        <button onclick="saveNoteOnly()" style="width:100%;height:32px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;color:var(--text2);font-family:inherit">💬 Solo guardar nota (sin completar)</button>
       </div>
     </div>
   </div>
@@ -1005,22 +1012,50 @@ function saveTask(){
 
 let pendingMove={id:null,dir:null};
 
+let isVencidaCompletion = false;
+
 function moveTaskToComplete(id){
-  // Move vencida directly to completada — opens notes modal
   const t=tasks.find(x=>x.id===id);if(!t)return;
   const ord=['p','e','c'];
   const i=ord.indexOf(t.status);
-  const stepsToComplete=2-i; // how many steps to reach 'c'
+  const stepsToComplete=2-i;
   pendingMove={id,dir:stepsToComplete};
-  document.getElementById('notes-title').textContent='✓ Completar tarea vencida';
+  isVencidaCompletion=true;
+  document.getElementById('notes-title').textContent='Tarea vencida — ¿qué pasó?';
   document.getElementById('notes-sub').textContent=t.title;
   document.getElementById('notes-input').value='';
+  document.getElementById('notes-input').placeholder='Explica qué pasó con esta tarea (opcional)...';
   const history=(t.notes||[]).slice().reverse();
   document.getElementById('notes-history').innerHTML=history.length
     ?history.map(n=>`<div class="notes-entry"><div class="notes-entry-txt">${n.text}</div><div class="notes-entry-meta">${n.date} · ${n.from}</div></div>`).join('')
     :'';
+  // Show vencida footer with 2 buttons
+  document.getElementById('notes-footer-default').style.display='none';
+  document.getElementById('notes-footer-vencida').style.display='flex';
   document.getElementById('notes-overlay').style.display='flex';
   setTimeout(()=>document.getElementById('notes-input').focus(),100);
+}
+
+function saveNoteOnly(){
+  // Save note without completing the task
+  const t=tasks.find(x=>x.id===pendingMove.id);if(!t)return;
+  const noteText=document.getElementById('notes-input').value.trim();
+  if(noteText){
+    if(!t.notes)t.notes=[];
+    const now=new Date();
+    t.notes.push({text:noteText,date:now.toLocaleDateString('es-CO'),from:document.getElementById('fwho').value||'Equipo'});
+    persist();
+    renderCurrent();
+  }
+  closeNotesModalReset();
+}
+
+function closeNotesModalReset(){
+  isVencidaCompletion=false;
+  document.getElementById('notes-footer-default').style.display='flex';
+  document.getElementById('notes-footer-vencida').style.display='none';
+  document.getElementById('notes-input').placeholder='Escribe una nota sobre este avance... (opcional)';
+  document.getElementById('notes-overlay').style.display='none';
 }
 
 function moveTask(id,dir){
@@ -1057,10 +1092,10 @@ function saveNoteAndMove(){
   }
   t.status=ord[i+pendingMove.dir];
   persist();
-  document.getElementById('notes-overlay').style.display='none';
+  closeNotesModalReset();
   renderCurrent();
 }
-function closeNotesBtn(){document.getElementById('notes-overlay').style.display='none';}
+function closeNotesBtn(){ closeNotesModalReset(); }
 function closeNotes(e){if(e.target===document.getElementById('notes-overlay'))closeNotesBtn();}
 
 let curResp='';
