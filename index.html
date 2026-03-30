@@ -1004,6 +1004,25 @@ function saveTask(){
 }
 
 let pendingMove={id:null,dir:null};
+
+function moveTaskToComplete(id){
+  // Move vencida directly to completada — opens notes modal
+  const t=tasks.find(x=>x.id===id);if(!t)return;
+  const ord=['p','e','c'];
+  const i=ord.indexOf(t.status);
+  const stepsToComplete=2-i; // how many steps to reach 'c'
+  pendingMove={id,dir:stepsToComplete};
+  document.getElementById('notes-title').textContent='✓ Completar tarea vencida';
+  document.getElementById('notes-sub').textContent=t.title;
+  document.getElementById('notes-input').value='';
+  const history=(t.notes||[]).slice().reverse();
+  document.getElementById('notes-history').innerHTML=history.length
+    ?history.map(n=>`<div class="notes-entry"><div class="notes-entry-txt">${n.text}</div><div class="notes-entry-meta">${n.date} · ${n.from}</div></div>`).join('')
+    :'';
+  document.getElementById('notes-overlay').style.display='flex';
+  setTimeout(()=>document.getElementById('notes-input').focus(),100);
+}
+
 function moveTask(id,dir){
   const t=tasks.find(x=>x.id===id);if(!t)return;
   const ord=['p','e','c'];const i=ord.indexOf(t.status);
@@ -1175,7 +1194,7 @@ function cardHtml(t,showBiz){
     </div>
     <div class="card-actions" style="${isViewer?'display:none':''}">
       ${sem.vencida
-        ? `<button class="ca-btn" style="background:#E24B4A;color:#fff;border-color:#E24B4A" onclick="moveTask('${t.id}',2-idx)">✓ Completar</button>`
+        ? `<button class="ca-btn" style="background:#E24B4A;color:#fff;border-color:#E24B4A" onclick="moveTaskToComplete('${t.id}')">✓ Completar</button>`
         : `${idx>0?`<button class="ca-btn" onclick="moveTask('${t.id}',-1)">← Atrás</button>`:''} ${idx<2?`<button class="ca-btn" onclick="moveTask('${t.id}',1)">Avanzar →</button>`:`<span style="font-size:11px;color:var(--text3)">Completada ✓</span>`}`
       }
       <button class="ca-del" onclick="delTask('${t.id}')" title="Eliminar">×</button>
