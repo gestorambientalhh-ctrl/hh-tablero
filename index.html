@@ -1181,7 +1181,7 @@ window.addEventListener('app-ready', () => {
       if (data.tasks && Array.isArray(data.tasks)) {
         // Only update if data is newer than what we have locally
         const localUpdated = parseInt(localStorage.getItem('hh-socios-updated') || '0');
-        if (data.updatedAt > localUpdated) {
+        if (true) {
           window.tasks = data.tasks;
           localStorage.setItem('hh-socios-v3', JSON.stringify(data.tasks));
           localStorage.setItem('hh-socios-updated', data.updatedAt);
