@@ -1517,20 +1517,35 @@ function populateMonthFilter(){
   // Repopulate weeks if month is selected
   if(current) populateWeekFilter(current);
 }
+// Shared filter helpers
+function getWeekFilter(){
+  const el=document.getElementById('filter-week');
+  return el?el.value:'';
+}
+function getMonthFilter(){
+  const el=document.getElementById('filter-month');
+  return el?el.value:'';
+}
+function applyDateFilter(t){
+  const weekVal=getWeekFilter();
+  const month=getMonthFilter();
+  if(weekVal){
+    const [wStart,wEnd]=weekVal.split('|');
+    if(!t.date||t.date<wStart||t.date>wEnd) return false;
+  } else if(month){
+    if(!t.date||!t.date.startsWith(month)) return false;
+  }
+  return true;
+}
+
 function getFiltered(){
   const q=(document.getElementById('sq').value||'').toLowerCase();
   const who=document.getElementById('fwho').value;
-  const month=document.getElementById('filter-month')?document.getElementById('filter-month').value:'';
-  const weekVal=document.getElementById('filter-week')?document.getElementById('filter-week').value:'';
-  const [wStart,wEnd]=weekVal?weekVal.split('|'):['',''];
   return tasks.filter(t=>{
     if(biz<3&&t.biz!==biz)return false;
     if(q&&!t.title.toLowerCase().includes(q))return false;
     if(who&&t.who!==who)return false;
-    if(weekVal){
-      if(!t.date) return false;
-      if(t.date<wStart||t.date>wEnd) return false;
-    } else if(month&&t.date&&!t.date.startsWith(month)) return false;
+    if(!applyDateFilter(t)) return false;
     return true;
   });
 }
@@ -1642,15 +1657,10 @@ function renderGlobal(){
   const who=document.getElementById('fwho').value;
   const monthFilter=document.getElementById('filter-month')?document.getElementById('filter-month').value:'';
 
-  const weekVal=(document.getElementById('filter-week')?document.getElementById('filter-week').value:'');
-  const [wStart,wEnd]=weekVal?weekVal.split('|'):['',''];
   let list=tasks.filter(t=>{
     if(q&&!t.title.toLowerCase().includes(q))return false;
     if(who&&t.who!==who)return false;
-    if(weekVal){
-      if(!t.date) return false;
-      if(t.date<wStart||t.date>wEnd) return false;
-    } else if(monthFilter&&t.date&&!t.date.startsWith(monthFilter)) return false;
+    if(!applyDateFilter(t)) return false;
     return true;
   });
 
@@ -1743,6 +1753,9 @@ function setDashFilter(key, val){
       const el=document.getElementById('db-rb-'+k);
       if(el) el.classList.toggle('act',(k==='all'&&val==='')||(k===val.toLowerCase()));
     });
+    // Sync with section-bar who filter
+    const fwho=document.getElementById('fwho');
+    if(fwho) fwho.value=val;
   }
   renderDashboard();
 }
@@ -1751,8 +1764,9 @@ function getTasksForDash(){
   if(window.tasks && window.tasks.length > 0) tasks = window.tasks;
   return tasks.filter(t=>{
     if(dashFilter.who && t.who!==dashFilter.who) return false;
-    if(dashFilter.month && t.date && !t.date.startsWith(dashFilter.month)) return false;
     if(dashFilter.biz!=='' && t.biz!==parseInt(dashFilter.biz)) return false;
+    // Use shared date filter (month/week from section-bar)
+    if(!applyDateFilter(t)) return false;
     return true;
   });
 }
