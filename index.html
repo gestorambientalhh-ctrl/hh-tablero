@@ -599,7 +599,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
   </div>
 
   <!-- REUNIONES SECTION -->
-  <div id="section-reuniones" style="display:none;height:calc(100vh - 52px);flex-direction:column;overflow:hidden;background:var(--bg2)">
+  <div id="section-reuniones" style="display:none;height:calc(100vh - 92px);flex-direction:column;overflow:hidden;background:var(--bg2)">
     <div class="project-bar">
       <span class="proj-title">📋 Notas de Reunión</span>
 <button class="btn-task" onclick="clearMeetingForm()">
@@ -780,15 +780,21 @@ function showSection(s){
   const secReu=document.getElementById('section-reuniones');
   if(secTab) secTab.style.display=(s==='tablero'||s==='dashboard')?'flex':'none';
   if(secReu) secReu.style.display=s==='reuniones'?'flex':'none';
-  // Also hide/show app-layout
+  // Show/hide content areas
   const appLayout=document.querySelector('.app-layout');
-  if(appLayout) appLayout.style.display=s==='reuniones'?'none':'flex';
-  // Also show/hide section-bar filters when in reuniones
+  const boardEl=document.getElementById('board');
+  const dashEl=document.getElementById('dash-view');
+  const globalEl=document.getElementById('global-view');
+  // Show app-layout always but hide its content when in reuniones
+  if(appLayout) appLayout.style.visibility=s==='reuniones'?'hidden':'visible';
+  if(appLayout) appLayout.style.height=s==='reuniones'?'0':'';
+  if(appLayout) appLayout.style.overflow=s==='reuniones'?'hidden':'';
+  // Hide/show filters in section-bar
   const secBar=document.querySelector('.section-bar');
   if(secBar){
     [...secBar.children].forEach(el=>{
       if(el.id==='sec-tablero'||el.id==='sec-dashboard'||el.id==='sec-reuniones') return;
-      el.style.display=s==='reuniones'?'none':'';
+      el.style.visibility=s==='reuniones'?'hidden':'visible';
     });
   }
   // btn-add only on tablero + biz < 3
