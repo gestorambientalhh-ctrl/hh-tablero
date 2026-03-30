@@ -217,6 +217,28 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 
 
 
+
+/* USER MANAGEMENT VISUAL */
+.user-section{margin-top:20px}
+.user-section-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.user-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.user-card{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:16px 18px;overflow:hidden}
+.user-card-head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.user-avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0}
+.user-card-name{font-size:15px;font-weight:600;color:var(--text)}
+.user-card-sub{font-size:12px;color:var(--text2);margin-top:1px}
+.user-stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px}
+.user-stat{background:var(--bg2);border-radius:8px;padding:8px 4px;text-align:center}
+.user-stat-n{font-size:18px;font-weight:700}
+.user-stat-l{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.03em;margin-top:1px}
+.user-prog-label{display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:4px}
+.user-tasks-list{margin-top:12px}
+.user-task-item{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg2);border-radius:7px;margin-bottom:5px;font-size:12px}
+.user-task-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.user-task-title{flex:1;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-task-biz{font-size:10px;padding:1px 6px;border-radius:999px;font-weight:500;flex-shrink:0}
+.user-task-date{font-size:10px;color:var(--text3);flex-shrink:0}
+
 /* VIEWER MODE */
 .viewer-banner{background:#fef3c7;border-bottom:2px solid #f59e0b;padding:8px 16px;font-size:12px;color:#92400e;display:flex;align-items:center;gap:8px;font-weight:500}
 
@@ -1302,6 +1324,76 @@ function renderDashboard(){
     </div>`;
   });
   html+='</div>';
+
+  // ── USER SECTION ─────────────────────────────────
+  const SEM_C = {urgente:'#E24B4A',alta:'#EF9F27',normal:'#639922'};
+  const BIZ_LABELS = ['Gestor HH','Logístico','Montevra'];
+  const USERS = [
+    {name:'Anderson', init:'AN', color:'#2563eb', filterKeys:['Anderson','Ambos']},
+    {name:'Raul',     init:'RA', color:'#0ea5e9', filterKeys:['Raul','Ambos']},
+  ];
+
+  html += `<div class="user-section">
+    <div class="user-section-title">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Gestión por usuario
+    </div>
+    <div class="user-cards">`;
+
+  USERS.forEach(u => {
+    const myTasks = filtered.filter(t => u.filterKeys.includes(t.who));
+    const mP = myTasks.filter(t=>t.status==='p').length;
+    const mE = myTasks.filter(t=>t.status==='e').length;
+    const mC = myTasks.filter(t=>t.status==='c').length;
+    const mV = myTasks.filter(t=>t.date&&isOver(t.date)&&t.status!=='c').length;
+    const total = myTasks.length || 1;
+    const pct = Math.round((mC/total)*100);
+    // Open tasks sorted: vencidas first, then urgente, then alta, then normal
+    const openTasks = myTasks.filter(t=>t.status!=='c')
+      .sort((a,b)=>{
+        const scoreA = isOver(a.date)?0:a.pri==='urgente'?1:a.pri==='alta'?2:3;
+        const scoreB = isOver(b.date)?0:b.pri==='urgente'?1:b.pri==='alta'?2:3;
+        return scoreA - scoreB;
+      }).slice(0,5);
+
+    html += `<div class="user-card">
+      <div class="user-card-head">
+        <div class="user-avatar" style="background:${u.color}">${u.init}</div>
+        <div>
+          <div class="user-card-name">${u.name}</div>
+          <div class="user-card-sub">${myTasks.length} tarea${myTasks.length!==1?'s':''} asignada${myTasks.length!==1?'s':''}</div>
+        </div>
+        ${mV>0?`<span style="margin-left:auto;font-size:11px;background:#FCEBEB;color:#791F1F;padding:3px 9px;border-radius:999px;font-weight:600">⚠ ${mV} vencida${mV!==1?'s':''}</span>`:'<span style="margin-left:auto;font-size:11px;background:#dcfce7;color:#166534;padding:3px 9px;border-radius:999px;font-weight:600">✓ Al día</span>'}
+      </div>
+      <div class="user-stats-row">
+        <div class="user-stat"><div class="user-stat-n" style="color:#94a3b8">${mP}</div><div class="user-stat-l">Pend.</div></div>
+        <div class="user-stat"><div class="user-stat-n" style="color:#2563eb">${mE}</div><div class="user-stat-l">Prog.</div></div>
+        <div class="user-stat"><div class="user-stat-n" style="color:#16a34a">${mC}</div><div class="user-stat-l">Listas</div></div>
+        <div class="user-stat"><div class="user-stat-n" style="color:#E24B4A">${mV}</div><div class="user-stat-l">Venc.</div></div>
+      </div>
+      <div class="user-prog-label"><span>Progreso</span><span style="font-weight:600;color:${u.color}">${pct}%</span></div>
+      <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${u.color}"></div></div>
+      ${openTasks.length>0?`<div class="user-tasks-list">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Próximas tareas</div>
+        ${openTasks.map(t=>{
+          const over=t.date&&isOver(t.date);
+          const dotC=over?'#E24B4A':SEM_C[t.pri]||'#639922';
+          const biz=BIZ_LABELS[t.biz]||'';
+          const bizC=BIZ_C[t.biz]||'#639922';
+          return `<div class="user-task-item">
+            <span class="user-task-dot" style="background:${dotC}"></span>
+            <span class="user-task-title" title="${t.title}">${t.title}</span>
+            <span class="user-task-biz" style="background:${bizC}18;color:${bizC}">${biz}</span>
+            ${t.date?`<span class="user-task-date">${fmtDate(t.date)}</span>`:''}
+          </div>`;
+        }).join('')}
+      </div>`:'<div style="text-align:center;padding:12px;color:var(--text3);font-size:12px">Sin tareas abiertas ✓</div>'}
+    </div>`;
+  });
+
+  html += '</div></div>';
+  // ── END USER SECTION ─────────────────────────────
+
   document.getElementById('dash-view').innerHTML=html;
 }
 </script>
