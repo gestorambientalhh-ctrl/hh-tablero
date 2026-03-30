@@ -218,6 +218,30 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 
 
 
+
+/* MEETING NOTES */
+.notes-section{padding:16px;background:var(--bg2);flex:1;overflow-y:auto}
+.meeting-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px}
+.meeting-card-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.meeting-date-badge{background:var(--blue);color:#fff;font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap}
+.meeting-title{font-size:14px;font-weight:600;color:var(--text);flex:1}
+.meeting-biz-tag{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:500}
+.meeting-body{font-size:13px;color:var(--text2);line-height:1.6;white-space:pre-wrap}
+.meeting-footer{display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.meeting-author{font-size:11px;color:var(--text3)}
+.meeting-del{background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;margin-left:auto}
+.meeting-del:hover{color:#E24B4A}
+.meeting-form{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:16px}
+.meeting-form-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px}
+.meeting-textarea{width:100%;min-height:100px;font-size:13px;border:1px solid var(--border);border-radius:8px;padding:10px;font-family:inherit;resize:vertical;outline:none;color:var(--text);background:var(--bg2);line-height:1.6}
+.meeting-textarea:focus{border-color:var(--blue)}
+.meeting-empty{text-align:center;padding:40px;color:var(--text3);font-size:13px}
+
+/* PAYMENT SUPPORT */
+.support-required{background:#FEF3C7;border:1.5px solid #F59E0B;border-radius:8px;padding:8px 12px;margin-bottom:8px;display:flex;align-items:center;gap:8px;font-size:12px;color:#92400E;font-weight:500}
+.support-badge{font-size:10px;background:#FEF3C7;color:#92400E;padding:2px 7px;border-radius:999px;font-weight:600;border:1px solid #F59E0B}
+.support-done-badge{font-size:10px;background:#DCFCE7;color:#166534;padding:2px 7px;border-radius:999px;font-weight:600;border:1px solid #86EFAC}
+
 /* USER MANAGEMENT VISUAL */
 .user-section{margin-top:20px}
 .user-section-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
@@ -486,6 +510,18 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
               <option value="12">12 veces</option><option value="24">24 veces</option>
             </select>
           </div>
+          <div class="form-field">
+            <label style="display:flex;align-items:center;gap:5px;cursor:pointer;height:34px;margin-bottom:0">
+              <input type="checkbox" id="fa-payment" onchange="togglePayment()" style="width:15px;height:15px;cursor:pointer;accent-color:#F59E0B">
+              <span style="font-size:12px;color:var(--text2);white-space:nowrap">💰 Es pago</span>
+            </label>
+          </div>
+          <div id="fa-support-wrap" style="display:none;align-items:flex-end;gap:6px">
+            <div class="form-field">
+              <label>Soporte requerido</label>
+              <input id="fa-support-desc" type="text" placeholder="Ej: Factura, comprobante..." style="height:34px;font-size:12px;border:1px solid #F59E0B;border-radius:6px;padding:0 8px;font-family:inherit;width:200px">
+            </div>
+          </div>
           <button class="btn-save" onclick="saveTask()">Guardar</button>
           <button class="btn-cancel" onclick="toggleForm()">Cancelar</button>
         </div>
@@ -545,7 +581,51 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
         </button>
       </div>
     </div>
+
   </div>
+
+  <!-- REUNIONES SECTION -->
+  <div id="section-reuniones" style="display:none;height:calc(100vh - 52px);flex-direction:column;overflow:hidden;background:var(--bg2)">
+    <div class="project-bar">
+      <span class="proj-title">📋 Notas de Reunión</span>
+<button class="btn-task" onclick="clearMeetingForm()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Nueva reunión
+      </button>
+    </div>
+    <!-- Meeting form inline (always at top when open) -->
+    <div id="meeting-form-area" style="display:block;padding:14px 16px;border-bottom:2px solid var(--blue-mid);background:var(--bg);flex-shrink:0">
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px">📋 Nueva nota de reunión</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:flex-end">
+        <div style="flex:2;min-width:160px">
+          <div style="font-size:11px;color:var(--text2);margin-bottom:3px">Título</div>
+          <input id="mt-title" type="text" placeholder="Ej: Reunión semanal Gestor HH" style="width:100%;height:34px;font-size:13px;border:1px solid var(--border);border-radius:6px;padding:0 10px;font-family:inherit;outline:none;color:var(--text);background:var(--bg2)">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:3px">Fecha</div>
+          <input id="mt-date" type="date" style="height:34px;font-size:13px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text);background:var(--bg2)">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:3px">Proyecto</div>
+          <select id="mt-biz" style="height:34px;font-size:13px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text);background:var(--bg2)">
+            <option value="">General</option>
+            <option value="0">Gestor HH</option>
+            <option value="1">Logístico</option>
+            <option value="2">Montevra</option>
+          </select>
+        </div>
+      </div>
+      <textarea id="mt-body" placeholder="Escribe los puntos tratados, decisiones tomadas, compromisos..." style="width:100%;min-height:120px;font-size:13px;border:1px solid var(--border);border-radius:8px;padding:10px;font-family:inherit;resize:vertical;outline:none;color:var(--text);background:var(--bg2);line-height:1.6;box-sizing:border-box"></textarea>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn-save" onclick="saveMeeting()" style="background:var(--blue)">💾 Guardar reunión</button>
+        <button class="btn-cancel" onclick="toggleMeetingForm()">Cancelar</button>
+      </div>
+    </div>
+    <!-- List of meetings -->
+    <div id="meetings-view" style="flex:1;overflow-y:auto;padding:16px;background:#eef2f7;-webkit-overflow-scrolling:touch"></div>
+  </div>
+
+
 
   <!-- NOTES MODAL -->
   <div id="notes-overlay" class="notes-overlay" style="display:none" onclick="closeNotes(event)">
@@ -575,7 +655,8 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
     </div>
   </div>
 
-  <!-- MOBILE BOTTOM NAV -->
+
+  <!-- MOBILE BOTTOM NAV -->->
   <nav class="mob-nav">
     <button class="mob-nav-btn act" id="mobnav-tablero" onclick="showSection('tablero')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
@@ -584,6 +665,10 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
     <button class="mob-nav-btn" id="mobnav-dashboard" onclick="showSection('dashboard')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
       Dashboard
+    </button>
+    <button class="mob-nav-btn" id="mobnav-reuniones" onclick="showSection('reuniones')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Reuniones
     </button>
     <button class="mob-nav-btn" id="mobnav-nueva" onclick="toggleForm()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -638,15 +723,40 @@ function setBiz(i){
 
 function showSection(s){
   curSection=s;
-  document.getElementById('sec-tablero').classList.toggle('act',s==='tablero');
-  document.getElementById('sec-dashboard').classList.toggle('act',s==='dashboard');
-  document.getElementById('mobnav-tablero').classList.toggle('act',s==='tablero');
-  document.getElementById('mobnav-dashboard').classList.toggle('act',s==='dashboard');
+  // Nav tabs desktop
+  ['tablero','dashboard','reuniones'].forEach(sec=>{
+    const el=document.getElementById('nav-'+sec);
+    if(el) el.classList.toggle('act',sec===s);
+  });
+  // Mobile nav
+  ['tablero','dashboard','reuniones'].forEach(sec=>{
+    const el=document.getElementById('mobnav-'+sec);
+    if(el) el.classList.toggle('act',sec===s);
+  });
+  // section-bar tabs (tablero/dashboard are inside section-tablero)
+  const st=document.getElementById('sec-tablero');
+  const sd=document.getElementById('sec-dashboard');
+  if(st) st.classList.toggle('act',s==='tablero');
+  if(sd) sd.classList.toggle('act',s==='dashboard');
+  // Show/hide main sections
+  const secTab=document.getElementById('section-tablero');
+  const secReu=document.getElementById('section-reuniones');
+  if(secTab) secTab.style.display=(s==='tablero'||s==='dashboard')?'flex':'none';
+  if(secReu) secReu.style.display=s==='reuniones'?'flex':'none';
+  // Also hide/show app-layout
+  const appLayout=document.querySelector('.app-layout');
+  if(appLayout) appLayout.style.display=s==='reuniones'?'none':'flex';
   // btn-add only on tablero + biz < 3
   document.getElementById('btn-add').style.display=(s==='tablero'&&biz<3)?'flex':'none';
   document.getElementById('mobnav-nueva').style.display=(s==='tablero'&&biz<3)?'flex':'none';
   document.getElementById('form-area').style.display='none';
-  renderCurrent();
+  if(s==='reuniones'){
+    renderMeetings();
+    const today=new Date().toISOString().split('T')[0];
+    const dtEl=document.getElementById('mt-date');
+    if(dtEl&&!dtEl.value) dtEl.value=today;
+  }
+  else renderCurrent();
 }
 
 function toggleRecFields(){
@@ -825,12 +935,133 @@ function checkPw(){
 }
 
 
+
+// ── MEETING NOTES ─────────────────────────────────────────────
+let meetings = [];
+let meetingFormOpen = false;
+
+function loadMeetings(){
+  const s = localStorage.getItem('hh-meetings-v1');
+  meetings = s ? JSON.parse(s) : [];
+  if(window.persistMeetingsToFirebase) window.persistMeetingsToFirebase(meetings);
+}
+
+function persistMeetings(){
+  localStorage.setItem('hh-meetings-v1', JSON.stringify(meetings));
+  if(window.persistMeetingsToFirebase) window.persistMeetingsToFirebase(meetings);
+}
+
+function toggleMeetingForm(){
+  clearMeetingForm();
+}
+function clearMeetingForm(){
+  const today = new Date().toISOString().split('T')[0];
+  if(document.getElementById('mt-title')) document.getElementById('mt-title').value='';
+  if(document.getElementById('mt-body')) document.getElementById('mt-body').value='';
+  if(document.getElementById('mt-biz')) document.getElementById('mt-biz').value='';
+  if(document.getElementById('mt-date')) document.getElementById('mt-date').value=today;
+  if(document.getElementById('mt-title')) document.getElementById('mt-title').focus();
+}
+
+function saveMeeting(){
+  const titleEl = document.getElementById('mt-title');
+  const bodyEl = document.getElementById('mt-body');
+  const bizEl = document.getElementById('mt-biz');
+  if(!titleEl||!bodyEl||!bizEl) return;
+  const title = titleEl.value.trim();
+  const body = bodyEl.value.trim();
+  const biz = bizEl.value;
+  if(!body){ bodyEl.focus(); return; }
+  const dateVal = document.getElementById('mt-date').value || new Date().toISOString().split('T')[0];
+  const dateObj = new Date(dateVal+'T00:00:00');
+  const dateFmt = dateObj.toLocaleDateString('es-CO',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  meetings.unshift({
+    id: 'mt'+Date.now(),
+    title: title || 'Reunión de trabajo',
+    body,
+    biz: biz===''?null:parseInt(biz),
+    date: dateFmt,
+    dateISO: dateVal,
+    author: 'HH Socios'
+  });
+  persistMeetings();
+  clearMeetingForm();
+  renderMeetings();
+}
+
+function delMeeting(id){
+  if(!confirm('¿Eliminar esta nota de reunión?')) return;
+  meetings = meetings.filter(m=>m.id!==id);
+  persistMeetings();
+  renderMeetings();
+}
+
+function renderMeetings(){
+  loadMeetings();
+  const BIZ_NAMES = ['Gestor HH','Logístico','Montevra'];
+  const BIZ_C = ['#639922','#378ADD','#D85A30'];
+  let html = '';
+
+  if(!meetings.length){
+    html += '<div class="meeting-empty">No hay notas de reunión aún.<br>Crea la primera con el botón "+ Nueva reunión"</div>';
+  } else {
+    // Group by month
+    const grouped = {};
+    meetings.forEach(m=>{
+      const key = m.dateISO ? m.dateISO.substring(0,7) : 'otros';
+      if(!grouped[key]) grouped[key]=[];
+      grouped[key].push(m);
+    });
+    const MONTHS_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    Object.keys(grouped).sort().reverse().forEach(key=>{
+      const [y,mo] = key.split('-');
+      const monthLabel = mo ? MONTHS_ES[parseInt(mo)-1]+' '+y : 'Sin fecha';
+      html += `<div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin:12px 0 8px">${monthLabel}</div>`;
+      grouped[key].forEach(m=>{
+        const bizTag = m.biz!==null&&m.biz!==undefined
+          ? `<span class="meeting-biz-tag" style="background:${BIZ_C[m.biz]}18;color:${BIZ_C[m.biz]}">${BIZ_NAMES[m.biz]}</span>`
+          : '<span class="meeting-biz-tag" style="background:var(--bg2);color:var(--text3)">General</span>';
+        html += `<div class="meeting-card">
+          <div class="meeting-card-head">
+            <span class="meeting-date-badge">${m.dateISO||''}</span>
+            <span class="meeting-title">${m.title}</span>
+            ${bizTag}
+          </div>
+          <div class="meeting-body">${m.body.replace(/</g,'&lt;')}</div>
+          <div class="meeting-footer">
+            <span class="meeting-author">📝 ${m.author}</span>
+            <button class="meeting-del" onclick="delMeeting('${m.id}')" title="Eliminar">×</button>
+          </div>
+        </div>`;
+      });
+    });
+  }
+
+  document.getElementById('meetings-view').innerHTML = html;
+}
+
+
+// ── PAYMENT SUPPORT ───────────────────────────────────────────
+function markSupportDone(id){
+  const t = tasks.find(x=>x.id===id);
+  if(!t) return;
+  t.supportDone = true;
+  persist();
+  renderCurrent();
+}
+
+function togglePayment(){
+  const isP = document.getElementById('fa-payment').checked;
+  document.getElementById('fa-support-wrap').style.display = isP ? 'flex' : 'none';
+}
+
+
 function loadTasks(){
   const local = localStorage.getItem('hh-socios-v3');
-  if(local){ tasks = JSON.parse(local); }
+  tasks = local ? JSON.parse(local) : [];
+  window.tasks = tasks;
   setBiz(0);
   setTimeout(checkRecurringOnLoad, 1500);
-  window.tasks = tasks;
   window.dispatchEvent(new Event('app-ready'));
   setInterval(()=>window.dispatchEvent(new Event('app-ready')), 10000);
 }
@@ -840,13 +1071,7 @@ let recurring = [];
 
 function loadRecurring(){
   const s = localStorage.getItem('hh-recurring-v1');
-  recurring = s ? JSON.parse(s) : [
-    {id:'r1', title:'Pago nómina Anderson', who:'Anderson', biz:0, day:1, pri:'urgente'},
-    {id:'r2', title:'Reporte mensual clientes', who:'Raul', biz:0, day:5, pri:'alta'},
-    {id:'r3', title:'Revisión inventario dark stores', who:'Ambos', biz:1, day:1, pri:'normal'},
-    {id:'r4', title:'Cierre caja Montevra', who:'Anderson', biz:2, day:28, pri:'alta'},
-    {id:'r5', title:'Cobro fiados del mes', who:'Raul', biz:2, day:5, pri:'urgente'},
-  ];
+  recurring = s ? JSON.parse(s) : [];
   persistRecurring();
 }
 
@@ -997,7 +1222,13 @@ function saveTask(){
     recurring.push({id:'r'+Date.now(),title,who:whoVal,biz:bizVal,day,pri:priVal,freq});
     persistRecurring();
   } else {
-    tasks.push({id:Date.now()+'',title,who:whoVal,pri:priVal,date:dateVal,status:'p',biz:bizVal});
+    const isPayment = document.getElementById('fa-payment').checked;
+  const supportDesc = isPayment ? document.getElementById('fa-support-desc').value.trim() : '';
+  tasks.push({id:Date.now()+'',title,who:whoVal,pri:priVal,date:dateVal,status:'p',biz:bizVal,
+    isPayment: isPayment || false,
+    supportDesc: supportDesc,
+    supportDone: false
+  });
   }
   persist();
   document.getElementById('fa-title').value='';
@@ -1090,7 +1321,18 @@ function saveNoteAndMove(){
     const now=new Date();
     t.notes.push({text:noteText,date:now.toLocaleDateString('es-CO'),from:document.getElementById('fwho').value||'Equipo'});
   }
-  t.status=ord[i+pendingMove.dir];
+  const newStatus = ord[i+pendingMove.dir];
+  // Block payment tasks from completing without support
+  if(newStatus==='c' && t.isPayment && !t.supportDone){
+    // Ask if support is ready
+    const confirm_support = confirm('⚠️ Esta tarea requiere soporte:\n"'+(t.supportDesc||'comprobante')+'".\n\n¿Ya dejaste el soporte en la carpeta?\n\nClic en Aceptar para confirmar que el soporte está listo.');
+    if(!confirm_support){
+      closeNotesModalReset();
+      return;
+    }
+    t.supportDone = true;
+  }
+  t.status=newStatus;
   persist();
   closeNotesModalReset();
   renderCurrent();
@@ -1212,6 +1454,8 @@ function cardHtml(t,showBiz){
   const ord=['p','e','c'];const idx=ord.indexOf(t.status);
   return `<div class="card" draggable="true" data-task-id="${t.id}" style="${sem.vencida?'border-left:4px solid #E24B4A;border-radius:8px':''}">
     ${sem.vencida?'<div class="vencida-badge">⚠ VENCIDA</div>':''}
+    ${t.isPayment&&!t.supportDone?'<div class="support-required"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.73 18l-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Requiere soporte: <strong>'+(t.supportDesc||'comprobante')+'</strong> — no se puede cerrar sin el soporte</div>':''}
+    ${t.isPayment&&t.supportDone?'<span class="support-done-badge">✓ Soporte registrado</span>':''}
     ${t.isRecurring?`<span class="rec-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>${t.recLabel||'Recurrente'}</span>`:''}
     <div class="card-top">
       <div class="card-cb${done?' done':''}" onclick="toggleDone('${t.id}')"></div>
@@ -1227,6 +1471,7 @@ function cardHtml(t,showBiz){
       ${showBiz?`<span class="biz-pill" style="background:${BIZ_C[t.biz]}20;color:${BIZ_C[t.biz]}">${BIZ_NAMES[t.biz]||''}</span>`:''}
       <div class="avatar-sm" style="background:${wa.bg};color:${wa.col}">${wa.init}</div>
     </div>
+    ${t.isPayment&&!t.supportDone&&!done?`<button onclick="markSupportDone('${t.id}')" style="width:100%;margin-bottom:6px;height:28px;background:#FEF3C7;border:1.5px solid #F59E0B;border-radius:6px;font-size:11px;font-weight:600;color:#92400E;cursor:pointer;font-family:inherit">📎 Marcar soporte como registrado</button>`:''}
     <div class="card-actions" style="${isViewer?'display:none':''}">
       ${sem.vencida
         ? `<button class="ca-btn" style="background:#E24B4A;color:#fff;border-color:#E24B4A" onclick="moveTaskToComplete('${t.id}')">✓ Completar</button>`
