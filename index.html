@@ -448,6 +448,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
       <div class="section-bar">
         <button class="sec-tab act" id="sec-tablero" onclick="showSection('tablero')">Tablero</button>
         <button class="sec-tab" id="sec-dashboard" onclick="showSection('dashboard')">Dashboard</button>
+        <button class="sec-tab" id="sec-reuniones" onclick="showSection('reuniones')">📋 Reuniones</button>
         <div style="display:flex;align-items:center;gap:6px;margin-left:10px">
           <span style="font-size:11px;color:var(--text2);white-space:nowrap">Ver:</span>
           <button class="resp-btn act" id="rb-all" onclick="setResp('')">Todos</button>
@@ -736,8 +737,10 @@ function showSection(s){
   // section-bar tabs (tablero/dashboard are inside section-tablero)
   const st=document.getElementById('sec-tablero');
   const sd=document.getElementById('sec-dashboard');
+  const sr=document.getElementById('sec-reuniones');
   if(st) st.classList.toggle('act',s==='tablero');
   if(sd) sd.classList.toggle('act',s==='dashboard');
+  if(sr) sr.classList.toggle('act',s==='reuniones');
   // Show/hide main sections
   const secTab=document.getElementById('section-tablero');
   const secReu=document.getElementById('section-reuniones');
@@ -748,6 +751,9 @@ function showSection(s){
   if(appLayout) appLayout.style.display=s==='reuniones'?'none':'flex';
   // btn-add only on tablero + biz < 3
   document.getElementById('btn-add').style.display=(s==='tablero'&&biz<3)?'flex':'none';
+  // Hide filters on reuniones
+  const filterArea=document.querySelector('.section-bar .sem-leg');
+  const filterVer=document.querySelector('.section-bar div[style*="Ver:"]');
   document.getElementById('mobnav-nueva').style.display=(s==='tablero'&&biz<3)?'flex':'none';
   document.getElementById('form-area').style.display='none';
   if(s==='reuniones'){
