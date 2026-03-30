@@ -1113,6 +1113,7 @@ function loadTasks(){
   const local = localStorage.getItem('hh-socios-v3');
   tasks = local ? JSON.parse(local) : [];
   window.tasks = tasks;
+  autoAdvanceTasks();
   setBiz(0);
   setTimeout(checkRecurringOnLoad, 1500);
   window.dispatchEvent(new Event('app-ready'));
@@ -1416,6 +1417,23 @@ function persist(){
   localStorage.setItem('hh-socios-v3',JSON.stringify(tasks));
   localStorage.setItem('hh-socios-updated', Date.now());
   if(window.persistToFirebase) window.persistToFirebase(tasks);
+}
+
+function autoAdvanceTasks(){
+  // Tareas pendientes con 5 días o menos pasan automáticamente a En Progreso
+  let changed = false;
+  tasks.forEach(t=>{
+    if(t.status!=='p' || !t.date) return;
+    const dl = daysLeft(t.date);
+    if(dl !== null && dl <= 5 && dl >= 0){
+      t.status = 'e';
+      changed = true;
+    }
+  });
+  if(changed){
+    persist();
+    if(typeof window.renderCurrent==='function') window.renderCurrent();
+  }
 }
 
 function fmtDate(d){
