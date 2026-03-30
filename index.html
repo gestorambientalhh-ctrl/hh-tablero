@@ -344,6 +344,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 /* RESPONSIVE */
 @media(max-width:700px){
   .app-layout{height:calc(100vh - 52px - 56px)}
+  #section-reuniones{top:52px;bottom:56px}
   .mob-nav{display:flex}
   .search-top{width:110px}
   .fsel-top{display:none}
@@ -599,10 +600,14 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
   </div>
 
   <!-- REUNIONES SECTION -->
-  <div id="section-reuniones" style="display:none;height:calc(100vh - 92px);flex-direction:column;overflow:hidden;background:var(--bg2)">
+  <div id="section-reuniones" style="display:none;position:fixed;top:52px;left:0;right:0;bottom:0;flex-direction:column;overflow:hidden;background:var(--bg2);z-index:50">
     <div class="project-bar">
+      <button onclick="showSection('tablero')" style="display:flex;align-items:center;gap:6px;height:32px;padding:0 12px;font-size:13px;font-weight:500;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text2);cursor:pointer;font-family:inherit;margin-right:8px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        Inicio
+      </button>
       <span class="proj-title">📋 Notas de Reunión</span>
-<button class="btn-task" onclick="clearMeetingForm()">
+      <button class="btn-task" onclick="clearMeetingForm()" style="margin-left:auto">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Nueva reunión
       </button>
@@ -758,60 +763,38 @@ function setBiz(i){
 
 function showSection(s){
   curSection=s;
-  // Nav tabs desktop
+
+  // ── Tabs desktop (section-bar)
   ['tablero','dashboard','reuniones'].forEach(sec=>{
-    const el=document.getElementById('nav-'+sec);
+    const el=document.getElementById('sec-'+sec);
     if(el) el.classList.toggle('act',sec===s);
   });
-  // Mobile nav
+
+  // ── Tabs mobile (bottom nav)
   ['tablero','dashboard','reuniones'].forEach(sec=>{
     const el=document.getElementById('mobnav-'+sec);
     if(el) el.classList.toggle('act',sec===s);
   });
-  // section-bar tabs (tablero/dashboard are inside section-tablero)
-  const st=document.getElementById('sec-tablero');
-  const sd=document.getElementById('sec-dashboard');
-  const sr=document.getElementById('sec-reuniones');
-  if(st) st.classList.toggle('act',s==='tablero');
-  if(sd) sd.classList.toggle('act',s==='dashboard');
-  if(sr) sr.classList.toggle('act',s==='reuniones');
-  // Show/hide main sections
+
+  // ── Show/hide sections
   const secTab=document.getElementById('section-tablero');
   const secReu=document.getElementById('section-reuniones');
   if(secTab) secTab.style.display=(s==='tablero'||s==='dashboard')?'flex':'none';
   if(secReu) secReu.style.display=s==='reuniones'?'flex':'none';
-  // Show/hide content areas
-  const appLayout=document.querySelector('.app-layout');
-  const boardEl=document.getElementById('board');
-  const dashEl=document.getElementById('dash-view');
-  const globalEl=document.getElementById('global-view');
-  // Show app-layout always but hide its content when in reuniones
-  if(appLayout) appLayout.style.visibility=s==='reuniones'?'hidden':'visible';
-  if(appLayout) appLayout.style.height=s==='reuniones'?'0':'';
-  if(appLayout) appLayout.style.overflow=s==='reuniones'?'hidden':'';
-  // Hide/show filters in section-bar
-  const secBar=document.querySelector('.section-bar');
-  if(secBar){
-    [...secBar.children].forEach(el=>{
-      if(el.id==='sec-tablero'||el.id==='sec-dashboard'||el.id==='sec-reuniones') return;
-      el.style.visibility=s==='reuniones'?'hidden':'visible';
-    });
-  }
-  // btn-add only on tablero + biz < 3
+
+  // ── Buttons
   document.getElementById('btn-add').style.display=(s==='tablero'&&biz<3)?'flex':'none';
-  // Hide filters on reuniones
-  const filterArea=document.querySelector('.section-bar .sem-leg');
-  const filterVer=document.querySelector('.section-bar div[style*="Ver:"]');
-  document.getElementById('mobnav-nueva').style.display=(s==='tablero'&&biz<3)?'flex':'none';
+  const mobNueva=document.getElementById('mobnav-nueva');
+  if(mobNueva) mobNueva.style.display=(s==='tablero'&&biz<3)?'flex':'none';
   document.getElementById('form-area').style.display='none';
+
+  // ── Render
   if(s==='reuniones'){
     renderMeetings();
     setTimeout(initRTE,200);
-    const today=new Date().toISOString().split('T')[0];
-    const dtEl=document.getElementById('mt-date');
-    if(dtEl&&!dtEl.value) dtEl.value=today;
+  } else {
+    renderCurrent();
   }
-  else renderCurrent();
 }
 
 function toggleRecFields(){
