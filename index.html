@@ -219,6 +219,19 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 
 
 
+
+/* RICH TEXT EDITOR */
+.rte-toolbar{display:flex;gap:4px;flex-wrap:wrap;padding:8px;background:var(--bg2);border:1px solid var(--border);border-radius:8px 8px 0 0;border-bottom:none;align-items:center}
+.rte-btn{background:none;border:1px solid transparent;border-radius:5px;padding:4px 8px;font-size:13px;cursor:pointer;color:var(--text);font-family:inherit;height:28px;display:flex;align-items:center;gap:3px;min-width:28px;justify-content:center}
+.rte-btn:hover{background:var(--bg);border-color:var(--border)}
+.rte-sep{width:1px;height:20px;background:var(--border);margin:0 2px;flex-shrink:0}
+.rte-editor{min-height:140px;border:1px solid var(--border);border-radius:0 0 8px 8px;padding:12px;font-family:inherit;font-size:13px;outline:none;line-height:1.8;color:var(--text);background:var(--bg2)}
+.rte-editor:focus{border-color:var(--blue)}
+.rte-editor ul,.meeting-body ul{padding-left:20px;margin:4px 0}
+.rte-editor ol,.meeting-body ol{padding-left:20px;margin:4px 0}
+.rte-color-pick{width:22px;height:22px;border-radius:4px;border:1px solid var(--border);cursor:pointer;padding:0}
+.rte-select{height:26px;font-size:12px;border:1px solid var(--border);border-radius:5px;padding:0 6px;font-family:inherit;background:var(--bg);color:var(--text)}
+
 /* MEETING NOTES */
 .notes-section{padding:16px;background:var(--bg2);flex:1;overflow-y:auto}
 .meeting-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px}
@@ -616,7 +629,28 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
           </select>
         </div>
       </div>
-      <textarea id="mt-body" placeholder="Escribe los puntos tratados, decisiones tomadas, compromisos..." style="width:100%;min-height:120px;font-size:13px;border:1px solid var(--border);border-radius:8px;padding:10px;font-family:inherit;resize:vertical;outline:none;color:var(--text);background:var(--bg2);line-height:1.6;box-sizing:border-box"></textarea>
+      <div class="rte-toolbar">
+        <button class="rte-btn" onclick="rte('bold')"><b>B</b></button>
+        <button class="rte-btn" onclick="rte('italic')"><i>I</i></button>
+        <button class="rte-btn" onclick="rte('underline')"><u>U</u></button>
+        <div class="rte-sep"></div>
+        <button class="rte-btn" onclick="rte('insertUnorderedList')">&#8226; Lista</button>
+        <button class="rte-btn" onclick="rte('insertOrderedList')">1. Lista</button>
+        <div class="rte-sep"></div>
+        <select class="rte-select" onchange="rte('fontSize',this.value);this.value=''">
+          <option value="">Tam.</option>
+          <option value="1">Peq.</option>
+          <option value="3">Normal</option>
+          <option value="5">Grande</option>
+          <option value="7">Muy grande</option>
+        </select>
+        <div class="rte-sep"></div>
+        <input type="color" class="rte-color-pick" value="#2563eb" title="Color" onchange="rte('foreColor',this.value)">
+        <input type="color" class="rte-color-pick" value="#fef08a" title="Resaltar" onchange="rte('hiliteColor',this.value)">
+        <div class="rte-sep"></div>
+        <button class="rte-btn" onclick="document.getElementById('rte-editor').innerHTML=''">&#128465;</button>
+      </div>
+      <div id="rte-editor" class="rte-editor" contenteditable="true"></div>
       <div style="display:flex;gap:8px;margin-top:10px">
         <button class="btn-save" onclick="saveMeeting()" style="background:var(--blue)">💾 Guardar reunión</button>
         <button class="btn-cancel" onclick="toggleMeetingForm()">Cancelar</button>
@@ -749,6 +783,14 @@ function showSection(s){
   // Also hide/show app-layout
   const appLayout=document.querySelector('.app-layout');
   if(appLayout) appLayout.style.display=s==='reuniones'?'none':'flex';
+  // Also show/hide section-bar filters when in reuniones
+  const secBar=document.querySelector('.section-bar');
+  if(secBar){
+    [...secBar.children].forEach(el=>{
+      if(el.id==='sec-tablero'||el.id==='sec-dashboard'||el.id==='sec-reuniones') return;
+      el.style.display=s==='reuniones'?'none':'';
+    });
+  }
   // btn-add only on tablero + biz < 3
   document.getElementById('btn-add').style.display=(s==='tablero'&&biz<3)?'flex':'none';
   // Hide filters on reuniones
@@ -758,6 +800,7 @@ function showSection(s){
   document.getElementById('form-area').style.display='none';
   if(s==='reuniones'){
     renderMeetings();
+    setTimeout(initRTE,200);
     const today=new Date().toISOString().split('T')[0];
     const dtEl=document.getElementById('mt-date');
     if(dtEl&&!dtEl.value) dtEl.value=today;
@@ -960,10 +1003,13 @@ function persistMeetings(){
 function toggleMeetingForm(){
   clearMeetingForm();
 }
+function rte(cmd,val){const ed=document.getElementById('rte-editor');if(ed)ed.focus();document.execCommand(cmd,false,val||null);}
+function initRTE(){const ed=document.getElementById('rte-editor');if(ed)ed.focus();}
+
 function clearMeetingForm(){
   const today = new Date().toISOString().split('T')[0];
   if(document.getElementById('mt-title')) document.getElementById('mt-title').value='';
-  if(document.getElementById('mt-body')) document.getElementById('mt-body').value='';
+  const rted=document.getElementById('rte-editor');if(rted){rted.innerHTML='';rted.focus();}
   if(document.getElementById('mt-biz')) document.getElementById('mt-biz').value='';
   if(document.getElementById('mt-date')) document.getElementById('mt-date').value=today;
   if(document.getElementById('mt-title')) document.getElementById('mt-title').focus();
@@ -971,13 +1017,13 @@ function clearMeetingForm(){
 
 function saveMeeting(){
   const titleEl = document.getElementById('mt-title');
-  const bodyEl = document.getElementById('mt-body');
   const bizEl = document.getElementById('mt-biz');
-  if(!titleEl||!bodyEl||!bizEl) return;
+  if(!titleEl||!bizEl) return;
   const title = titleEl.value.trim();
-  const body = bodyEl.value.trim();
-  const biz = bizEl.value;
-  if(!body){ bodyEl.focus(); return; }
+  const rted2=document.getElementById('rte-editor');
+  const body=rted2?rted2.innerHTML.trim():'';
+  const biz=bizEl.value;
+  if(!body||body==='<br>'){if(rted2)rted2.focus();return;}
   const dateVal = document.getElementById('mt-date').value || new Date().toISOString().split('T')[0];
   const dateObj = new Date(dateVal+'T00:00:00');
   const dateFmt = dateObj.toLocaleDateString('es-CO',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
@@ -993,6 +1039,15 @@ function saveMeeting(){
   persistMeetings();
   clearMeetingForm();
   renderMeetings();
+}
+
+function toggleMeetingCard(id){
+  const body = document.getElementById('mc-body-'+id);
+  const arrow = document.getElementById('mc-arrow-'+id);
+  if(!body) return;
+  const open = body.style.display==='none';
+  body.style.display = open ? 'block' : 'none';
+  if(arrow) arrow.style.transform = open ? 'rotate(180deg)' : '';
 }
 
 function delMeeting(id){
@@ -1027,16 +1082,19 @@ function renderMeetings(){
         const bizTag = m.biz!==null&&m.biz!==undefined
           ? `<span class="meeting-biz-tag" style="background:${BIZ_C[m.biz]}18;color:${BIZ_C[m.biz]}">${BIZ_NAMES[m.biz]}</span>`
           : '<span class="meeting-biz-tag" style="background:var(--bg2);color:var(--text3)">General</span>';
-        html += `<div class="meeting-card">
+        html += `<div class="meeting-card" style="cursor:pointer" onclick="toggleMeetingCard('${m.id}')">
           <div class="meeting-card-head">
             <span class="meeting-date-badge">${m.dateISO||''}</span>
             <span class="meeting-title">${m.title}</span>
             ${bizTag}
+            <span id="mc-arrow-${m.id}" style="color:var(--text3);font-size:14px;margin-left:4px;transition:transform .2s">▼</span>
+            <button class="meeting-del" onclick="event.stopPropagation();delMeeting('${m.id}')" title="Eliminar">×</button>
           </div>
-          <div class="meeting-body">${m.body.replace(/</g,'&lt;')}</div>
-          <div class="meeting-footer">
-            <span class="meeting-author">📝 ${m.author}</span>
-            <button class="meeting-del" onclick="delMeeting('${m.id}')" title="Eliminar">×</button>
+          <div id="mc-body-${m.id}" style="display:none">
+            <div class="meeting-body">${m.body}</div>
+            <div class="meeting-footer" onclick="event.stopPropagation()">
+              <span class="meeting-author">📝 ${m.author}</span>
+            </div>
           </div>
         </div>`;
       });
