@@ -1668,6 +1668,13 @@ function toggleCkItem(itemId, userId){
   ckChecks[wk][itemId][userId] = !ckChecks[wk][itemId][userId];
   saveCkData();
   renderChecklist();
+  // Update progress bars in board/dashboard if visible
+  if(curSection==='tablero'||curSection==='dashboard'){
+    renderCurrent();
+  }
+  // Show sync indicator
+  const ind=document.getElementById('sync-indicator');
+  if(ind){ind.style.opacity='1';setTimeout(()=>ind.style.opacity='0',1500);}
 }
 
 function deleteCkItem(id){
@@ -2387,6 +2394,11 @@ function renderBoard(){
   const cweStr=curWeekEndP.toISOString().split('T')[0];
 
   let pbHtml='<span style="font-size:11px;color:var(--text2);font-weight:600;white-space:nowrap">Avance:</span>';
+  // Load checklist data for combined progress
+  loadChecklist();
+  const curWkKey=getCurrentWeekKey();
+  const curWkChecks=ckChecks[curWkKey]||{};
+
   // Get current filters
   const curWhoFilter=document.getElementById('fwho')?document.getElementById('fwho').value:'';
   const curMonthFilter=getMonthFilter();
@@ -2408,17 +2420,28 @@ function renderBoard(){
 
     // Weekly tasks (filtered by selected week or current week)
     const weekTasks=allTasks.filter(t=>t.who===u.name&&t.date&&t.date>=filterStart&&t.date<=filterEnd);
-    const weekDone=weekTasks.filter(t=>t.status==='c').length;
+    // Count checklist completions for this week too
+    const ckUserItems=ckItems.filter(it=>it.who===u.name);
+    const ckDoneCount=ckUserItems.filter(it=>curWkChecks[it.id]?.[u.name]).length;
+    const weekDone=weekTasks.filter(t=>t.status==='c').length + ckDoneCount;
+    const weekTotalAdj=weekTasks.length + ckUserItems.length;
 
     // Monthly tasks (filtered by selected month or current month)
     const monthTasks=allTasks.filter(t=>t.who===u.name&&t.date&&t.date.startsWith(filterMonth));
-    const monthDone=monthTasks.filter(t=>t.status==='c').length;
+    // Add monthly ck completions
+    const monthCkDone=ckItems.filter(it=>it.who===u.name&&it.freq==='monthly').filter(it=>{
+      // Check any week in this month
+      return Object.keys(ckChecks).some(wk=>wk.startsWith(filterMonth.substring(0,7))&&ckChecks[wk][it.id]?.[u.name]);
+    }).length;
+    const monthDone=monthTasks.filter(t=>t.status==='c').length + monthCkDone;
+    const monthCkItems=ckItems.filter(it=>it.who===u.name&&it.freq==='monthly');
+    const monthTotalAdj=monthTasks.length+monthCkItems.length;
 
     // Skip user if no tasks at all
-    if(!weekTasks.length && !monthTasks.length) return;
+    if(!weekTasks.length && !monthTasks.length && !ckUserItems.length) return;
 
-    const weekPct=weekTasks.length?Math.round((weekDone/weekTasks.length)*100):0;
-    const monthPct=monthTasks.length?Math.round((monthDone/monthTasks.length)*100):0;
+    const weekPct=weekTotalAdj?Math.round((weekDone/weekTotalAdj)*100):0;
+    const monthPct=monthTotalAdj?Math.round((monthDone/monthTotalAdj)*100):0;
     const pctColor=weekPct>=80?'#16a34a':weekPct>=50?'#EF9F27':'#E24B4A';
     const mPctColor=monthPct>=80?'#16a34a':monthPct>=50?'#EF9F27':'#E24B4A';
 
