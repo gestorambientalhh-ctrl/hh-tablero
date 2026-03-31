@@ -232,6 +232,50 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 .rte-color-pick{width:22px;height:22px;border-radius:4px;border:1px solid var(--border);cursor:pointer;padding:0}
 .rte-select{height:26px;font-size:12px;border:1px solid var(--border);border-radius:5px;padding:0 6px;font-family:inherit;background:var(--bg);color:var(--text)}
 
+
+
+.edit-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:400;display:flex;align-items:center;justify-content:center;padding:20px}
+.edit-modal{background:var(--bg);border-radius:12px;width:100%;max-width:480px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.18)}
+.edit-modal-head{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.edit-modal-title{font-size:14px;font-weight:600;color:var(--text)}
+.edit-modal-body{padding:16px 20px;display:flex;flex-direction:column;gap:10px}
+.edit-field{display:flex;flex-direction:column;gap:4px}
+.edit-field label{font-size:11px;color:var(--text2)}
+.edit-field input,.edit-field select,.edit-field textarea{height:34px;font-size:13px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;outline:none;color:var(--text);background:var(--bg2)}
+.edit-field textarea{height:70px;padding:8px;resize:none}
+.edit-badge{font-size:10px;background:#FEF3C7;color:#92400E;padding:2px 8px;border-radius:999px;border:1px solid #F59E0B;font-weight:600}
+
+
+/* CHECKLIST MODULE */
+.ck-section{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#eef2f7}
+.ck-header{padding:12px 16px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0}
+.ck-body{flex:1;overflow-y:auto;padding:16px;-webkit-overflow-scrolling:touch}
+.ck-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px}
+.ck-card-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.ck-user-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.ck-username{font-size:14px;font-weight:600;color:var(--text);flex:1}
+.ck-pct{font-size:13px;font-weight:700}
+.ck-prog-bar{height:8px;background:#f0f0ee;border-radius:999px;overflow:hidden;margin-bottom:12px}
+.ck-prog-fill{height:100%;border-radius:999px;transition:width .4s}
+.ck-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;margin-bottom:4px;cursor:pointer;transition:background .15s}
+.ck-item:hover{background:var(--bg2)}
+.ck-item.done{opacity:.6}
+.ck-checkbox{width:18px;height:18px;border-radius:5px;border:2px solid #ccc;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.ck-checkbox.done{background:var(--blue);border-color:var(--blue)}
+.ck-item-label{flex:1;font-size:13px;color:var(--text)}
+.ck-item.done .ck-item-label{text-decoration:line-through;color:var(--text3)}
+.ck-item-date{font-size:11px;color:var(--text3)}
+.ck-summary{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:16px}
+.ck-summary-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px}
+.ck-user-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.ck-user-bar{flex:1;height:24px;background:var(--bg2);border-radius:6px;overflow:hidden;position:relative;display:flex;align-items:center}
+.ck-user-fill{height:100%;border-radius:6px;transition:width .4s;position:absolute;left:0;top:0}
+.ck-user-pct-label{position:relative;z-index:1;font-size:11px;font-weight:600;padding-left:8px;color:#fff}
+.ck-week-tabs{display:flex;gap:4px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.ck-week-tabs::-webkit-scrollbar{display:none}
+.ck-week-tab{padding:5px 12px;font-size:12px;border:1.5px solid var(--border);border-radius:20px;cursor:pointer;background:var(--bg);color:var(--text2);white-space:nowrap;font-family:inherit}
+.ck-week-tab.act{background:var(--blue);color:#fff;border-color:var(--blue)}
+
 /* MEETING NOTES */
 .notes-section{padding:16px;background:var(--bg2);flex:1;overflow-y:auto}
 .meeting-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px}
@@ -412,6 +456,10 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
     </div>
     <span class="logo-name">Tasks Socios</span>
     <span id="sync-indicator" style="font-size:10px;color:#16a34a;background:#dcfce7;padding:2px 8px;border-radius:999px;transition:opacity .5s;opacity:0;margin-left:4px">⟳ Sincronizado</span>
+    <button onclick="manualRefresh()" id="refresh-btn" title="Actualizar tareas" style="display:flex;align-items:center;gap:5px;height:30px;padding:0 10px;font-size:12px;font-weight:500;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text2);cursor:pointer;font-family:inherit;margin-left:4px;transition:all .2s">
+      <svg id="refresh-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+      Actualizar
+    </button>
 
     <!-- PROJECT TABS — desktop -->
     <div class="proj-tabs">
@@ -470,6 +518,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
         <button class="sec-tab act" id="sec-tablero" onclick="showSection('tablero')">Tablero</button>
         <button class="sec-tab" id="sec-dashboard" onclick="showSection('dashboard')">Dashboard</button>
         <button class="sec-tab" id="sec-reuniones" onclick="showSection('reuniones')">📋 Reuniones</button>
+        <button class="sec-tab" id="sec-checklist" onclick="showSection('checklist')">✅ Checklist</button>
         <div style="display:flex;align-items:center;gap:4px;margin-left:10px">
           <span style="font-size:11px;color:var(--text2);white-space:nowrap">Ver:</span>
           <div id="section-bar-filters" style="display:flex;gap:4px;flex-wrap:wrap">
@@ -733,6 +782,137 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
     </div>
   </div>
 
+  <!-- EDIT TASK MODAL -->
+  <div id="edit-overlay" class="edit-overlay" style="display:none" onclick="if(event.target===this)closeEdit()">
+    <div class="edit-modal">
+      <div class="edit-modal-head">
+        <div>
+          <div class="edit-modal-title">✏️ Editar tarea</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px">Los cambios quedan registrados</div>
+        </div>
+        <button onclick="closeEdit()" style="background:none;border:none;font-size:22px;color:var(--text2);cursor:pointer">×</button>
+      </div>
+      <div class="edit-modal-body">
+        <div class="edit-field">
+          <label>Título *</label>
+          <input id="edit-title" type="text" placeholder="Título de la tarea">
+        </div>
+        <div style="display:flex;gap:8px">
+          <div class="edit-field" style="flex:1">
+            <label>Responsable</label>
+            <select id="edit-who"></select>
+          </div>
+          <div class="edit-field" style="flex:1">
+            <label>Prioridad</label>
+            <select id="edit-pri">
+              <option value="normal">Normal</option>
+              <option value="alta">Alta</option>
+              <option value="urgente">Urgente</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <div class="edit-field" style="flex:1">
+            <label>Fecha límite</label>
+            <input id="edit-date" type="date">
+          </div>
+          <div class="edit-field" style="flex:1">
+            <label>Proyecto</label>
+            <select id="edit-biz">
+              <option value="0">Gestor HH</option>
+              <option value="1">Logístico</option>
+              <option value="2">Montevra</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--text)">
+            <input type="checkbox" id="edit-payment" onchange="toggleEditPayment()" style="width:15px;height:15px;accent-color:#F59E0B">
+            💰 Es tarea de pago
+          </label>
+        </div>
+        <div id="edit-payment-wrap" style="display:none" class="edit-field">
+          <label>Soporte requerido</label>
+          <input id="edit-support-desc" type="text" placeholder="Ej: Factura, comprobante...">
+        </div>
+        <div class="edit-field">
+          <label>Nota de edición (opcional)</label>
+          <textarea id="edit-note" placeholder="¿Por qué se editó esta tarea?"></textarea>
+        </div>
+      </div>
+      <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn-cancel" onclick="closeEdit()">Cancelar</button>
+        <button class="btn-save" onclick="saveEdit()" style="background:var(--blue)">💾 Guardar cambios</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHECKLIST SECTION -->
+  <div id="section-checklist" style="display:none;position:fixed;top:52px;left:0;right:0;bottom:0;flex-direction:column;overflow:hidden;z-index:50;background:#eef2f7">
+    <div class="ck-header">
+      <button onclick="showSection('tablero')" style="display:flex;align-items:center;gap:5px;height:30px;padding:0 10px;font-size:12px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text2);cursor:pointer;font-family:inherit">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        Inicio
+      </button>
+      <span style="font-size:14px;font-weight:600;color:var(--text)">✅ Checklist Semanal</span>
+      <select id="ck-month" onchange="renderChecklist()" style="height:28px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;background:var(--bg);color:var(--text2)">
+        <option value="">Este mes</option>
+      </select>
+      <select id="ck-who" onchange="renderChecklist()" style="height:28px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;background:var(--bg);color:var(--text2)">
+        <option value="">Todos los usuarios</option>
+      </select>
+      <button onclick="openCkItemModal()" style="height:30px;padding:0 12px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;margin-left:auto">
+        + Agregar actividad
+      </button>
+    </div>
+    <div id="ck-body" class="ck-body"></div>
+  </div>
+
+  <!-- CHECKLIST ITEM MODAL -->
+  <div id="ck-item-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:600;display:none;align-items:center;justify-content:center;padding:20px">
+    <div style="background:var(--bg);border-radius:12px;width:100%;max-width:420px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.18)">
+      <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:14px;font-weight:600;color:var(--text)">Nueva actividad de checklist</div>
+        <button onclick="closeCkItemModal()" style="background:none;border:none;font-size:22px;color:var(--text2);cursor:pointer">×</button>
+      </div>
+      <div style="padding:16px 20px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <label style="font-size:11px;color:var(--text2)">Actividad *</label>
+          <input id="cki-title" type="text" placeholder="Ej: Reporte semanal de entregas" style="height:34px;font-size:13px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;outline:none;color:var(--text);background:var(--bg2)">
+        </div>
+        <div style="display:flex;gap:8px">
+          <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+            <label style="font-size:11px;color:var(--text2)">Responsable</label>
+            <select id="cki-who" style="height:34px;font-size:13px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text);background:var(--bg2)"></select>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+            <label style="font-size:11px;color:var(--text2)">Recurrencia</label>
+            <select id="cki-freq" style="height:34px;font-size:13px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text);background:var(--bg2)">
+              <option value="weekly">Semanal</option>
+              <option value="biweekly">Cada 2 semanas</option>
+              <option value="monthly">Mensual</option>
+              <option value="bimonthly">Bimestral</option>
+            </select>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+            <label style="font-size:11px;color:var(--text2)">Veces por periodo</label>
+            <select id="cki-times" style="height:34px;font-size:13px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text);background:var(--bg2)">
+              <option value="1">1 vez</option>
+              <option value="2">2 veces</option>
+              <option value="3">3 veces</option>
+              <option value="4">4 veces</option>
+              <option value="5">5 veces</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end">
+        <button onclick="closeCkItemModal()" style="height:34px;background:none;border:1px solid var(--border);border-radius:8px;padding:0 14px;font-size:13px;cursor:pointer;color:var(--text2);font-family:inherit">Cancelar</button>
+        <button onclick="saveCkItem()" style="height:34px;background:var(--blue);color:#fff;border:none;border-radius:8px;padding:0 16px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit">Guardar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MOBILE BOTTOM NAV -->->
   <nav class="mob-nav">
     <button class="mob-nav-btn act" id="mobnav-tablero" onclick="showSection('tablero')">
@@ -746,6 +926,10 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
     <button class="mob-nav-btn" id="mobnav-reuniones" onclick="showSection('reuniones')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
       Reuniones
+    </button>
+    <button class="mob-nav-btn" id="mobnav-checklist" onclick="showSection('checklist')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Checklist
     </button>
     <button class="mob-nav-btn" id="mobnav-nueva" onclick="toggleForm()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -857,10 +1041,16 @@ function showSection(s){
   document.getElementById('form-area').style.display='none';
 
   // ── Render
+  // Show/hide checklist section
+  const secCk=document.getElementById('section-checklist');
+  if(secCk) secCk.style.display=s==='checklist'?'flex':'none';
   if(s==='reuniones'){
     renderMeetings();
     setTimeout(initRTE,200);
     setTimeout(populateMtTaskWho,300);
+  } else if(s==='checklist'){
+    populateCkWhoFilter();
+    renderChecklist();
   } else {
     renderCurrent();
   }
@@ -1258,13 +1448,30 @@ function openUserModal(){
   users.forEach((u,i)=>{
     const c = colors[i % colors.length];
     html += `<div class="user-row">
-      <div class="user-avatar-sm" style="background:${c.bg};color:${c.col}">${u.init}</div>
-      <input class="user-name-input" id="uname-${u.id}" value="${u.name}" placeholder="Nombre del usuario" maxlength="20">
-      <input class="user-init-input" id="uinit-${u.id}" value="${u.init}" placeholder="XX" maxlength="3">
+      <div class="user-avatar-sm" id="uavatar-${u.id}" style="background:${c.bg};color:${c.col}">${u.init}</div>
+      <input class="user-name-input" id="uname-${u.id}" value="${u.name}" placeholder="Nombre del usuario" maxlength="20"
+        oninput="autoInitials('${u.id}')">
+      <input class="user-init-input" id="uinit-${u.id}" value="${u.init}" placeholder="XX" maxlength="3"
+        oninput="document.getElementById('uavatar-${u.id}').textContent=this.value.toUpperCase()">
     </div>`;
   });
   document.getElementById('user-modal-body').innerHTML = html;
   document.getElementById('user-modal-overlay').style.display = 'flex';
+}
+
+function autoInitials(uid){
+  const nameEl=document.getElementById('uname-'+uid);
+  const initEl=document.getElementById('uinit-'+uid);
+  const avatarEl=document.getElementById('uavatar-'+uid);
+  if(!nameEl||!initEl) return;
+  const name=nameEl.value.trim();
+  // Generate initials from first letters of each word (max 2)
+  const parts=name.split(' ').filter(Boolean);
+  let init='';
+  if(parts.length>=2) init=(parts[0][0]+parts[1][0]).toUpperCase();
+  else if(parts.length===1) init=parts[0].substring(0,2).toUpperCase();
+  initEl.value=init;
+  if(avatarEl) avatarEl.textContent=init;
 }
 
 function closeUserModal(){
@@ -1302,6 +1509,326 @@ function buildRespButtons(){
   if(!bar) return;
   bar.innerHTML=`<button class="resp-btn act" data-who="" onclick="setResp('')">Total</button>`+
     users.map(u=>`<button class="resp-btn" data-who="${u.name}" onclick="setResp('${u.name}')">${u.name}</button>`).join('');
+}
+
+
+// ── EDIT TASK ─────────────────────────────────────────────────
+let editingTaskId = null;
+
+function openEdit(id){
+  const t = tasks.find(x=>x.id===id);
+  if(!t) return;
+  editingTaskId = id;
+  // Populate who select
+  const users = getUsers();
+  const editWho = document.getElementById('edit-who');
+  if(editWho) editWho.innerHTML = users.map(u=>`<option value="${u.name}">${u.name}</option>`).join('');
+  // Fill fields
+  document.getElementById('edit-title').value = t.title || '';
+  document.getElementById('edit-who').value = t.who || '';
+  document.getElementById('edit-pri').value = t.pri || 'normal';
+  document.getElementById('edit-date').value = t.date || '';
+  document.getElementById('edit-biz').value = String(t.biz ?? 0);
+  document.getElementById('edit-payment').checked = t.isPayment || false;
+  document.getElementById('edit-support-desc').value = t.supportDesc || '';
+  document.getElementById('edit-payment-wrap').style.display = t.isPayment ? 'flex' : 'none';
+  document.getElementById('edit-note').value = '';
+  document.getElementById('edit-overlay').style.display = 'flex';
+  setTimeout(()=>document.getElementById('edit-title').focus(), 100);
+}
+
+function closeEdit(){
+  document.getElementById('edit-overlay').style.display = 'none';
+  editingTaskId = null;
+}
+
+function toggleEditPayment(){
+  const isP = document.getElementById('edit-payment').checked;
+  document.getElementById('edit-payment-wrap').style.display = isP ? 'flex' : 'none';
+}
+
+function saveEdit(){
+  const t = tasks.find(x=>x.id===editingTaskId);
+  if(!t) return;
+  const oldTitle = t.title;
+  // Save changes
+  t.title = document.getElementById('edit-title').value.trim() || t.title;
+  t.who = document.getElementById('edit-who').value;
+  t.pri = document.getElementById('edit-pri').value;
+  t.date = document.getElementById('edit-date').value;
+  t.biz = parseInt(document.getElementById('edit-biz').value);
+  t.isPayment = document.getElementById('edit-payment').checked;
+  t.supportDesc = t.isPayment ? document.getElementById('edit-support-desc').value.trim() : '';
+  // Mark as edited
+  t.edited = true;
+  t.editedAt = new Date().toLocaleDateString('es-CO');
+  // Save edit note
+  const note = document.getElementById('edit-note').value.trim();
+  if(note){
+    if(!t.notes) t.notes=[];
+    t.notes.push({
+      text: '✏️ Editada: ' + note,
+      date: new Date().toLocaleDateString('es-CO'),
+      from: 'Edición'
+    });
+  }
+  persist();
+  closeEdit();
+  renderCurrent();
+}
+
+
+function manualRefresh(){
+  const btn = document.getElementById('refresh-btn');
+  const icon = document.getElementById('refresh-icon');
+  if(btn) btn.style.opacity='0.5';
+  if(icon) icon.style.animation='spin 1s linear infinite';
+  // Add spin CSS if not exists
+  if(!document.getElementById('spin-style')){
+    const st=document.createElement('style');
+    st.id='spin-style';
+    st.textContent='@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}';
+    document.head.appendChild(st);
+  }
+  // Force Firebase re-sync
+  window.dispatchEvent(new Event('app-ready'));
+  setTimeout(()=>{
+    if(btn) btn.style.opacity='1';
+    if(icon) icon.style.animation='';
+    // Show sync indicator
+    const ind=document.getElementById('sync-indicator');
+    if(ind){ind.style.opacity='1';setTimeout(()=>ind.style.opacity='0',2000);}
+    renderCurrent();
+  }, 1200);
+}
+
+
+// ── CHECKLIST MODULE ──────────────────────────────────────────
+let ckItems = [];    // activities/templates
+let ckChecks = {};   // {weekKey: {itemId: {userId: bool}}}
+let ckSelWeek = '';  // selected week key
+
+function loadChecklist(){
+  const si = localStorage.getItem('hh-ck-items-v1');
+  ckItems = si ? JSON.parse(si) : [
+    {id:'cki1', title:'Reporte semanal de actividades', who:'Anderson', freq:'weekly'},
+    {id:'cki2', title:'Revisión de tareas pendientes', who:'Raul', freq:'weekly'},
+    {id:'cki3', title:'Resumen mensual de cumplimiento', who:'Anderson', freq:'monthly'},
+  ];
+  const sc = localStorage.getItem('hh-ck-checks-v1');
+  ckChecks = sc ? JSON.parse(sc) : {};
+}
+
+function saveCkData(){
+  localStorage.setItem('hh-ck-items-v1', JSON.stringify(ckItems));
+  localStorage.setItem('hh-ck-checks-v1', JSON.stringify(ckChecks));
+}
+
+function getWeeksOfMonth(yearMonth){
+  if(!yearMonth){
+    const n=new Date();
+    yearMonth=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;
+  }
+  const [y,m]=yearMonth.split('-');
+  const year=parseInt(y), mo=parseInt(m)-1;
+  const firstDay=new Date(year,mo,1);
+  const lastDay=new Date(year,mo+1,0);
+  let d=new Date(firstDay);
+  while(d.getDay()!==1) d.setDate(d.getDate()-1);
+  const MES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const weeks=[];
+  let wNum=1;
+  while(d<=lastDay){
+    const wStart=new Date(d), wEnd=new Date(d);
+    wEnd.setDate(wEnd.getDate()+6);
+    const key=wStart.toISOString().split('T')[0];
+    weeks.push({
+      key,
+      label:`Sem ${wNum}: ${wStart.getDate()} ${MES[wStart.getMonth()]} - ${wEnd.getDate()} ${MES[wEnd.getMonth()]}`,
+      start:wStart.toISOString().split('T')[0],
+      end:wEnd.toISOString().split('T')[0]
+    });
+    d.setDate(d.getDate()+7);
+    wNum++;
+  }
+  return weeks;
+}
+
+function getCurrentWeekKey(){
+  const n=new Date();
+  let d=new Date(n);
+  while(d.getDay()!==1) d.setDate(d.getDate()-1);
+  return d.toISOString().split('T')[0];
+}
+
+function toggleCkItem(itemId, userId){
+  const wk=ckSelWeek||getCurrentWeekKey();
+  if(!ckChecks[wk]) ckChecks[wk]={};
+  if(!ckChecks[wk][itemId]) ckChecks[wk][itemId]={};
+  ckChecks[wk][itemId][userId] = !ckChecks[wk][itemId][userId];
+  saveCkData();
+  renderChecklist();
+}
+
+function deleteCkItem(id){
+  if(!confirm('¿Eliminar esta actividad?')) return;
+  ckItems=ckItems.filter(x=>x.id!==id);
+  saveCkData();
+  renderChecklist();
+}
+
+function openCkItemModal(){
+  const users=getUsers();
+  const sel=document.getElementById('cki-who');
+  if(sel) sel.innerHTML=users.map(u=>`<option value="${u.name}">${u.name}</option>`).join('');
+  document.getElementById('cki-title').value='';
+  document.getElementById('ck-item-overlay').style.display='flex';
+  setTimeout(()=>document.getElementById('cki-title').focus(),100);
+}
+
+function closeCkItemModal(){
+  document.getElementById('ck-item-overlay').style.display='none';
+}
+
+function saveCkItem(){
+  const title=document.getElementById('cki-title').value.trim();
+  if(!title) return;
+  const freq=document.getElementById('cki-freq').value;
+  const times=parseInt(document.getElementById('cki-times').value)||1;
+  const freqLabel={weekly:'Semanal',biweekly:'C/2 semanas',monthly:'Mensual',bimonthly:'Bimestral'};
+  ckItems.push({
+    id:'cki'+Date.now(),
+    title,
+    who:document.getElementById('cki-who').value,
+    freq,
+    times,
+    freqLabel:freqLabel[freq]||'Semanal',
+  });
+  saveCkData();
+  closeCkItemModal();
+  renderChecklist();
+}
+
+function populateCkWhoFilter(){
+  const sel=document.getElementById('ck-who');
+  if(!sel) return;
+  const cur=sel.value;
+  const users=getUsers();
+  sel.innerHTML='<option value="">Todos los usuarios</option>'+
+    users.map(u=>`<option value="${u.name}">${u.name}</option>`).join('');
+  sel.value=cur;
+}
+
+function populateCkMonthFilter(){
+  const sel=document.getElementById('ck-month');
+  if(!sel) return;
+  const cur=sel.value;
+  const months=new Set();
+  const n=new Date();
+  for(let i=-1;i<=2;i++){
+    const d=new Date(n.getFullYear(),n.getMonth()+i,1);
+    months.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+  }
+  const MES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const sorted=[...months].sort();
+  sel.innerHTML='<option value="">Este mes</option>'+
+    sorted.map(m=>{const[y,mo]=m.split('-');return `<option value="${m}">${MES[parseInt(mo)-1]} ${y}</option>`;}).join('');
+  sel.value=cur;
+}
+
+function renderChecklist(){
+  loadChecklist();
+  const container=document.getElementById('ck-body');
+  if(!container) return;
+  populateCkMonthFilter();
+  populateCkWhoFilter();
+
+  const selMonth=document.getElementById('ck-month')?document.getElementById('ck-month').value:'';
+  const now=new Date();
+  const monthKey=selMonth||`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const weeks=getWeeksOfMonth(monthKey);
+  const curWk=getCurrentWeekKey();
+  if(!ckSelWeek||!weeks.find(w=>w.key===ckSelWeek)) ckSelWeek=curWk;
+
+  const ckWhoFilter=document.getElementById('ck-who')?document.getElementById('ck-who').value:'';
+  const allUsers=getUsers();
+  const users=ckWhoFilter?allUsers.filter(u=>u.name===ckWhoFilter):allUsers;
+  const uColors=['#2563eb','#0ea5e9','#7c3aed','#d97706'];
+  const MES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+  // ── Week tabs
+  let html=`<div class="ck-week-tabs" style="margin-bottom:14px">`;
+  weeks.forEach(w=>{
+    const isCur=w.key===curWk;
+    html+=`<button class="ck-week-tab${ckSelWeek===w.key?' act':''}" onclick="ckSelWeek='${w.key}';renderChecklist()">
+      ${w.label}${isCur?' 📍':''}
+    </button>`;
+  });
+  html+=`</div>`;
+
+  // ── Summary card
+  const selWeekData=ckChecks[ckSelWeek]||{};
+  let summaryHtml=`<div class="ck-summary">
+    <div class="ck-summary-title">📊 Cumplimiento — ${weeks.find(w=>w.key===ckSelWeek)?.label||'Semana actual'}</div>`;
+
+  users.forEach((u,i)=>{
+    const uColor=uColors[i%uColors.length];
+    const uItems=ckItems.filter(it=>it.who===u.name||(it.freq==='weekly'));
+    const done=uItems.filter(it=>selWeekData[it.id]?.[u.name]).length;
+    const total=uItems.length||1;
+    const pct=Math.round((done/total)*100);
+    // Monthly pct
+    const monthDone=weeks.reduce((acc,w)=>{
+      const wd=ckChecks[w.key]||{};
+      return acc+uItems.filter(it=>wd[it.id]?.[u.name]).length;
+    },0);
+    const monthTotal=uItems.length*weeks.length||1;
+    const monthPct=Math.round((monthDone/monthTotal)*100);
+    summaryHtml+=`<div class="ck-user-row">
+      <div class="ck-user-dot" style="background:${uColor}22;color:${uColor};width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">${u.init}</div>
+      <span style="font-size:12px;font-weight:600;color:var(--text);width:70px;flex-shrink:0">${u.name}</span>
+      <div class="ck-user-bar">
+        <div class="ck-user-fill" style="width:${pct}%;background:${uColor}"></div>
+        <span class="ck-user-pct-label">${pct}% sem.</span>
+      </div>
+      <span style="font-size:11px;color:var(--text2);white-space:nowrap;margin-left:8px">${monthPct}% mes</span>
+    </div>`;
+  });
+  summaryHtml+=`</div>`;
+  html+=summaryHtml;
+
+  // ── Checklist by user
+  users.forEach((u,i)=>{
+    const uColor=uColors[i%uColors.length];
+    const uItems=ckItems.filter(it=>it.who===u.name);
+    if(!uItems.length) return;
+    const done=uItems.filter(it=>selWeekData[it.id]?.[u.name]).length;
+    const pct=Math.round((done/uItems.length)*100);
+    const pctColor=pct>=80?'#16a34a':pct>=50?'#EF9F27':'#E24B4A';
+    html+=`<div class="ck-card">
+      <div class="ck-card-head">
+        <div class="ck-user-dot" style="background:${uColor}22;color:${uColor}">${u.init}</div>
+        <span class="ck-username">${u.name}</span>
+        <span class="ck-pct" style="color:${pctColor}">${done}/${uItems.length} — ${pct}%</span>
+      </div>
+      <div class="ck-prog-bar"><div class="ck-prog-fill" style="width:${pct}%;background:${pctColor}"></div></div>
+      ${uItems.map(it=>{
+        const isDone=selWeekData[it.id]?.[u.name]||false;
+        return `<div class="ck-item${isDone?' done':''}" onclick="toggleCkItem('${it.id}','${u.name}')">
+          <div class="ck-checkbox${isDone?' done':''}">${isDone?'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>
+          <span class="ck-item-label">${it.title}</span>
+          <span style="font-size:10px;color:var(--blue);background:var(--blue-light);padding:1px 6px;border-radius:999px;font-weight:500">${it.freqLabel||'Semanal'}${it.times>1?' x'+it.times:''}</span>
+          <button onclick="event.stopPropagation();deleteCkItem('${it.id}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;line-height:1;padding:0 2px">×</button>
+        </div>`;
+      }).join('')}
+    </div>`;
+  });
+
+  if(!ckItems.length){
+    html+=`<div style="text-align:center;padding:40px;color:var(--text3);font-size:13px">No hay actividades aún.<br>Agrega la primera con el botón "+ Agregar actividad"</div>`;
+  }
+
+  container.innerHTML=html;
 }
 
 function loadTasks(){
@@ -1809,6 +2336,7 @@ function cardHtml(t,showBiz){
     ${sem.vencida?'<div class="vencida-badge">⚠ VENCIDA</div>':''}
     ${t.isPayment&&!t.supportDone?'<div class="support-required"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.73 18l-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Requiere soporte: <strong>'+(t.supportDesc||'comprobante')+'</strong> — no se puede cerrar sin el soporte</div>':''}
     ${t.isPayment&&t.supportDone?'<span class="support-done-badge">✓ Soporte registrado</span>':''}
+    ${t.edited?'<span class="edit-badge">✏️ Editada '+t.editedAt+'</span>':''}
     ${t.isRecurring?`<span class="rec-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>${t.recLabel||'Recurrente'}</span>`:''}
     <div class="card-top">
       <div class="card-cb${done?' done':''}" onclick="toggleDone('${t.id}')"></div>
@@ -1836,6 +2364,96 @@ function cardHtml(t,showBiz){
 }
 
 function renderBoard(){
+  // Build user progress mini-bar
+  const users=getUsers();
+  const uColors=['#2563eb','#0ea5e9','#7c3aed','#d97706'];
+  const allTasks=window.tasks&&window.tasks.length?window.tasks:tasks;
+  const boardEl=document.getElementById('board');
+  // Remove old progress bar if exists
+  const oldBar=document.getElementById('user-progress-bar');
+  if(oldBar) oldBar.remove();
+  // Create mini progress widget
+  const progBar=document.createElement('div');
+  progBar.id='user-progress-bar';
+  progBar.style.cssText='display:flex;gap:8px;padding:6px 16px;background:#fff;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;align-items:center';
+  // Get current month/week
+  const nowP=new Date();
+  const curMonthP=`${nowP.getFullYear()}-${String(nowP.getMonth()+1).padStart(2,'0')}`;
+  let curWeekStartP=new Date(nowP);
+  while(curWeekStartP.getDay()!==1) curWeekStartP.setDate(curWeekStartP.getDate()-1);
+  const curWeekEndP=new Date(curWeekStartP);
+  curWeekEndP.setDate(curWeekEndP.getDate()+6);
+  const cwsStr=curWeekStartP.toISOString().split('T')[0];
+  const cweStr=curWeekEndP.toISOString().split('T')[0];
+
+  let pbHtml='<span style="font-size:11px;color:var(--text2);font-weight:600;white-space:nowrap">Avance:</span>';
+  // Get current filters
+  const curWhoFilter=document.getElementById('fwho')?document.getElementById('fwho').value:'';
+  const curMonthFilter=getMonthFilter();
+  const curWeekFilter=getWeekFilter();
+
+  users.forEach((u,i)=>{
+    // If who filter is active and doesn't match this user, skip
+    if(curWhoFilter && curWhoFilter!==u.name) return;
+
+    const col=uColors[i%uColors.length];
+
+    // Apply month/week filter to task calculations
+    let filterStart=cwsStr, filterEnd=cweStr, filterMonth=curMonthP;
+    if(curWeekFilter){
+      const [ws,we]=curWeekFilter.split('|');
+      filterStart=ws; filterEnd=we;
+    }
+    if(curMonthFilter) filterMonth=curMonthFilter;
+
+    // Weekly tasks (filtered by selected week or current week)
+    const weekTasks=allTasks.filter(t=>t.who===u.name&&t.date&&t.date>=filterStart&&t.date<=filterEnd);
+    const weekDone=weekTasks.filter(t=>t.status==='c').length;
+
+    // Monthly tasks (filtered by selected month or current month)
+    const monthTasks=allTasks.filter(t=>t.who===u.name&&t.date&&t.date.startsWith(filterMonth));
+    const monthDone=monthTasks.filter(t=>t.status==='c').length;
+
+    // Skip user if no tasks at all
+    if(!weekTasks.length && !monthTasks.length) return;
+
+    const weekPct=weekTasks.length?Math.round((weekDone/weekTasks.length)*100):0;
+    const monthPct=monthTasks.length?Math.round((monthDone/monthTasks.length)*100):0;
+    const pctColor=weekPct>=80?'#16a34a':weekPct>=50?'#EF9F27':'#E24B4A';
+    const mPctColor=monthPct>=80?'#16a34a':monthPct>=50?'#EF9F27':'#E24B4A';
+
+    pbHtml+=`<div style="display:flex;align-items:center;gap:6px;background:var(--bg2);border-radius:8px;padding:4px 8px 4px 4px">
+      <div style="width:24px;height:24px;border-radius:50%;background:${col};color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0">${u.init}</div>
+      <div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:2px">${u.name}</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          ${weekTasks.length?`<div style="display:flex;align-items:center;gap:3px">
+            <span style="font-size:9px;color:var(--text3)">Sem</span>
+            <div style="width:40px;height:5px;background:#f0f0ee;border-radius:999px;overflow:hidden">
+              <div style="width:${weekPct}%;height:100%;background:${col};border-radius:999px"></div>
+            </div>
+            <span style="font-size:10px;font-weight:700;color:${pctColor}">${weekPct}%</span>
+          </div>`:''}
+          ${weekTasks.length&&monthTasks.length?'<div style="width:1px;height:12px;background:var(--border)"></div>':''}
+          ${monthTasks.length?`<div style="display:flex;align-items:center;gap:3px">
+            <span style="font-size:9px;color:var(--text3)">Mes</span>
+            <div style="width:40px;height:5px;background:#f0f0ee;border-radius:999px;overflow:hidden">
+              <div style="width:${monthPct}%;height:100%;background:${col}88;border-radius:999px"></div>
+            </div>
+            <span style="font-size:10px;font-weight:700;color:${mPctColor}">${monthPct}%</span>
+          </div>`:''}
+        </div>
+      </div>
+    </div>`;
+  });
+  // Only show if there's user data
+  const hasUserData = pbHtml.includes('border-radius:8px');
+  if(hasUserData){
+    progBar.innerHTML=pbHtml;
+    if(boardEl&&boardEl.parentElement){
+      boardEl.parentElement.insertBefore(progBar, boardEl);
+    }
+  }
   const list=getFiltered();
   const cols={v:[],p:[],e:[],c:[]};
   list.forEach(t=>{
@@ -2072,6 +2690,11 @@ function renderDashboard(){
   const totE=filtered.filter(t=>t.status==='e').length;
   const totC=filtered.filter(t=>t.status==='c').length;
   const tot=filtered.length;
+  // Build user progress summary for dashboard top
+  const allT=window.tasks&&window.tasks.length?window.tasks:tasks;
+  const uColorsD=['#2563eb','#0ea5e9','#7c3aed','#d97706'];
+  const dynUsersD=getUsers();
+
   let html=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
     <div class="dash-h" style="margin-bottom:0">Dashboard</div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
@@ -2094,6 +2717,61 @@ function renderDashboard(){
     </div>
   </div>
   <div class="dash-sub" style="margin-top:2px">Resumen de tareas por unidad de negocio</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid var(--border);margin-bottom:12px">
+    ${dynUsersD.filter(u=>{
+      // Only show users with tasks (respecting filters)
+      if(dashFilter.who&&dashFilter.who!==u.name) return false;
+      return allT.some(t=>t.who===u.name);
+    }).map((u,i)=>{
+      const col=uColorsD[i%uColorsD.length];
+      const nowD=new Date();
+      // Use dashboard month/week filter if active
+      const dWkVal=dashFilter.week||'';
+      const dMoVal=dashFilter.month||'';
+      let cwsD,cweD,curMo;
+      if(dWkVal){ const[ws,we]=dWkVal.split('|'); cwsD=ws; cweD=we; }
+      else {
+        let cwS=new Date(nowD);
+        while(cwS.getDay()!==1) cwS.setDate(cwS.getDate()-1);
+        const cwE=new Date(cwS); cwE.setDate(cwE.getDate()+6);
+        cwsD=cwS.toISOString().split('T')[0]; cweD=cwE.toISOString().split('T')[0];
+      }
+      curMo=dMoVal||`${nowD.getFullYear()}-${String(nowD.getMonth()+1).padStart(2,'0')}`;
+      const wt=allT.filter(t=>t.who===u.name&&t.date&&t.date>=cwsD&&t.date<=cweD);
+      const wDone=wt.filter(t=>t.status==='c').length;
+      const wPct=wt.length?Math.round((wDone/wt.length)*100):0;
+      const mt=allT.filter(t=>t.who===u.name&&t.date&&t.date.startsWith(curMo));
+      const mDone=mt.filter(t=>t.status==='c').length;
+      const mPct=mt.length?Math.round((mDone/mt.length)*100):0;
+      const wColor=wPct>=80?'#16a34a':wPct>=50?'#EF9F27':'#E24B4A';
+      const mColor=mPct>=80?'#16a34a':mPct>=50?'#EF9F27':'#E24B4A';
+      // Skip if no tasks in filtered period
+      if(!wt.length&&!mt.length) return '';
+      return `<div style="display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:6px 12px 6px 6px">
+        <div style="width:30px;height:30px;border-radius:50%;background:${col};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${u.init}</div>
+        <div>
+          <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px">${u.name}</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <div style="display:flex;align-items:center;gap:4px">
+              <span style="font-size:10px;color:var(--text3)">Sem:</span>
+              <div style="width:50px;height:6px;background:#f0f0ee;border-radius:999px;overflow:hidden">
+                <div style="width:${wPct}%;height:100%;background:${col};border-radius:999px"></div>
+              </div>
+              <span style="font-size:11px;font-weight:700;color:${wColor}">${wPct}%</span>
+            </div>
+            <div style="width:1px;height:14px;background:var(--border)"></div>
+            <div style="display:flex;align-items:center;gap:4px">
+              <span style="font-size:10px;color:var(--text3)">Mes:</span>
+              <div style="width:50px;height:6px;background:#f0f0ee;border-radius:999px;overflow:hidden">
+                <div style="width:${mPct}%;height:100%;background:${col}88;border-radius:999px"></div>
+              </div>
+              <span style="font-size:11px;font-weight:700;color:${mColor}">${mPct}%</span>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }).filter(Boolean).join('')}
+  </div>
   <div class="global-box">
     <div class="global-box-title">Resumen general</div>
     <div class="global-stats">
