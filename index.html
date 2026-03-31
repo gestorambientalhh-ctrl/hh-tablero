@@ -1,0 +1,2284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Tasks Socios</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
+:root{--blue:#2563eb;--blue-dark:#1d4ed8;--blue-light:#eff6ff;--blue-mid:#dbeafe;--border:#e2e8f0;--bg:#fff;--bg2:#f0f4f8;--text:#0f172a;--text2:#475569;--text3:#94a3b8;--red:#ef4444}
+
+/* LOCK */
+.lock-screen{
+  position:fixed !important;
+  top:0 !important;
+  left:0 !important;
+  right:0 !important;
+  bottom:0 !important;
+  width:100vw !important;
+  height:100vh !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  padding:20px;
+  background:#06111f;
+  z-index:9999;
+  overflow:hidden;
+  box-sizing:border-box;
+}
+.lock-bg{
+  position:absolute;inset:0;
+  background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(37,99,235,.18) 0%,transparent 70%),
+             radial-gradient(ellipse 60% 40% at 80% 80%,rgba(14,165,233,.1) 0%,transparent 60%),
+             #06111f;
+}
+.lock-grid{
+  position:absolute;inset:0;
+  background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);
+  background-size:48px 48px;
+}
+.lock-card{
+  position:relative;z-index:1;
+  background:rgba(255,255,255,.04);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:20px;
+  padding:44px 40px 40px;
+  width:100%;max-width:380px;
+  text-align:center;
+  box-shadow:0 24px 64px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.08);
+}
+.lock-logo{
+  width:56px;height:56px;border-radius:16px;
+  background:linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%);
+  margin:0 auto 20px;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 8px 24px rgba(37,99,235,.4);
+}
+.lock-logo svg{width:24px;height:24px;fill:#fff}
+.lock-brand{font-size:22px;font-weight:700;color:#fff;margin-bottom:4px;letter-spacing:-.3px}
+.lock-tagline{font-size:12px;color:rgba(255,255,255,.4);margin-bottom:32px;letter-spacing:.08em;text-transform:uppercase}
+.lock-label{font-size:11px;color:rgba(255,255,255,.5);text-align:left;margin-bottom:6px;letter-spacing:.06em;text-transform:uppercase;font-weight:500}
+.lock-input{
+  width:100%;height:48px;font-size:15px;
+  text-align:left;letter-spacing:.06em;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:10px;margin-bottom:12px;outline:none;
+  font-family:inherit;
+  background:rgba(255,255,255,.06);
+  color:#fff;padding:0 16px;
+  transition:border-color .2s,background .2s;
+}
+.lock-input::placeholder{color:rgba(255,255,255,.2)}
+.lock-input:focus{border-color:rgba(37,99,235,.7);background:rgba(255,255,255,.08)}
+.lock-btn{
+  width:100%;height:48px;
+  background:linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%);
+  color:#fff;border:none;border-radius:10px;
+  font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;
+  letter-spacing:.04em;
+  box-shadow:0 4px 20px rgba(37,99,235,.4);
+  transition:transform .15s,box-shadow .15s;
+}
+.lock-btn:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(37,99,235,.55)}
+.lock-btn:active{transform:translateY(0)}
+.lock-err{font-size:12px;color:#ff7070;margin-bottom:10px;display:none;text-align:left}
+.lock-divider{height:1px;background:rgba(255,255,255,.08);margin:24px 0 16px}
+.lock-badges{display:flex;justify-content:center;gap:8px}
+.lock-badge{
+  padding:4px 12px;border-radius:999px;font-size:11px;font-weight:500;
+  border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.35);
+  display:flex;align-items:center;gap:5px;
+}
+.lock-badge-dot{width:6px;height:6px;border-radius:50%}
+
+/* TOPNAV */
+.topnav{height:52px;background:#fff;border-bottom:2px solid var(--blue-mid);display:flex;align-items:center;padding:0 16px;gap:10px;position:sticky;top:0;z-index:100}
+.logo-dot{width:28px;height:28px;border-radius:8px;background:var(--blue);display:flex;align-items:center;justify-content:center;flex-shrink:0;border:none;cursor:pointer}
+.logo-dot svg{width:15px;height:15px;fill:#fff}
+.logo-name{font-size:15px;font-weight:600;color:var(--text);white-space:nowrap}
+
+/* PROJECT TABS in topnav */
+.proj-tabs{display:flex;gap:4px;margin-left:8px}
+.proj-tab{padding:8px 18px;font-size:14px;font-weight:600;border-radius:9px;border:2px solid var(--border);background:var(--bg);color:var(--text2);cursor:pointer;font-family:inherit;white-space:nowrap;display:flex;align-items:center;gap:8px;transition:all .15s;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.proj-tab:hover{background:#f5f5f3;border-color:#ccc}
+.proj-tab.act{color:#fff;border-color:transparent;font-weight:500}
+.proj-tab-dot{width:11px;height:11px;border-radius:3px;flex-shrink:0}
+
+.topnav-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.search-top{height:32px;padding:0 10px;font-size:13px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);outline:none;width:150px}
+.fsel-top{height:32px;padding:0 8px;font-size:12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text2)}
+.avatar-btn{width:32px;height:32px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;cursor:pointer;border:none;flex-shrink:0}
+
+/* LAYOUT */
+.app-layout{display:flex;height:calc(100vh - 52px);overflow:hidden}
+
+/* MAIN CONTENT */
+.main-content{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+
+/* PROJECT BAR */
+.project-bar{height:48px;border-bottom:1px solid var(--border);background:#fff;display:flex;align-items:center;padding:0 16px;gap:10px;background:var(--bg);flex-shrink:0}
+.proj-title{font-size:14px;font-weight:600;color:var(--text);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btn-task{background:var(--blue);color:#fff;border:none;padding:7px 13px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0}
+.btn-task:hover{background:var(--blue-dark)}
+
+/* SECTION TABS (Tablero / Dashboard) */
+.section-bar{height:40px;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:4px;background:#fff;flex-shrink:0}
+.sec-tab{padding:5px 14px;font-size:13px;color:var(--text2);cursor:pointer;background:none;border:none;font-family:inherit;border-radius:6px}
+.resp-btn{padding:4px 12px;font-size:12px;font-weight:500;border:1.5px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text2);cursor:pointer;font-family:inherit;transition:all .12s}
+.resp-btn:hover{background:var(--blue-light)}
+.resp-btn.act{background:var(--blue);color:#fff;border-color:var(--blue)}
+.sec-tab:hover{background:var(--blue-light)}
+.sec-tab.act{color:var(--blue);font-weight:600;background:var(--blue-light);border-bottom:2px solid var(--blue)}
+.sem-leg{margin-left:auto;display:flex;align-items:center;gap:10px}
+.leg{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);white-space:nowrap}
+.leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* FORM */
+.form-area{padding:12px 16px;border-bottom:1px solid var(--border);background:var(--bg);display:none;flex-shrink:0}
+.form-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px}
+.form-row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+.form-field{display:flex;flex-direction:column;gap:3px}
+.form-field label{font-size:11px;color:var(--text2)}
+.form-field input,.form-field select{height:34px;font-size:13px;border:1px solid var(--border);border-radius:6px;padding:0 8px;background:var(--bg);color:var(--text);font-family:inherit;outline:none}
+.btn-save{height:34px;background:var(--blue);color:#fff;border:none;border-radius:8px;padding:0 16px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit}
+.btn-cancel{height:34px;background:none;border:1px solid var(--border);border-radius:8px;padding:0 12px;font-size:13px;cursor:pointer;color:var(--text2);font-family:inherit}
+
+/* KANBAN BOARD */
+.board{display:flex;gap:14px;padding:16px;overflow-x:auto;overflow-y:auto;flex:1;align-items:flex-start;background:#eef2f7;-webkit-overflow-scrolling:touch}
+.col-wrap{width:260px;flex-shrink:0}
+.col-header{display:flex;align-items:center;gap:7px;padding:0 2px 10px}
+.col-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.col-label{font-size:13px;font-weight:600;color:var(--text)}
+.col-cnt{font-size:12px;color:var(--text3)}
+.col-body{display:flex;flex-direction:column;gap:7px}
+
+/* CARD */
+.card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:11px 12px;transition:border-color .12s}
+.card:hover{border-color:#ccc}
+.card-top{display:flex;align-items:flex-start;gap:8px;margin-bottom:8px}
+.card-cb{width:15px;height:15px;border-radius:50%;border:2px solid #ccc;flex-shrink:0;cursor:pointer;transition:all .15s;margin-top:1px}
+.card-cb.done{background:var(--blue);border-color:var(--blue)}
+.card-title{font-size:13px;color:var(--text);line-height:1.4;flex:1}
+.card-title.done{text-decoration:line-through;color:var(--text3)}
+.card-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.sem-pill{display:flex;align-items:center;gap:4px;padding:2px 7px;border-radius:999px;font-size:11px;font-weight:500}
+.date-pill{font-size:11px;padding:2px 7px;border-radius:999px;background:#f0f0ee;color:var(--text2)}
+.date-pill.over{background:#fcebeb;color:#791f1f}
+.biz-pill{font-size:11px;padding:2px 7px;border-radius:999px;font-weight:500}
+.avatar-sm{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-left:auto;flex-shrink:0;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.card-actions{display:flex;gap:4px;padding-top:7px;border-top:1px solid var(--border);align-items:center}
+.ca-btn{background:none;border:1px solid var(--border);border-radius:5px;padding:3px 9px;font-size:11px;cursor:pointer;color:var(--text2);font-family:inherit}
+.ca-btn:hover{background:#f0f0ee}
+.ca-del{background:none;border:none;cursor:pointer;color:var(--text3);font-size:17px;margin-left:auto;line-height:1;padding:0 2px}
+.ca-del:hover{color:#E24B4A}
+.add-btn{display:flex;align-items:center;gap:6px;padding:8px 4px;font-size:13px;color:var(--text3);cursor:pointer;border-radius:6px;border:none;background:none;width:100%;text-align:left;font-family:inherit}
+.add-btn:hover{color:var(--blue)}
+.empty-col{background:var(--bg);border:1px dashed var(--border);border-radius:8px;padding:24px;text-align:center;font-size:12px;color:var(--text3)}
+
+/* GLOBAL VIEW */
+.global-view-wrap{flex:1;overflow-y:auto;background:#eef2f7;padding:16px;-webkit-overflow-scrolling:touch}
+.gsec{margin-bottom:18px}
+.gsec-title{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.gstatus-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin:6px 0 4px}
+
+/* DASHBOARD */
+.dash-wrap{flex:1;overflow-y:auto;background:#eef2f7;padding:16px;-webkit-overflow-scrolling:touch}
+.dash-h{font-size:16px;font-weight:600;color:var(--text);margin-bottom:2px}
+.dash-sub{font-size:12px;color:var(--text2);margin-bottom:16px}
+.global-box{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:16px}
+.global-box-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px}
+.global-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.g-stat{background:var(--bg2);border-radius:8px;padding:10px 6px;text-align:center}
+.g-n{font-size:22px;font-weight:700}
+.g-l{font-size:10px;color:var(--text2);margin-top:2px;text-transform:uppercase;letter-spacing:.03em}
+.biz-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.biz-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.biz-card-top{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.biz-dot{width:11px;height:11px;border-radius:3px;flex-shrink:0}
+.biz-name{font-size:14px;font-weight:600;color:var(--text);flex:1}
+.urg-badge{font-size:11px;background:#FCEBEB;color:#791F1F;padding:2px 8px;border-radius:999px;font-weight:500}
+.vencida-badge{display:inline-block;background:#E24B4A;color:#fff;font-size:11px;font-weight:700;letter-spacing:.06em;padding:3px 10px;border-radius:5px;margin-bottom:6px;text-transform:uppercase}
+.biz-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:12px}
+.biz-stat{background:var(--bg2);border-radius:7px;padding:8px 4px;text-align:center}
+.biz-stat-n{font-size:20px;font-weight:700}
+.biz-stat-l{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.03em}
+.prog-bar{height:6px;background:#f0f0ee;border-radius:999px;overflow:hidden;margin-bottom:5px}
+.prog-fill{height:100%;border-radius:999px}
+.prog-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--text2)}
+.people-row{display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.person{flex:1;background:var(--bg2);border-radius:7px;padding:8px;text-align:center}
+.person-name{font-size:11px;font-weight:600;color:var(--text);margin-bottom:3px}
+.person-n{font-size:18px;font-weight:700;color:var(--blue)}
+.person-l{font-size:10px;color:var(--text2)}
+
+
+
+
+
+
+/* RICH TEXT EDITOR */
+.rte-toolbar{display:flex;gap:4px;flex-wrap:wrap;padding:8px;background:var(--bg2);border:1px solid var(--border);border-radius:8px 8px 0 0;border-bottom:none;align-items:center}
+.rte-btn{background:none;border:1px solid transparent;border-radius:5px;padding:4px 8px;font-size:13px;cursor:pointer;color:var(--text);font-family:inherit;height:28px;display:flex;align-items:center;gap:3px;min-width:28px;justify-content:center}
+.rte-btn:hover{background:var(--bg);border-color:var(--border)}
+.rte-sep{width:1px;height:20px;background:var(--border);margin:0 2px;flex-shrink:0}
+.rte-editor{min-height:140px;border:1px solid var(--border);border-radius:0 0 8px 8px;padding:12px;font-family:inherit;font-size:13px;outline:none;line-height:1.8;color:var(--text);background:var(--bg2)}
+.rte-editor:focus{border-color:var(--blue)}
+.rte-editor ul,.meeting-body ul{padding-left:20px;margin:4px 0}
+.rte-editor ol,.meeting-body ol{padding-left:20px;margin:4px 0}
+.rte-color-pick{width:22px;height:22px;border-radius:4px;border:1px solid var(--border);cursor:pointer;padding:0}
+.rte-select{height:26px;font-size:12px;border:1px solid var(--border);border-radius:5px;padding:0 6px;font-family:inherit;background:var(--bg);color:var(--text)}
+
+/* MEETING NOTES */
+.notes-section{padding:16px;background:var(--bg2);flex:1;overflow-y:auto}
+.meeting-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px}
+.meeting-card-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.meeting-date-badge{background:var(--blue);color:#fff;font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap}
+.meeting-title{font-size:14px;font-weight:600;color:var(--text);flex:1}
+.meeting-biz-tag{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:500}
+.meeting-body{font-size:13px;color:var(--text2);line-height:1.6;white-space:pre-wrap}
+.meeting-footer{display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.meeting-author{font-size:11px;color:var(--text3)}
+.meeting-del{background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;margin-left:auto}
+.meeting-del:hover{color:#E24B4A}
+.meeting-form{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:16px}
+.meeting-form-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px}
+.meeting-textarea{width:100%;min-height:100px;font-size:13px;border:1px solid var(--border);border-radius:8px;padding:10px;font-family:inherit;resize:vertical;outline:none;color:var(--text);background:var(--bg2);line-height:1.6}
+.meeting-textarea:focus{border-color:var(--blue)}
+.meeting-empty{text-align:center;padding:40px;color:var(--text3);font-size:13px}
+
+/* PAYMENT SUPPORT */
+.support-required{background:#FEF3C7;border:1.5px solid #F59E0B;border-radius:8px;padding:8px 12px;margin-bottom:8px;display:flex;align-items:center;gap:8px;font-size:12px;color:#92400E;font-weight:500}
+.support-badge{font-size:10px;background:#FEF3C7;color:#92400E;padding:2px 7px;border-radius:999px;font-weight:600;border:1px solid #F59E0B}
+.support-done-badge{font-size:10px;background:#DCFCE7;color:#166534;padding:2px 7px;border-radius:999px;font-weight:600;border:1px solid #86EFAC}
+
+
+/* USER SETTINGS MODAL */
+.user-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px}
+.user-modal{background:var(--bg);border-radius:12px;width:100%;max-width:400px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.18)}
+.user-modal-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.user-modal-title{font-size:14px;font-weight:600;color:var(--text)}
+.user-row{display:flex;align-items:center;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border)}
+.user-avatar-sm{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.user-name-input{flex:1;height:32px;font-size:13px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;outline:none;color:var(--text)}
+.user-init-input{width:44px;height:32px;font-size:12px;font-weight:600;border:1px solid var(--border);border-radius:6px;padding:0 6px;font-family:inherit;outline:none;text-align:center;color:var(--text)}
+
+/* USER MANAGEMENT VISUAL */
+.user-section{margin-top:20px}
+.user-section-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.user-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.user-card{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:16px 18px;overflow:hidden}
+.user-card-head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.user-avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0}
+.user-card-name{font-size:15px;font-weight:600;color:var(--text)}
+.user-card-sub{font-size:12px;color:var(--text2);margin-top:1px}
+.user-stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px}
+.user-stat{background:var(--bg2);border-radius:8px;padding:8px 4px;text-align:center}
+.user-stat-n{font-size:18px;font-weight:700}
+.user-stat-l{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.03em;margin-top:1px}
+.user-prog-label{display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:4px}
+.user-tasks-list{margin-top:12px}
+.user-task-item{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg2);border-radius:7px;margin-bottom:5px;font-size:12px}
+.user-task-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.user-task-title{flex:1;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-task-biz{font-size:10px;padding:1px 6px;border-radius:999px;font-weight:500;flex-shrink:0}
+.user-task-date{font-size:10px;color:var(--text3);flex-shrink:0}
+
+/* VIEWER MODE */
+.viewer-banner{background:#fef3c7;border-bottom:2px solid #f59e0b;padding:8px 16px;font-size:12px;color:#92400e;display:flex;align-items:center;gap:8px;font-weight:500}
+
+/* DRAG AND DROP */
+.card{cursor:grab}
+.card.dragging{opacity:.4;cursor:grabbing;transform:scale(.98)}
+.col-body.drag-over{background:var(--blue-mid);border-radius:8px;outline:2px dashed var(--blue)}
+
+/* RECURRING */
+.rec-badge{font-size:10px;background:#EEF2FF;color:#3730A3;padding:2px 7px;border-radius:999px;font-weight:600;display:inline-flex;align-items:center;gap:3px}
+.rec-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:400;display:flex;align-items:center;justify-content:center;padding:20px}
+.rec-modal{background:var(--bg);border-radius:12px;width:100%;max-width:480px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.18)}
+.rec-modal-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.rec-modal-title{font-size:14px;font-weight:600;color:var(--text)}
+.rec-close{background:none;border:none;font-size:22px;color:var(--text2);cursor:pointer;line-height:1}
+.rec-body{padding:16px 20px;max-height:60vh;overflow-y:auto}
+.rec-task-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg2);border-radius:8px;margin-bottom:8px;border:1px solid var(--border)}
+.rec-task-title{flex:1;font-size:13px;font-weight:500;color:var(--text)}
+.rec-task-meta{font-size:11px;color:var(--text2)}
+.rec-freq{font-size:11px;background:#EEF2FF;color:#3730A3;padding:2px 8px;border-radius:999px;font-weight:600}
+.rec-btn-gen{background:var(--blue);color:#fff;border:none;padding:3px 10px;border-radius:6px;font-size:11px;cursor:pointer;font-family:inherit}
+.rec-btn-gen:hover{background:var(--blue-dark)}
+.rec-btn-del{background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer}
+.rec-btn-del:hover{color:#E24B4A}
+/* NOTES MODAL */
+.notes-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px}
+.notes-modal{background:var(--bg);border-radius:12px;width:100%;max-width:420px;padding:0;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.18)}
+.notes-modal-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.notes-modal-title{font-size:14px;font-weight:600;color:var(--text)}
+.notes-modal-sub{font-size:12px;color:var(--text2);margin-top:2px}
+.notes-close{background:none;border:none;font-size:22px;color:var(--text2);cursor:pointer;line-height:1;padding:0}
+.notes-body{padding:16px 20px}
+.notes-textarea{width:100%;height:100px;font-size:13px;border:1px solid var(--border);border-radius:8px;padding:10px;font-family:inherit;resize:none;outline:none;color:var(--text);background:var(--bg2)}
+.notes-textarea:focus{border-color:#ccc}
+.notes-history{margin-top:12px;max-height:140px;overflow-y:auto}
+.notes-entry{padding:8px 10px;background:var(--bg2);border-radius:7px;margin-bottom:6px;font-size:12px;color:var(--text2);border-left:3px solid var(--border)}
+.notes-entry-txt{color:var(--text);margin-bottom:2px;line-height:1.4}
+.notes-entry-meta{font-size:10px;color:var(--text3)}
+.notes-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px}
+/* HISTORY & WORKLOAD */
+.dash-section-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.dash-section-title svg{width:16px;height:16px;color:var(--blue)}
+.history-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-bottom:20px}
+.history-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.history-card-top{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.history-weeks{display:flex;gap:6px;align-items:flex-end;height:50px;margin-bottom:6px}
+.history-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
+.history-bar{width:100%;border-radius:3px 3px 0 0;min-height:3px;transition:height .3s}
+.history-bar-label{font-size:9px;color:var(--text3);text-align:center}
+.history-bar-n{font-size:10px;font-weight:600;color:var(--text2);text-align:center}
+.workload-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+.wl-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.wl-name{font-size:13px;font-weight:600;color:var(--text);width:80px;flex-shrink:0}
+.wl-bar-wrap{flex:1;height:28px;background:var(--bg2);border-radius:6px;overflow:hidden;position:relative;display:flex;align-items:center}
+.wl-bar{height:100%;border-radius:6px;transition:width .4s;position:absolute;left:0;top:0}
+.wl-count{position:relative;z-index:1;font-size:12px;font-weight:600;padding-left:10px;color:#fff}
+.wl-detail{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+.wl-chip{font-size:10px;padding:2px 8px;border-radius:999px;font-weight:500}
+.wl-empty{text-align:center;padding:20px;color:var(--text3);font-size:12px}
+/* MOBILE BOTTOM NAV */
+.mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:56px;background:var(--bg);border-top:1px solid var(--border);z-index:100;justify-content:space-around;align-items:center}
+.mob-nav-btn{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:var(--text2);border:none;background:none;cursor:pointer;padding:6px 0;font-family:inherit;flex:1}
+.mob-nav-btn.act{color:var(--blue);font-weight:500}
+.mob-nav-btn svg{width:20px;height:20px}
+
+/* RESPONSIVE */
+@media(max-width:700px){
+  .app-layout{height:calc(100vh - 52px - 56px)}
+  #section-reuniones{top:52px;bottom:56px}
+  .mob-nav{display:flex}
+  .search-top{width:110px}
+  .fsel-top{display:none}
+  .col-wrap{width:235px}
+  .global-stats{grid-template-columns:repeat(2,1fr)}
+  .proj-tabs{display:none}
+  .proj-title-bar-tabs{display:flex!important;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .proj-title-bar-tabs::-webkit-scrollbar{display:none}
+  .proj-title{display:none}
+  .section-bar{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;gap:4px;scrollbar-width:none}
+  .section-bar::-webkit-scrollbar{display:none}
+  .section-bar>*{flex-shrink:0}
+  .sem-leg{display:none}
+  .project-bar{padding:0 10px;gap:6px}
+}
+@media(min-width:701px){
+  .mob-nav{display:none!important}
+  .proj-title-bar-tabs{display:none!important}
+}
+</style>
+</head>
+<body>
+
+<!-- LOCK -->
+<div id="lock-screen" style="position:fixed!important;top:0!important;left:0!important;width:100vw!important;height:100vh!important;display:flex!important;align-items:center!important;justify-content:center!important;background:#06111f;z-index:9999">
+  <div class="lock-bg"></div>
+  <div class="lock-grid"></div>
+  <div class="lock-card">
+    <div class="lock-logo">
+      <svg viewBox="0 0 24 24" fill="#fff"><circle cx="12" cy="5" r="3.5"/><circle cx="19.5" cy="16.5" r="3.5"/><circle cx="4.5" cy="16.5" r="3.5"/></svg>
+    </div>
+    <div class="lock-brand">Tasks Socios</div>
+    <div class="lock-tagline">Plataforma de gestión operativa</div>
+    <div class="lock-label">Clave de acceso</div>
+    <input class="lock-input" id="pw-input" type="password" placeholder="Ingresa tu clave" onkeydown="if(event.key==='Enter')checkPw()">
+    <div class="lock-err" id="pw-err">⚠ Clave incorrecta. Intenta de nuevo.</div>
+    <button class="lock-btn" onclick="checkPw()">Acceder al sistema</button>
+    <div class="lock-divider"></div>
+    <div class="lock-badges">
+      <span class="lock-badge"><span class="lock-badge-dot" style="background:#639922"></span>Gestor HH</span>
+      <span class="lock-badge"><span class="lock-badge-dot" style="background:#378ADD"></span>Logístico</span>
+      <span class="lock-badge"><span class="lock-badge-dot" style="background:#D85A30"></span>Montevra</span>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none">
+
+  <!-- TOPNAV -->
+  <nav class="topnav">
+    <div class="logo-dot">
+      <svg viewBox="0 0 24 24" fill="#fff"><circle cx="12" cy="5" r="3.5"/><circle cx="19.5" cy="16.5" r="3.5"/><circle cx="4.5" cy="16.5" r="3.5"/></svg>
+    </div>
+    <span class="logo-name">Tasks Socios</span>
+    <span id="sync-indicator" style="font-size:10px;color:#16a34a;background:#dcfce7;padding:2px 8px;border-radius:999px;transition:opacity .5s;opacity:0;margin-left:4px">⟳ Sincronizado</span>
+
+    <!-- PROJECT TABS — desktop -->
+    <div class="proj-tabs">
+      <button class="proj-tab act" id="pt0" onclick="setBiz(0)">
+        <span class="proj-tab-dot" style="background:#639922"></span>Gestor HH
+      </button>
+      <button class="proj-tab" id="pt1" onclick="setBiz(1)">
+        <span class="proj-tab-dot" style="background:#378ADD"></span>Logístico
+      </button>
+      <button class="proj-tab" id="pt2" onclick="setBiz(2)">
+        <span class="proj-tab-dot" style="background:#D85A30"></span>Montevra
+      </button>
+      <button class="proj-tab" id="pt3" onclick="setBiz(3)">
+        <span class="proj-tab-dot" style="background:#7F77DD"></span>General
+      </button>
+    </div>
+
+    <div class="topnav-right">
+      <input class="search-top" type="text" placeholder="Buscar..." id="sq" oninput="renderCurrent()">
+      <select class="fsel-top" id="fwho" onchange="renderCurrent()"><option value="">Total</option></select>
+<button onclick="openUserModal()" title="Configurar usuarios" style="width:32px;height:32px;border-radius:50%;background:var(--bg2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px">👥</button>
+      <button class="avatar-btn" onclick="logout()" title="Salir">HH</button>
+    </div>
+  </nav>
+
+  <!-- MAIN LAYOUT -->
+  <div class="app-layout">
+    <div id="section-tablero" class="main-content">
+
+      <!-- PROJECT BAR -->
+      <div class="project-bar">
+        <span class="proj-title" id="proj-title">Gestor Ambiental HH</span>
+        <!-- Project tabs mobile -->
+        <div class="proj-title-bar-tabs" style="display:none;gap:4px;flex:1;overflow-x:auto;margin:0 4px;-webkit-overflow-scrolling:touch">
+          <button class="proj-tab act" id="mpt0" onclick="setBiz(0)" style="font-size:12px;padding:5px 12px;border-width:1.5px">
+            <span class="proj-tab-dot" style="background:#639922"></span>Gestor
+          </button>
+          <button class="proj-tab" id="mpt1" onclick="setBiz(1)" style="font-size:12px;padding:5px 12px;border-width:1.5px">
+            <span class="proj-tab-dot" style="background:#378ADD"></span>Log.
+          </button>
+          <button class="proj-tab" id="mpt2" onclick="setBiz(2)" style="font-size:12px;padding:5px 12px;border-width:1.5px">
+            <span class="proj-tab-dot" style="background:#D85A30"></span>Mont.
+          </button>
+          <button class="proj-tab" id="mpt3" onclick="setBiz(3)" style="font-size:12px;padding:5px 12px;border-width:1.5px">
+            <span class="proj-tab-dot" style="background:#7F77DD"></span>General
+          </button>
+        </div>
+        <button class="btn-task" id="btn-add" onclick="toggleForm()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nueva tarea
+        </button>
+      </div>
+
+      <!-- SECTION BAR (Tablero / Dashboard) con semáforo -->
+      <div class="section-bar">
+        <button class="sec-tab act" id="sec-tablero" onclick="showSection('tablero')">Tablero</button>
+        <button class="sec-tab" id="sec-dashboard" onclick="showSection('dashboard')">Dashboard</button>
+        <button class="sec-tab" id="sec-reuniones" onclick="showSection('reuniones')">📋 Reuniones</button>
+        <div style="display:flex;align-items:center;gap:4px;margin-left:10px">
+          <span style="font-size:11px;color:var(--text2);white-space:nowrap">Ver:</span>
+          <div id="section-bar-filters" style="display:flex;gap:4px;flex-wrap:wrap">
+            <button class="resp-btn act" data-who="" onclick="setResp('')">Total</button>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;margin-left:10px">
+          <span style="font-size:11px;color:var(--text2);white-space:nowrap">Mes:</span>
+          <select id="filter-month" onchange="renderCurrent()" style="height:26px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text2);background:var(--bg)">
+            <option value="">Todos</option>
+          </select>
+          <button onclick="clearDateFilter()" title="Ver todos" style="height:26px;padding:0 7px;font-size:11px;border:1px solid var(--border);border-radius:5px;background:var(--bg);cursor:pointer;color:var(--text3)">✕</button>
+        </div>
+        <div class="sem-leg">
+          <span class="leg"><span class="leg-dot" style="background:#E24B4A"></span>Vencida</span>
+          <span class="leg"><span class="leg-dot" style="background:#EF9F27"></span>≤5 días</span>
+          <span class="leg"><span class="leg-dot" style="background:#639922"></span>A tiempo</span>
+          <span class="leg"><span class="leg-dot" style="background:#888780"></span>Cerrada</span>
+        </div>
+      </div>
+
+      <!-- FORM -->
+      <div class="form-area" id="form-area">
+        <div class="form-title">Nueva tarea</div>
+        <div class="form-row">
+          <div class="form-field" style="flex:2;min-width:140px">
+            <label>Título *</label>
+            <input id="fa-title" type="text" placeholder="Nombre de la tarea" style="width:100%">
+          </div>
+          <div class="form-field">
+            <label>Responsable</label>
+            <select id="fa-who"></select>
+          </div>
+          <div class="form-field">
+            <label>Prioridad</label>
+            <select id="fa-pri"><option value="normal">Normal</option><option value="alta">Alta</option><option value="urgente">Urgente</option></select>
+          </div>
+          <div class="form-field">
+            <label>Fecha límite</label>
+            <input id="fa-date" type="date">
+          </div>
+          <div class="form-field" id="fa-biz-wrap">
+            <label>Proyecto</label>
+            <select id="fa-biz"><option value="0">Gestor HH</option><option value="1">Logístico</option><option value="2">Montevra</option></select>
+          </div>
+          <div class="form-field">
+            <label>↻ Repetir</label>
+            <select id="fa-freq" onchange="toggleRecFields()" style="height:34px;font-size:13px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit">
+              <option value="none">Sin repetición</option>
+              <option value="weekly">Semanal</option>
+              <option value="monthly">Mensual</option>
+              <option value="bimonthly">Cada 2 meses</option>
+            </select>
+          </div>
+          <div class="form-field" id="fa-times-wrap" style="display:none">
+            <label>Veces</label>
+            <select id="fa-times" style="height:34px;font-size:13px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit">
+              <option value="3">3 veces</option><option value="6">6 veces</option>
+              <option value="12">12 veces</option><option value="24">24 veces</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label style="display:flex;align-items:center;gap:5px;cursor:pointer;height:34px;margin-bottom:0">
+              <input type="checkbox" id="fa-payment" onchange="togglePayment()" style="width:15px;height:15px;cursor:pointer;accent-color:#F59E0B">
+              <span style="font-size:12px;color:var(--text2);white-space:nowrap">💰 Es pago</span>
+            </label>
+          </div>
+          <div id="fa-support-wrap" style="display:none;align-items:flex-end;gap:6px">
+            <div class="form-field">
+              <label>Soporte requerido</label>
+              <input id="fa-support-desc" type="text" placeholder="Ej: Factura, comprobante..." style="height:34px;font-size:12px;border:1px solid #F59E0B;border-radius:6px;padding:0 8px;font-family:inherit;width:200px">
+            </div>
+          </div>
+          <button class="btn-save" onclick="saveTask()">Guardar</button>
+          <button class="btn-cancel" onclick="toggleForm()">Cancelar</button>
+        </div>
+        <div id="fa-preview" style="display:none;margin-top:10px;padding:10px 12px;background:var(--blue-light);border-radius:8px;font-size:12px;color:var(--blue)"></div>
+      </div>
+
+      <!-- KANBAN -->
+      <div class="board" id="board"></div>
+      <!-- GLOBAL VIEW -->
+      <div class="global-view-wrap" id="global-view" style="display:none"></div>
+      <!-- DASHBOARD -->
+      <div class="dash-wrap" id="dash-view" style="display:none"></div>
+
+    </div>
+  </div>
+
+  <!-- RECURRING MODAL -->
+  <div id="rec-overlay" class="rec-modal-overlay" style="display:none" onclick="if(event.target===this)closeRec()">
+    <div class="rec-modal">
+      <div class="rec-modal-head">
+        <div>
+          <div class="rec-modal-title">Tareas recurrentes</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:2px">Tareas que se repiten cada mes</div>
+        </div>
+        <button class="rec-close" onclick="closeRec()">×</button>
+      </div>
+      <div class="rec-body">
+        <div style="margin-bottom:14px">
+          <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">Agregar tarea recurrente</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <input id="rec-title" type="text" placeholder="Nombre de la tarea" style="flex:2;min-width:140px;height:32px;font-size:13px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;outline:none">
+            <select id="rec-who" class="rec-who-dyn" style="height:32px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit">
+              <option>Anderson</option><option>Raul</option><option>Ambos</option>
+            </select>
+            <select id="rec-biz" style="height:32px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit">
+              <option value="0">Gestor HH</option><option value="1">Logístico</option><option value="2">Montevra</option>
+            </select>
+            <select id="rec-day" style="height:32px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit">
+              <option value="1">Día 1 del mes</option><option value="5">Día 5 del mes</option>
+              <option value="10">Día 10 del mes</option><option value="15">Día 15 del mes</option>
+              <option value="20">Día 20 del mes</option><option value="25">Día 25 del mes</option>
+              <option value="28">Día 28 del mes</option>
+            </select>
+            <select id="rec-pri" style="height:32px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit">
+              <option value="normal">Normal</option><option value="alta">Alta</option><option value="urgente">Urgente</option>
+            </select>
+            <button onclick="saveRecurring()" style="height:32px;background:var(--blue);color:#fff;border:none;border-radius:8px;padding:0 14px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit">Agregar</button>
+          </div>
+        </div>
+        <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">Tareas guardadas</div>
+        <div id="rec-list"></div>
+      </div>
+      <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:12px;color:var(--text2)" id="rec-status"></span>
+        <button onclick="generateRecurring()" style="background:var(--blue);color:#fff;border:none;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit">
+          ↻ Generar tareas del mes
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- REUNIONES SECTION -->
+  <div id="section-reuniones" style="display:none;position:fixed;top:52px;left:0;right:0;bottom:0;flex-direction:column;overflow:hidden;background:var(--bg2);z-index:50">
+    <div class="project-bar">
+      <button onclick="showSection('tablero')" style="display:flex;align-items:center;gap:6px;height:32px;padding:0 12px;font-size:13px;font-weight:500;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text2);cursor:pointer;font-family:inherit;margin-right:8px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        Inicio
+      </button>
+      <span class="proj-title">📋 Notas de Reunión</span>
+      <button class="btn-task" onclick="clearMeetingForm()" style="margin-left:auto">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Nueva reunión
+      </button>
+    </div>
+    <!-- Meeting form inline (always at top when open) -->
+    <div id="meeting-form-area" style="display:block;padding:14px 16px;border-bottom:2px solid var(--blue-mid);background:var(--bg);flex-shrink:0">
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px">📋 Nueva nota de reunión</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:flex-end">
+        <div style="flex:2;min-width:160px">
+          <div style="font-size:11px;color:var(--text2);margin-bottom:3px">Título</div>
+          <input id="mt-title" type="text" placeholder="Ej: Reunión semanal Gestor HH" style="width:100%;height:34px;font-size:13px;border:1px solid var(--border);border-radius:6px;padding:0 10px;font-family:inherit;outline:none;color:var(--text);background:var(--bg2)">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:3px">Fecha</div>
+          <input id="mt-date" type="date" style="height:34px;font-size:13px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text);background:var(--bg2)">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:3px">Proyecto</div>
+          <select id="mt-biz" style="height:34px;font-size:13px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text);background:var(--bg2)">
+            <option value="">General</option>
+            <option value="0">Gestor HH</option>
+            <option value="1">Logístico</option>
+            <option value="2">Montevra</option>
+          </select>
+        </div>
+      </div>
+      <div class="rte-toolbar">
+        <button class="rte-btn" onclick="rte('bold')"><b>B</b></button>
+        <button class="rte-btn" onclick="rte('italic')"><i>I</i></button>
+        <button class="rte-btn" onclick="rte('underline')"><u>U</u></button>
+        <div class="rte-sep"></div>
+        <button class="rte-btn" onclick="rte('insertUnorderedList')">&#8226; Lista</button>
+        <button class="rte-btn" onclick="rte('insertOrderedList')">1. Lista</button>
+        <div class="rte-sep"></div>
+        <select class="rte-select" onchange="rte('fontSize',this.value);this.value=''">
+          <option value="">Tam.</option>
+          <option value="1">Peq.</option>
+          <option value="3">Normal</option>
+          <option value="5">Grande</option>
+          <option value="7">Muy grande</option>
+        </select>
+        <div class="rte-sep"></div>
+        <input type="color" class="rte-color-pick" value="#2563eb" title="Color" onchange="rte('foreColor',this.value)">
+        <input type="color" class="rte-color-pick" value="#fef08a" title="Resaltar" onchange="rte('hiliteColor',this.value)">
+        <div class="rte-sep"></div>
+        <button class="rte-btn" onclick="document.getElementById('rte-editor').innerHTML=''">&#128465;</button>
+      </div>
+      <div id="rte-editor" class="rte-editor" contenteditable="true"></div>
+      <!-- TAREAS DE REUNIÓN -->
+      <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
+        <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">📌 Tareas asignadas en esta reunión</div>
+        <div id="mt-tasks-list" style="margin-bottom:8px"></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end">
+          <input id="mt-task-title" type="text" placeholder="Título de la tarea..." style="flex:2;min-width:140px;height:32px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;outline:none;color:var(--text);background:var(--bg)">
+          <select id="mt-task-who" style="height:32px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text);background:var(--bg)"></select>
+          <input id="mt-task-date" type="date" style="height:32px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text);background:var(--bg)">
+          <select id="mt-task-pri" style="height:32px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text);background:var(--bg)">
+            <option value="normal">Normal</option>
+            <option value="alta">Alta</option>
+            <option value="urgente">Urgente</option>
+          </select>
+          <button onclick="addMeetingTask()" style="height:32px;padding:0 12px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:500">+ Agregar</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn-save" onclick="saveMeeting()" style="background:var(--blue)">💾 Guardar reunión</button>
+        <button class="btn-cancel" onclick="toggleMeetingForm()">Cancelar</button>
+      </div>
+    </div>
+    <!-- List of meetings -->
+    <div id="meetings-view" style="flex:1;overflow-y:auto;padding:16px;background:#eef2f7;-webkit-overflow-scrolling:touch"></div>
+  </div>
+
+
+
+  <!-- NOTES MODAL -->
+  <div id="notes-overlay" class="notes-overlay" style="display:none" onclick="closeNotes(event)">
+    <div class="notes-modal" onclick="event.stopPropagation()">
+      <div class="notes-modal-head">
+        <div>
+          <div class="notes-modal-title" id="notes-title">Notas del avance</div>
+          <div class="notes-modal-sub" id="notes-sub"></div>
+        </div>
+        <button class="notes-close" onclick="closeNotesBtn()">×</button>
+      </div>
+      <div class="notes-body">
+        <textarea class="notes-textarea" id="notes-input" placeholder="Escribe una nota sobre este avance... (opcional)"></textarea>
+        <div class="notes-history" id="notes-history"></div>
+      </div>
+      <div class="notes-footer" id="notes-footer-default">
+        <button class="btn-save" onclick="saveNoteAndMove()" style="flex:1;background:var(--blue)">Confirmar avance</button>
+        <button class="btn-cancel" onclick="closeNotesBtn()">Cancelar</button>
+      </div>
+      <div class="notes-footer" id="notes-footer-vencida" style="display:none;flex-direction:column;gap:8px">
+        <div style="display:flex;gap:8px">
+          <button class="btn-save" onclick="saveNoteAndMove()" style="flex:1;background:#E24B4A">✓ Completar tarea</button>
+          <button class="btn-cancel" onclick="closeNotesBtn()">Cancelar</button>
+        </div>
+        <button onclick="saveNoteOnly()" style="width:100%;height:32px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;color:var(--text2);font-family:inherit">💬 Solo guardar nota (sin completar)</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- USER SETTINGS MODAL -->
+  <div id="user-modal-overlay" class="user-modal-overlay" style="display:none" onclick="if(event.target===this)closeUserModal()">
+    <div class="user-modal">
+      <div class="user-modal-head">
+        <div class="user-modal-title">👥 Configurar usuarios</div>
+        <button onclick="closeUserModal()" style="background:none;border:none;font-size:22px;color:var(--text2);cursor:pointer;line-height:1">×</button>
+      </div>
+      <div id="user-modal-body" style="padding:8px 0"></div>
+      <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px">
+        <button onclick="closeUserModal()" class="btn-cancel">Cancelar</button>
+        <button onclick="saveUserSettings()" class="btn-save" style="background:var(--blue)">Guardar cambios</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOBILE BOTTOM NAV -->->
+  <nav class="mob-nav">
+    <button class="mob-nav-btn act" id="mobnav-tablero" onclick="showSection('tablero')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Tablero
+    </button>
+    <button class="mob-nav-btn" id="mobnav-dashboard" onclick="showSection('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Dashboard
+    </button>
+    <button class="mob-nav-btn" id="mobnav-reuniones" onclick="showSection('reuniones')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Reuniones
+    </button>
+    <button class="mob-nav-btn" id="mobnav-nueva" onclick="toggleForm()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Nueva
+    </button>
+  </nav>
+
+</div>
+
+<script>
+const PW='hh2026';
+const BIZS=[{name:'Gestor Ambiental HH'},{name:'Operador Logístico'},{name:'Montevra'},{name:'Vista general'}];
+const BIZ_C=['#639922','#378ADD','#D85A30'];
+const BIZ_NAMES=['Gestor HH','Logístico','Montevra'];
+// ── DYNAMIC USERS ─────────────────────────────────────────────
+const USER_COLORS = [
+  {bg:'#E6F1FB',col:'#0C447C'},
+  {bg:'#EAF3DE',col:'#27500A'},
+  {bg:'#F3E8FF',col:'#6B21A8'},
+  {bg:'#FEF3C7',col:'#92400E'},
+];
+function getUsers(){
+  const saved = localStorage.getItem('hh-users-v1');
+  if(saved) return JSON.parse(saved);
+  return [
+    {id:'u1',name:'Anderson',init:'AN'},
+    {id:'u2',name:'Raul',init:'RA'},
+    {id:'u3',name:'Usuario 3',init:'U3'},
+    {id:'u4',name:'Usuario 4',init:'U4'},
+  ];
+}
+function saveUsers(users){
+  localStorage.setItem('hh-users-v1', JSON.stringify(users));
+}
+function getWHO(){
+  const users = getUsers();
+  const who = {};
+  users.forEach((u,i)=>{
+    const c = USER_COLORS[i % USER_COLORS.length];
+    who[u.name] = {bg:c.bg, col:c.col, init:u.init, id:u.id};
+  });
+  return who;
+}
+// Keep WHO as backward compat
+let WHO = getWHO();
+function refreshWHO(){ WHO = getWHO(); }
+const SEM={urgente:{c:'#E24B4A',bg:'#FCEBEB',tc:'#791F1F'},alta:{c:'#EF9F27',bg:'#FAEEDA',tc:'#633806'},normal:{c:'#639922',bg:'#EAF3DE',tc:'#27500A'}};
+const MONTHS=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+window.tasks=[];let biz=0,tasks=window.tasks,curSection='tablero';
+
+// checkPw moved to viewer mode section
+function logout(){
+  document.getElementById('app').style.display='none';
+  document.getElementById('lock-screen').style.display='flex';
+  document.getElementById('pw-input').value='';
+  document.getElementById('pw-err').style.display='none';
+}
+
+function setBiz(i){
+  biz=i;
+  // Update desktop tabs
+  for(let j=0;j<4;j++){
+    const dt=document.getElementById('pt'+j);
+    const mt=document.getElementById('mpt'+j);
+    const c=j===3?'#7F77DD':BIZ_C[j];
+    if(dt){
+      dt.classList.toggle('act',j===i);
+      dt.style.background=j===i?c:'';
+    }
+    if(mt){
+      mt.classList.toggle('act',j===i);
+      mt.style.background=j===i?c:'';
+    }
+  }
+  document.getElementById('proj-title').textContent=BIZS[i].name;
+  // Show/hide btn-add only on tablero section
+  const isBoard=i<3;
+  document.getElementById('btn-add').style.display=(curSection==='tablero'&&isBoard)?'flex':'none';
+  document.getElementById('form-area').style.display='none';
+  renderCurrent();
+  setTimeout(initDragDrop,100);
+}
+
+function showSection(s){
+  curSection=s;
+
+  // ── Tabs desktop (section-bar)
+  ['tablero','dashboard','reuniones'].forEach(sec=>{
+    const el=document.getElementById('sec-'+sec);
+    if(el) el.classList.toggle('act',sec===s);
+  });
+
+  // ── Tabs mobile (bottom nav)
+  ['tablero','dashboard','reuniones'].forEach(sec=>{
+    const el=document.getElementById('mobnav-'+sec);
+    if(el) el.classList.toggle('act',sec===s);
+  });
+
+  // ── Show/hide sections
+  const secTab=document.getElementById('section-tablero');
+  const secReu=document.getElementById('section-reuniones');
+  if(secTab) secTab.style.display=(s==='tablero'||s==='dashboard')?'flex':'none';
+  if(secReu) secReu.style.display=s==='reuniones'?'flex':'none';
+
+  // ── Buttons
+  document.getElementById('btn-add').style.display=(s==='tablero'&&biz<3)?'flex':'none';
+  const mobNueva=document.getElementById('mobnav-nueva');
+  if(mobNueva) mobNueva.style.display=(s==='tablero'&&biz<3)?'flex':'none';
+  document.getElementById('form-area').style.display='none';
+
+  // ── Render
+  if(s==='reuniones'){
+    renderMeetings();
+    setTimeout(initRTE,200);
+    setTimeout(populateMtTaskWho,300);
+  } else {
+    renderCurrent();
+  }
+}
+
+function toggleRecFields(){
+  const freq=document.getElementById('fa-freq').value;
+  const show=freq!=='none';
+  document.getElementById('fa-times-wrap').style.display=show?'block':'none';
+  updateRecPreview();
+}
+function updateRecPreview(){
+  const freq=document.getElementById('fa-freq').value;
+  const dateVal=document.getElementById('fa-date').value;
+  const preview=document.getElementById('fa-preview');
+  if(freq==='none'||!dateVal){preview.style.display='none';return;}
+  const times=parseInt(document.getElementById('fa-times').value)||6;
+  const freqLabel={weekly:'semana',monthly:'mes',bimonthly:'2 meses'};
+  const dates=getRecurringDates(dateVal,freq,times);
+  preview.style.display='block';
+  preview.innerHTML=`↻ Se generarán <strong>${times} tareas</strong> cada ${freqLabel[freq]}:<br>
+    <span style="opacity:.8">${dates.slice(0,4).map(d=>fmtDateFull(d)).join(' · ')}${dates.length>4?' · ...':''}</span>`;
+}
+function getRecurringDates(startDate,freq,times){
+  const dates=[];
+  let d=new Date(startDate+'T00:00:00');
+  for(let i=0;i<times;i++){
+    dates.push(d.toISOString().split('T')[0]);
+    const nd=new Date(d);
+    if(freq==='weekly') nd.setDate(nd.getDate()+7);
+    else if(freq==='monthly') nd.setMonth(nd.getMonth()+1);
+    else if(freq==='bimonthly') nd.setMonth(nd.getMonth()+2);
+    d=nd;
+  }
+  return dates;
+}
+function fmtDateFull(d){
+  if(!d)return'';
+  const[y,m,dd]=d.split('-');
+  return parseInt(dd)+' '+['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'][parseInt(m)-1]+' '+y;
+}
+function toggleForm(){
+  const f=document.getElementById('form-area');
+  const open=f.style.display==='none'||f.style.display==='';
+  f.style.display=open?'block':'none';
+  if(open){
+    document.getElementById('fa-biz').value=String(biz<3?biz:0);
+    document.getElementById('fa-freq').value='none';
+    document.getElementById('fa-times-wrap').style.display='none';
+    document.getElementById('fa-preview').style.display='none';
+    document.getElementById('fa-title').focus();
+    document.getElementById('fa-date').onchange=updateRecPreview;
+  }
+}
+
+
+// ── DRAG AND DROP ─────────────────────────────────────────────
+function initDragDrop(){
+  document.addEventListener('dragstart', e=>{
+    const card = e.target.closest('.card');
+    if(!card) return;
+    card.classList.add('dragging');
+    e.dataTransfer.setData('text/plain', card.dataset.taskId || '');
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  document.addEventListener('dragend', e=>{
+    const card = e.target.closest('.card');
+    if(card) card.classList.remove('dragging');
+    document.querySelectorAll('.col-body').forEach(c=>c.classList.remove('drag-over'));
+  });
+  document.addEventListener('dragover', e=>{
+    e.preventDefault();
+    const col = e.target.closest('.col-body');
+    if(col){
+      document.querySelectorAll('.col-body').forEach(c=>c.classList.remove('drag-over'));
+      col.classList.add('drag-over');
+    }
+  });
+  document.addEventListener('dragleave', e=>{
+    const col = e.target.closest('.col-body');
+    if(col && !col.contains(e.relatedTarget)) col.classList.remove('drag-over');
+  });
+  document.addEventListener('drop', e=>{
+    e.preventDefault();
+    const col = e.target.closest('.col-body');
+    if(!col) return;
+    col.classList.remove('drag-over');
+    const colWrap = col.closest('.col-wrap');
+    if(!colWrap) return;
+    const colIndex = [...document.querySelectorAll('.col-wrap')].indexOf(colWrap);
+    const statusMap = ['v','p','e','c'];
+    // adjust for vencidas column
+    const visibleCols = document.querySelectorAll('.col-wrap');
+    const colLabels = [...visibleCols].map(w=>w.querySelector('.col-label').textContent.trim());
+    const statusByLabel = {'Vencidas':'p','Pendiente':'p','En progreso':'e','Completada':'c'};
+    const newStatus = statusByLabel[colLabels[colIndex]] || 'p';
+    const taskId = e.dataTransfer.getData('text/plain');
+    if(!taskId) return;
+    const t = tasks.find(x=>x.id===taskId);
+    if(!t || t.status===newStatus) return;
+    // Open notes modal before moving
+    pendingMove = {id: taskId, dir: newStatus==='e'?1:newStatus==='c'?2:0};
+    // Direct move without notes for drag
+    t.status = newStatus;
+    persist();
+    renderCurrent();
+  });
+  // Touch drag for mobile
+  let touchTask = null, touchClone = null;
+  document.addEventListener('touchstart', e=>{
+    const card = e.target.closest('.card');
+    if(!card) return;
+    touchTask = card.dataset.taskId;
+    touchClone = card.cloneNode(true);
+    touchClone.style.cssText = 'position:fixed;opacity:.7;pointer-events:none;z-index:1000;width:'+card.offsetWidth+'px;top:0;left:0;transform:scale(1.05)';
+    document.body.appendChild(touchClone);
+  },{passive:true});
+  document.addEventListener('touchmove', e=>{
+    if(!touchClone) return;
+    const touch = e.touches[0];
+    touchClone.style.left = (touch.clientX - touchClone.offsetWidth/2)+'px';
+    touchClone.style.top = (touch.clientY - 30)+'px';
+    document.querySelectorAll('.col-body').forEach(c=>c.classList.remove('drag-over'));
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    const col = el && el.closest('.col-body');
+    if(col) col.classList.add('drag-over');
+  },{passive:true});
+  document.addEventListener('touchend', e=>{
+    if(!touchClone) return;
+    const touch = e.changedTouches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    const col = el && el.closest('.col-body');
+    document.querySelectorAll('.col-body').forEach(c=>c.classList.remove('drag-over'));
+    if(col && touchTask){
+      const colLabels = {'Vencidas':'p','Pendiente':'p','En progreso':'e','Completada':'c'};
+      const label = col.closest('.col-wrap').querySelector('.col-label').textContent.trim();
+      const newStatus = colLabels[label] || 'p';
+      const t = tasks.find(x=>x.id===touchTask);
+      if(t && t.status!==newStatus){
+        // Vencidas solo pueden ir a completada
+        const over=t.date&&isOver(t.date)&&t.status!=='c';
+        if(over && newStatus!=='c') return;
+        t.status=newStatus; persist(); renderCurrent();
+      }
+    }
+    touchClone.remove(); touchClone=null; touchTask=null;
+  },{passive:true});
+}
+
+
+// ── VIEWER MODE ───────────────────────────────────────────────
+const VIEWER_PW = 'ver2026';
+let isViewer = false;
+
+function checkPw(){
+  const val = document.getElementById('pw-input').value;
+  if(val === PW){
+    isViewer = false;
+    document.getElementById('lock-screen').style.display='none';
+    document.getElementById('app').style.display='block';
+    loadTasks();
+  } else if(val === VIEWER_PW){
+    isViewer = true;
+    document.getElementById('lock-screen').style.display='none';
+    document.getElementById('app').style.display='block';
+    // Show viewer banner
+    const banner = document.createElement('div');
+    banner.className = 'viewer-banner';
+    banner.innerHTML = '👁 Modo vista — solo lectura. Puedes ver el seguimiento pero no editar tareas.';
+    document.querySelector('.topnav').after(banner);
+    // Hide edit buttons
+    document.getElementById('btn-add').style.display='none';
+    loadTasks();
+  } else {
+    document.getElementById('pw-err').style.display='block';
+    document.getElementById('pw-input').value='';
+    document.getElementById('pw-input').focus();
+  }
+}
+
+
+
+// ── MEETING NOTES ─────────────────────────────────────────────
+let meetings = [];
+let meetingFormOpen = false;
+
+function loadMeetings(){
+  const s = localStorage.getItem('hh-meetings-v1');
+  meetings = s ? JSON.parse(s) : [];
+  if(window.persistMeetingsToFirebase) window.persistMeetingsToFirebase(meetings);
+}
+
+function persistMeetings(){
+  localStorage.setItem('hh-meetings-v1', JSON.stringify(meetings));
+  if(window.persistMeetingsToFirebase) window.persistMeetingsToFirebase(meetings);
+}
+
+function toggleMeetingForm(){
+  clearMeetingForm();
+}
+function rte(cmd,val){const ed=document.getElementById('rte-editor');if(ed)ed.focus();document.execCommand(cmd,false,val||null);}
+function initRTE(){const ed=document.getElementById('rte-editor');if(ed)ed.focus();}
+
+// ── MEETING TASKS ─────────────────────────────────────────────
+let meetingTasks = [];
+
+function populateMtTaskWho(){
+  const sel = document.getElementById('mt-task-who');
+  if(!sel) return;
+  const users = getUsers();
+  sel.innerHTML = users.map(u=>`<option value="${u.name}">${u.name}</option>`).join('');
+}
+
+function addMeetingTask(){
+  const title = document.getElementById('mt-task-title').value.trim();
+  if(!title) return;
+  const who = document.getElementById('mt-task-who').value;
+  const date = document.getElementById('mt-task-date').value;
+  const pri = document.getElementById('mt-task-pri').value;
+  meetingTasks.push({id:'mt'+Date.now()+Math.random(), title, who, date, pri});
+  document.getElementById('mt-task-title').value='';
+  renderMeetingTasksList();
+}
+
+function removeMeetingTask(id){
+  meetingTasks = meetingTasks.filter(t=>t.id!==id);
+  renderMeetingTasksList();
+}
+
+function renderMeetingTasksList(){
+  const container = document.getElementById('mt-tasks-list');
+  if(!container) return;
+  if(!meetingTasks.length){
+    container.innerHTML='';
+    return;
+  }
+  const priColors={urgente:'#E24B4A',alta:'#EF9F27',normal:'#639922'};
+  container.innerHTML = meetingTasks.map(t=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg2);border-radius:6px;margin-bottom:4px;font-size:12px">
+      <span style="width:8px;height:8px;border-radius:50%;background:${priColors[t.pri]||'#639922'};flex-shrink:0;display:inline-block"></span>
+      <span style="flex:1;color:var(--text)">${t.title}</span>
+      <span style="color:var(--text2)">${t.who}</span>
+      ${t.date?`<span style="color:var(--text3)">${t.date}</span>`:''}
+      <button onclick="removeMeetingTask('${t.id}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;line-height:1;padding:0">×</button>
+    </div>
+  `).join('');
+}
+
+function clearMeetingForm(){
+  const today = new Date().toISOString().split('T')[0];
+  if(document.getElementById('mt-title')) document.getElementById('mt-title').value='';
+  meetingTasks=[];
+  const rted=document.getElementById('rte-editor');if(rted){rted.innerHTML='';rted.focus();}
+  renderMeetingTasksList();
+  populateMtTaskWho();
+  if(document.getElementById('mt-biz')) document.getElementById('mt-biz').value='';
+  if(document.getElementById('mt-date')) document.getElementById('mt-date').value=today;
+  if(document.getElementById('mt-title')) document.getElementById('mt-title').focus();
+}
+
+function saveMeeting(){
+  const titleEl = document.getElementById('mt-title');
+  const bizEl = document.getElementById('mt-biz');
+  if(!titleEl||!bizEl) return;
+  const title = titleEl.value.trim();
+  const rted2=document.getElementById('rte-editor');
+  const body=rted2?rted2.innerHTML.trim():'';
+  const biz=bizEl.value;
+  if(!body||body==='<br>'){if(rted2)rted2.focus();return;}
+  const dateVal = document.getElementById('mt-date').value || new Date().toISOString().split('T')[0];
+  const dateObj = new Date(dateVal+'T00:00:00');
+  const dateFmt = dateObj.toLocaleDateString('es-CO',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  meetings.unshift({
+    id: 'mt'+Date.now(),
+    title: title || 'Reunión de trabajo',
+    body,
+    biz: biz===''?null:parseInt(biz),
+    date: dateFmt,
+    dateISO: dateVal,
+    author: 'HH Socios',
+    meetingTasks: [...meetingTasks]
+  });
+  // Save meeting tasks to main tasks board
+  if(meetingTasks.length > 0){
+    const bizVal = document.getElementById('mt-biz').value;
+    const bizInt = bizVal===''?0:parseInt(bizVal);
+    meetingTasks.forEach(t=>{
+      tasks.push({
+        id: 'mrt'+Date.now()+Math.random().toString(36).slice(2),
+        title: t.title,
+        who: t.who,
+        pri: t.pri,
+        date: t.date,
+        status: 'p',
+        biz: bizInt,
+        fromMeeting: true
+      });
+    });
+    persist();
+  }
+  persistMeetings();
+  clearMeetingForm();
+  renderMeetings();
+}
+
+function toggleMeetingCard(id){
+  const body = document.getElementById('mc-body-'+id);
+  const arrow = document.getElementById('mc-arrow-'+id);
+  if(!body) return;
+  const open = body.style.display==='none';
+  body.style.display = open ? 'block' : 'none';
+  if(arrow) arrow.style.transform = open ? 'rotate(180deg)' : '';
+}
+
+function delMeeting(id){
+  if(!confirm('¿Eliminar esta nota de reunión?')) return;
+  meetings = meetings.filter(m=>m.id!==id);
+  persistMeetings();
+  renderMeetings();
+}
+
+function renderMeetings(){
+  loadMeetings();
+  const BIZ_NAMES = ['Gestor HH','Logístico','Montevra'];
+  const BIZ_C = ['#639922','#378ADD','#D85A30'];
+  let html = '';
+
+  if(!meetings.length){
+    html += '<div class="meeting-empty">No hay notas de reunión aún.<br>Crea la primera con el botón "+ Nueva reunión"</div>';
+  } else {
+    // Group by month
+    const grouped = {};
+    meetings.forEach(m=>{
+      const key = m.dateISO ? m.dateISO.substring(0,7) : 'otros';
+      if(!grouped[key]) grouped[key]=[];
+      grouped[key].push(m);
+    });
+    const MONTHS_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    Object.keys(grouped).sort().reverse().forEach(key=>{
+      const [y,mo] = key.split('-');
+      const monthLabel = mo ? MONTHS_ES[parseInt(mo)-1]+' '+y : 'Sin fecha';
+      html += `<div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin:12px 0 8px">${monthLabel}</div>`;
+      grouped[key].forEach(m=>{
+        const bizTag = m.biz!==null&&m.biz!==undefined
+          ? `<span class="meeting-biz-tag" style="background:${BIZ_C[m.biz]}18;color:${BIZ_C[m.biz]}">${BIZ_NAMES[m.biz]}</span>`
+          : '<span class="meeting-biz-tag" style="background:var(--bg2);color:var(--text3)">General</span>';
+        html += `<div class="meeting-card" style="cursor:pointer" onclick="toggleMeetingCard('${m.id}')">
+          <div class="meeting-card-head">
+            <span class="meeting-date-badge">${m.dateISO||''}</span>
+            <span class="meeting-title">${m.title}</span>
+            ${bizTag}
+            <span id="mc-arrow-${m.id}" style="color:var(--text3);font-size:14px;margin-left:4px;transition:transform .2s">▼</span>
+            <button class="meeting-del" onclick="event.stopPropagation();delMeeting('${m.id}')" title="Eliminar">×</button>
+          </div>
+          <div id="mc-body-${m.id}" style="display:none">
+            <div class="meeting-body">${m.body}</div>
+            ${m.meetingTasks&&m.meetingTasks.length?`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+              <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px">📌 Tareas asignadas (${m.meetingTasks.length})</div>
+              ${m.meetingTasks.map(t=>`<div style="font-size:11px;color:var(--text2);padding:2px 0">• ${t.title} → <b>${t.who}</b></div>`).join('')}
+            </div>`:''}
+            <div class="meeting-footer" onclick="event.stopPropagation()">
+              <span class="meeting-author">📝 ${m.author}</span>
+            </div>
+          </div>
+        </div>`;
+      });
+    });
+  }
+
+  document.getElementById('meetings-view').innerHTML = html;
+}
+
+
+// ── PAYMENT SUPPORT ───────────────────────────────────────────
+function markSupportDone(id){
+  const t = tasks.find(x=>x.id===id);
+  if(!t) return;
+  t.supportDone = true;
+  persist();
+  renderCurrent();
+}
+
+function togglePayment(){
+  const isP = document.getElementById('fa-payment').checked;
+  document.getElementById('fa-support-wrap').style.display = isP ? 'flex' : 'none';
+}
+
+
+
+// ── USER MANAGEMENT ───────────────────────────────────────────
+function openUserModal(){
+  const users = getUsers();
+  const colors = USER_COLORS;
+  let html = '';
+  users.forEach((u,i)=>{
+    const c = colors[i % colors.length];
+    html += `<div class="user-row">
+      <div class="user-avatar-sm" style="background:${c.bg};color:${c.col}">${u.init}</div>
+      <input class="user-name-input" id="uname-${u.id}" value="${u.name}" placeholder="Nombre del usuario" maxlength="20">
+      <input class="user-init-input" id="uinit-${u.id}" value="${u.init}" placeholder="XX" maxlength="3">
+    </div>`;
+  });
+  document.getElementById('user-modal-body').innerHTML = html;
+  document.getElementById('user-modal-overlay').style.display = 'flex';
+}
+
+function closeUserModal(){
+  document.getElementById('user-modal-overlay').style.display = 'none';
+}
+
+function saveUserSettings(){
+  const users = getUsers();
+  users.forEach(u=>{
+    const nameEl = document.getElementById('uname-'+u.id);
+    const initEl = document.getElementById('uinit-'+u.id);
+    if(nameEl) u.name = nameEl.value.trim() || u.name;
+    if(initEl) u.init = initEl.value.trim().toUpperCase() || u.init;
+  });
+  saveUsers(users);
+  refreshWHO();
+  // Update all selects immediately
+  const fwhoEl=document.getElementById('fwho');
+  if(fwhoEl) fwhoEl.innerHTML='<option value="">Total</option>'+users.map(u=>`<option value="${u.name}">${u.name}</option>`).join('');
+  const faWhoEl=document.getElementById('fa-who');
+  if(faWhoEl) faWhoEl.innerHTML=users.map(u=>`<option value="${u.name}">${u.name}</option>`).join('');
+  buildRespButtons();
+  closeUserModal();
+  renderCurrent();
+  if(curSection==='dashboard') renderDashboard();
+}
+
+function updateAllFilters(){
+  // Kept for compatibility — actual updates done in saveUserSettings
+}
+
+function buildRespButtons(){
+  const users=getUsers();
+  const bar=document.getElementById('section-bar-filters');
+  if(!bar) return;
+  bar.innerHTML=`<button class="resp-btn act" data-who="" onclick="setResp('')">Total</button>`+
+    users.map(u=>`<button class="resp-btn" data-who="${u.name}" onclick="setResp('${u.name}')">${u.name}</button>`).join('');
+}
+
+function loadTasks(){
+  const local = localStorage.getItem('hh-socios-v3');
+  tasks = local ? JSON.parse(local) : [];
+  window.tasks = tasks;
+  autoAdvanceTasks();
+  refreshWHO();
+  // Populate ALL user selects on load
+  const us=getUsers();
+  const fwhoEl=document.getElementById('fwho');
+  if(fwhoEl) fwhoEl.innerHTML='<option value="">Total</option>'+us.map(u=>`<option value="${u.name}">${u.name}</option>`).join('');
+  const faWhoEl=document.getElementById('fa-who');
+  if(faWhoEl) faWhoEl.innerHTML=us.map(u=>`<option value="${u.name}">${u.name}</option>`).join('');
+  setBiz(0);
+  buildRespButtons();
+  setTimeout(checkRecurringOnLoad, 1500);
+  window.dispatchEvent(new Event('app-ready'));
+  setInterval(()=>window.dispatchEvent(new Event('app-ready')), 10000);
+}
+
+// ── RECURRING TASKS ──────────────────────────────────────────
+let recurring = [];
+
+function loadRecurring(){
+  const s = localStorage.getItem('hh-recurring-v1');
+  recurring = s ? JSON.parse(s) : [];
+  persistRecurring();
+}
+
+function persistRecurring(){
+  localStorage.setItem('hh-recurring-v1', JSON.stringify(recurring));
+}
+
+function openRec(){
+  loadRecurring();
+  renderRecList();
+  document.getElementById('rec-overlay').style.display='flex';
+}
+function closeRec(){
+  document.getElementById('rec-overlay').style.display='none';
+}
+
+function saveRecurring(){
+  const title = document.getElementById('rec-title').value.trim();
+  if(!title) return;
+  recurring.push({
+    id: 'r' + Date.now(),
+    title,
+    who: document.getElementById('rec-who').value,
+    biz: parseInt(document.getElementById('rec-biz').value),
+    day: parseInt(document.getElementById('rec-day').value),
+    pri: document.getElementById('rec-pri').value,
+  });
+  persistRecurring();
+  document.getElementById('rec-title').value = '';
+  renderRecList();
+}
+
+function delRecurring(id){
+  recurring = recurring.filter(r => r.id !== id);
+  persistRecurring();
+  renderRecList();
+}
+
+function renderRecList(){
+  const list = document.getElementById('rec-list');
+  if(!list) return;
+  if(!recurring.length){
+    list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px">No hay tareas recurrentes. Agrega la primera.</div>';
+    return;
+  }
+  const bizNames = ['Gestor HH','Logístico','Montevra'];
+  const priColors = {urgente:'#E24B4A', alta:'#EF9F27', normal:'#639922'};
+  list.innerHTML = recurring.map(r => `
+    <div class="rec-task-row">
+      <div style="flex:1">
+        <div class="rec-task-title">${r.title}</div>
+        <div class="rec-task-meta">${r.who} · ${bizNames[r.biz]} · Día ${r.day}</div>
+      </div>
+      <span style="width:8px;height:8px;border-radius:50%;background:${priColors[r.pri]||'#639922'};flex-shrink:0;display:inline-block"></span>
+      <span class="rec-freq">Mensual</span>
+      <button class="rec-btn-del" onclick="delRecurring('${r.id}')">×</button>
+    </div>
+  `).join('');
+}
+
+function generateRecurring(){
+  loadRecurring();
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  let added = 0;
+  recurring.forEach(r => {
+    const monthKey = `${year}-${String(month+1).padStart(2,'0')}`;
+    const alreadyExists = tasks.some(t =>
+      t.recurringId === r.id && t.monthKey === monthKey
+    );
+    if(!alreadyExists){
+      const dueDate = new Date(year, month, r.day);
+      tasks.push({
+        id: Date.now() + '_' + r.id + Math.random(),
+        title: r.title,
+        who: r.who,
+        pri: r.pri,
+        date: dueDate.toISOString().split('T')[0],
+        status: 'p',
+        biz: r.biz,
+        recurringId: r.id,
+        monthKey,
+        isRecurring: true
+      });
+      added++;
+    }
+  });
+  if(added > 0){
+    persist();
+    renderCurrent();
+    const st = document.getElementById('rec-status');
+    if(st){ st.textContent = `✓ ${added} tarea${added!==1?'s':''} generada${added!==1?'s':''}`; st.style.color='#16a34a'; }
+  } else {
+    const st = document.getElementById('rec-status');
+    if(st){ st.textContent = 'Ya están generadas para este mes'; st.style.color='var(--text2)'; }
+  }
+}
+
+function checkRecurringOnLoad(){
+  loadRecurring();
+  if(!recurring.length) return;
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const monthKey = `${year}-${String(month+1).padStart(2,'0')}`;
+  const pending = recurring.filter(r =>
+    !tasks.some(t => t.recurringId === r.id && t.monthKey === monthKey)
+  );
+  if(pending.length > 0){
+    const banner = document.createElement('div');
+    banner.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:#1d4ed8;color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;z-index:500;display:flex;align-items:center;gap:12px;box-shadow:0 4px 16px rgba(0,0,0,.2);white-space:nowrap';
+    banner.innerHTML = `<span>↻ ${pending.length} recurrente${pending.length!==1?'s':''} sin generar este mes</span>
+      <button onclick="generateRecurring();this.parentElement.remove()" style="background:#fff;color:#1d4ed8;border:none;border-radius:6px;padding:4px 12px;font-size:12px;font-weight:600;cursor:pointer">Generar</button>
+      <button onclick="this.parentElement.remove()" style="background:none;border:none;color:rgba(255,255,255,.7);font-size:18px;cursor:pointer;line-height:1">×</button>`;
+    document.body.appendChild(banner);
+    setTimeout(() => { if(banner.parentElement) banner.remove(); }, 8000);
+  }
+}
+
+function saveTask(){
+  const title=document.getElementById('fa-title').value.trim();
+  if(!title)return;
+  const bizVal=parseInt(document.getElementById('fa-biz').value);
+  const whoVal=document.getElementById('fa-who').value;
+  const priVal=document.getElementById('fa-pri').value;
+  const dateVal=document.getElementById('fa-date').value;
+  const freq=document.getElementById('fa-freq').value;
+  const times=parseInt(document.getElementById('fa-times').value)||6;
+
+  if(freq!=='none'&&dateVal){
+    // Generar múltiples tareas recurrentes
+    const recGroupId='rg'+Date.now();
+    const dates=getRecurringDates(dateVal,freq,times);
+    const freqLabel={weekly:'Semanal',monthly:'Mensual',bimonthly:'Bimestral'};
+    dates.forEach((date,i)=>{
+      tasks.push({
+        id:Date.now()+'_'+i+'_'+Math.random().toString(36).slice(2),
+        title:`${title}${times>1?' ('+(i+1)+'/'+times+')':''}`,
+        who:whoVal,pri:priVal,date,status:'p',biz:bizVal,
+        isRecurring:true,recGroupId,
+        recLabel:freqLabel[freq]
+      });
+    });
+    // Guardar también en lista de recurrentes para futura generación
+    loadRecurring();
+    const day=new Date(dateVal+'T00:00:00').getDate();
+    recurring.push({id:'r'+Date.now(),title,who:whoVal,biz:bizVal,day,pri:priVal,freq});
+    persistRecurring();
+  } else {
+    const isPayment = document.getElementById('fa-payment').checked;
+  const supportDesc = isPayment ? document.getElementById('fa-support-desc').value.trim() : '';
+  tasks.push({id:Date.now()+'',title,who:whoVal,pri:priVal,date:dateVal,status:'p',biz:bizVal,
+    isPayment: isPayment || false,
+    supportDesc: supportDesc,
+    supportDone: false
+  });
+  }
+  persist();
+  document.getElementById('fa-title').value='';
+  document.getElementById('fa-date').value='';
+  document.getElementById('fa-freq').value='none';
+  document.getElementById('fa-times-wrap').style.display='none';
+  document.getElementById('fa-preview').style.display='none';
+  window.tasks = tasks;
+  document.getElementById('form-area').style.display='none';
+  renderCurrent();
+}
+
+let pendingMove={id:null,dir:null};
+
+let isVencidaCompletion = false;
+
+function moveTaskToComplete(id){
+  const t=tasks.find(x=>x.id===id);if(!t)return;
+  const ord=['p','e','c'];
+  const i=ord.indexOf(t.status);
+  const stepsToComplete=2-i;
+  pendingMove={id,dir:stepsToComplete};
+  isVencidaCompletion=true;
+  document.getElementById('notes-title').textContent='Tarea vencida — ¿qué pasó?';
+  document.getElementById('notes-sub').textContent=t.title;
+  document.getElementById('notes-input').value='';
+  document.getElementById('notes-input').placeholder='Explica qué pasó con esta tarea (opcional)...';
+  const history=(t.notes||[]).slice().reverse();
+  document.getElementById('notes-history').innerHTML=history.length
+    ?history.map(n=>`<div class="notes-entry"><div class="notes-entry-txt">${n.text}</div><div class="notes-entry-meta">${n.date} · ${n.from}</div></div>`).join('')
+    :'';
+  // Show vencida footer with 2 buttons
+  document.getElementById('notes-footer-default').style.display='none';
+  document.getElementById('notes-footer-vencida').style.display='flex';
+  document.getElementById('notes-overlay').style.display='flex';
+  setTimeout(()=>document.getElementById('notes-input').focus(),100);
+}
+
+function saveNoteOnly(){
+  // Save note without completing the task
+  const t=tasks.find(x=>x.id===pendingMove.id);if(!t)return;
+  const noteText=document.getElementById('notes-input').value.trim();
+  if(noteText){
+    if(!t.notes)t.notes=[];
+    const now=new Date();
+    t.notes.push({text:noteText,date:now.toLocaleDateString('es-CO'),from:document.getElementById('fwho').value||'Equipo'});
+    persist();
+    renderCurrent();
+  }
+  closeNotesModalReset();
+}
+
+function closeNotesModalReset(){
+  isVencidaCompletion=false;
+  document.getElementById('notes-footer-default').style.display='flex';
+  document.getElementById('notes-footer-vencida').style.display='none';
+  document.getElementById('notes-input').placeholder='Escribe una nota sobre este avance... (opcional)';
+  document.getElementById('notes-overlay').style.display='none';
+}
+
+function moveTask(id,dir){
+  const t=tasks.find(x=>x.id===id);if(!t)return;
+  const ord=['p','e','c'];const i=ord.indexOf(t.status);
+  // Tareas vencidas solo pueden ir a Completada
+  const over=t.date&&isOver(t.date)&&t.status!=='c';
+  if(over && ord[i+dir]!=='c') return;
+  if(i+dir<0||i+dir>2)return;
+  // Open notes modal before moving
+  pendingMove={id,dir};
+  const labels={p:'Pendiente',e:'En progreso',c:'Completada'};
+  const newStatus=ord[i+dir];
+  document.getElementById('notes-title').textContent='Avance → '+labels[newStatus];
+  document.getElementById('notes-sub').textContent=t.title;
+  document.getElementById('notes-input').value='';
+  // Show existing notes
+  const history=(t.notes||[]).slice().reverse();
+  document.getElementById('notes-history').innerHTML=history.length
+    ?history.map(n=>`<div class="notes-entry"><div class="notes-entry-txt">${n.text}</div><div class="notes-entry-meta">${n.date} · ${n.from}</div></div>`).join('')
+    :'';
+  document.getElementById('notes-overlay').style.display='flex';
+  setTimeout(()=>document.getElementById('notes-input').focus(),100);
+}
+function saveNoteAndMove(){
+  const t=tasks.find(x=>x.id===pendingMove.id);if(!t)return;
+  const ord=['p','e','c'];const i=ord.indexOf(t.status);
+  if(i+pendingMove.dir<0||i+pendingMove.dir>2)return;
+  const noteText=document.getElementById('notes-input').value.trim();
+  if(noteText){
+    if(!t.notes)t.notes=[];
+    const now=new Date();
+    t.notes.push({text:noteText,date:now.toLocaleDateString('es-CO'),from:document.getElementById('fwho').value||'Equipo'});
+  }
+  const newStatus = ord[i+pendingMove.dir];
+  // Block payment tasks from completing without support
+  if(newStatus==='c' && t.isPayment && !t.supportDone){
+    // Ask if support is ready
+    const confirm_support = confirm('⚠️ Esta tarea requiere soporte:\n"'+(t.supportDesc||'comprobante')+'".\n\n¿Ya dejaste el soporte en la carpeta?\n\nClic en Aceptar para confirmar que el soporte está listo.');
+    if(!confirm_support){
+      closeNotesModalReset();
+      return;
+    }
+    t.supportDone = true;
+  }
+  t.status=newStatus;
+  persist();
+  closeNotesModalReset();
+  renderCurrent();
+}
+function closeNotesBtn(){ closeNotesModalReset(); }
+function closeNotes(e){if(e.target===document.getElementById('notes-overlay'))closeNotesBtn();}
+
+let curResp='';
+function setResp(v){
+  curResp=v;
+  document.querySelectorAll('#section-bar-filters .resp-btn').forEach(btn=>{
+    btn.classList.toggle('act',(btn.getAttribute('data-who')||'')=== v);
+  });
+  const fwho=document.getElementById('fwho');
+  if(fwho) fwho.value=v;
+  renderCurrent();
+}
+
+function buildRespButtons(){
+  const users=getUsers();
+  const bar=document.getElementById('section-bar-filters');
+  if(!bar) return;
+  bar.innerHTML=`<button class="resp-btn act" data-who="" onclick="setResp('')">Total</button>`+
+    users.map(u=>`<button class="resp-btn" data-who="${u.name}" onclick="setResp('${u.name}')">${u.name}</button>`).join('');
+}
+function toggleDone(id){
+  const t=tasks.find(x=>x.id===id);if(!t)return;
+  t.status=t.status==='c'?'p':'c';persist();renderCurrent();
+}
+function delTask(id){
+  if(!confirm('¿Eliminar esta tarea?'))return;
+  tasks=tasks.filter(x=>x.id!==id);persist();renderCurrent();
+}
+function persist(){
+  window.tasks = tasks;
+  localStorage.setItem('hh-socios-v3',JSON.stringify(tasks));
+  localStorage.setItem('hh-socios-updated', Date.now());
+  if(window.persistToFirebase) window.persistToFirebase(tasks);
+}
+
+function autoAdvanceTasks(){
+  // Tareas pendientes con 3 días o menos pasan automáticamente a En Progreso
+  let changed = false;
+  tasks.forEach(t=>{
+    if(t.status!=='p' || !t.date) return;
+    const dl = daysLeft(t.date);
+    if(dl !== null && dl <= 3 && dl >= 0){
+      t.status = 'e';
+      changed = true;
+    }
+  });
+  if(changed){
+    persist();
+    if(typeof window.renderCurrent==='function') window.renderCurrent();
+  }
+}
+
+function fmtDate(d){
+  if(!d)return'';
+  const[y,m,dd]=d.split('-');
+  return parseInt(dd)+' '+MONTHS[parseInt(m)-1];
+}
+function isOver(d){
+  if(!d)return false;
+  const t=new Date();t.setHours(0,0,0,0);
+  return new Date(d+'T00:00:00')<t;
+}
+function clearDateFilter(){
+  document.getElementById('filter-month').value='';
+  const fw=document.getElementById('filter-week');
+  if(fw){fw.value='';fw.style.display='none';}
+  renderCurrent();
+}
+
+function onMonthChange(){
+  const month=document.getElementById('filter-month').value;
+  const fw=document.getElementById('filter-week');
+  if(!fw) return;
+  if(!month){
+    fw.style.display='none';
+    fw.value='';
+    renderCurrent();
+    return;
+  }
+  // Populate weeks for selected month
+  populateWeekFilter(month);
+  fw.style.display='block';
+  fw.value='';
+  renderCurrent();
+}
+
+function populateWeekFilter(month){
+  const fw=document.getElementById('filter-week');
+  if(!fw||!month) return;
+  const [y,m]=month.split('-');
+  // Get all Mondays in this month
+  const year=parseInt(y), mo=parseInt(m)-1;
+  const firstDay=new Date(year,mo,1);
+  const lastDay=new Date(year,mo+1,0);
+  const weeks=[];
+  // Start from first day, find all week ranges
+  let d=new Date(firstDay);
+  // Go back to Monday
+  while(d.getDay()!==1) d.setDate(d.getDate()-1);
+  let wNum=1;
+  while(d<=lastDay){
+    const wStart=new Date(d);
+    const wEnd=new Date(d);
+    wEnd.setDate(wEnd.getDate()+6);
+    const startStr=wStart.toISOString().split('T')[0];
+    const endStr=wEnd.toISOString().split('T')[0];
+    const label=`Sem ${wNum}: ${wStart.getDate()} ${['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][wStart.getMonth()]} - ${wEnd.getDate()} ${['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][wEnd.getMonth()]}`;
+    weeks.push({label,startStr,endStr});
+    d.setDate(d.getDate()+7);
+    wNum++;
+  }
+  fw.innerHTML='<option value="">Todas las semanas</option>'+
+    weeks.map(w=>`<option value="${w.startStr}|${w.endStr}">${w.label}</option>`).join('');
+}
+function populateMonthFilter(){
+  const sel=document.getElementById('filter-month');
+  if(!sel)return;
+  const current=sel.value;
+  const months=new Set();
+  tasks.forEach(t=>{if(t.date)months.add(t.date.substring(0,7));});
+  const now=new Date();
+  months.add(`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`);
+  const sorted=[...months].sort();
+  const MONTHS_ES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  sel.innerHTML='<option value="">Todos los meses</option>'+
+    sorted.map(m=>{
+      const[y,mo]=m.split('-');
+      return `<option value="${m}">${MONTHS_ES[parseInt(mo)-1]} ${y}</option>`;
+    }).join('');
+  sel.value=current;
+  // Repopulate weeks if month is selected
+  if(current) populateWeekFilter(current);
+}
+// Shared filter helpers
+function getWeekFilter(){
+  const el=document.getElementById('filter-week');
+  return el?el.value:'';
+}
+function getMonthFilter(){
+  const el=document.getElementById('filter-month');
+  return el?el.value:'';
+}
+function applyDateFilter(t){
+  // Vencidas always show regardless of date filter
+  const over = t.date && isOver(t.date) && t.status!=='c';
+  if(over) return true;
+  const weekVal=getWeekFilter();
+  const month=getMonthFilter();
+  if(weekVal){
+    const [wStart,wEnd]=weekVal.split('|');
+    if(!t.date||t.date<wStart||t.date>wEnd) return false;
+  } else if(month){
+    if(!t.date||!t.date.startsWith(month)) return false;
+  }
+  return true;
+}
+
+function getFiltered(){
+  const q=(document.getElementById('sq').value||'').toLowerCase();
+  const who=document.getElementById('fwho').value;
+  return tasks.filter(t=>{
+    if(biz<3&&t.biz!==biz)return false;
+    if(q&&!t.title.toLowerCase().includes(q))return false;
+    if(who&&t.who!==who)return false;
+    if(!applyDateFilter(t)) return false;
+    return true;
+  });
+}
+
+window.renderCurrent=function renderCurrent(){
+  if(window.tasks && window.tasks.length > 0) tasks = window.tasks;
+  populateMonthFilter();
+  // hide all panels first
+  document.getElementById('board').style.display='none';
+  document.getElementById('global-view').style.display='none';
+  document.getElementById('dash-view').style.display='none';
+
+  if(curSection==='dashboard'){
+    document.getElementById('dash-view').style.display='block';
+    renderDashboard();
+    return;
+  }
+  // tablero section
+  if(biz===3){
+    document.getElementById('global-view').style.display='block';
+    renderGlobal();
+  } else {
+    document.getElementById('board').style.display='flex';
+    renderBoard();
+  }
+}
+
+function daysLeft(d){
+  if(!d)return null;
+  const today=new Date();today.setHours(0,0,0,0);
+  return Math.round((new Date(d+'T00:00:00')-today)/(1000*60*60*24));
+}
+function semByDate(t){
+  if(t.status==='c')return{c:'#888780',bg:'#F1EFE8',tc:'#5F5E5A',label:'Completada'};
+  if(!t.date)return{c:'#639922',bg:'#EAF3DE',tc:'#27500A',label:'A tiempo'};
+  const dl=daysLeft(t.date);
+  if(dl<0)return{c:'#E24B4A',bg:'#FCEBEB',tc:'#791F1F',label:'Vencida',vencida:true};
+  if(dl<=5)return{c:'#EF9F27',bg:'#FAEEDA',tc:'#633806',label:`${dl}d restantes`};
+  return{c:'#639922',bg:'#EAF3DE',tc:'#27500A',label:`${dl}d restantes`};
+}
+function cardHtml(t,showBiz){
+  const done=t.status==='c';
+  const sem=semByDate(t);
+  const wa=WHO[t.who]||WHO.Anderson;
+  const ord=['p','e','c'];const idx=ord.indexOf(t.status);
+  return `<div class="card" draggable="true" data-task-id="${t.id}" style="${sem.vencida?'border-left:4px solid #E24B4A;border-radius:8px':''}">
+    ${sem.vencida?'<div class="vencida-badge">⚠ VENCIDA</div>':''}
+    ${t.isPayment&&!t.supportDone?'<div class="support-required"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.73 18l-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Requiere soporte: <strong>'+(t.supportDesc||'comprobante')+'</strong> — no se puede cerrar sin el soporte</div>':''}
+    ${t.isPayment&&t.supportDone?'<span class="support-done-badge">✓ Soporte registrado</span>':''}
+    ${t.isRecurring?`<span class="rec-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>${t.recLabel||'Recurrente'}</span>`:''}
+    <div class="card-top">
+      <div class="card-cb${done?' done':''}" onclick="toggleDone('${t.id}')"></div>
+      <span class="card-title${done?' done':''}">${t.title}</span>
+    </div>
+    <div class="card-meta">
+      <span class="sem-pill" style="background:${sem.bg};color:${sem.tc}">
+        <span style="width:6px;height:6px;border-radius:50%;background:${sem.c};display:inline-block"></span>
+        ${sem.label}
+      </span>
+      ${t.date?`<span class="date-pill${sem.vencida?' over':''}">${fmtDate(t.date)}</span>`:''}
+      ${t.notes&&t.notes.length?`<span style="font-size:11px;background:#E6F1FB;color:#0C447C;padding:2px 7px;border-radius:999px">${t.notes.length} nota${t.notes.length!==1?'s':''}</span>`:''}
+      ${showBiz?`<span class="biz-pill" style="background:${BIZ_C[t.biz]}20;color:${BIZ_C[t.biz]}">${BIZ_NAMES[t.biz]||''}</span>`:''}
+      <div class="avatar-sm" style="background:${wa.bg};color:${wa.col}">${wa.init}</div>
+    </div>
+    ${t.isPayment&&!t.supportDone&&!done?`<button onclick="markSupportDone('${t.id}')" style="width:100%;margin-bottom:6px;height:28px;background:#FEF3C7;border:1.5px solid #F59E0B;border-radius:6px;font-size:11px;font-weight:600;color:#92400E;cursor:pointer;font-family:inherit">📎 Marcar soporte como registrado</button>`:''}
+    <div class="card-actions" style="${isViewer?'display:none':''}">
+      ${sem.vencida
+        ? `<button class="ca-btn" style="background:#E24B4A;color:#fff;border-color:#E24B4A" onclick="moveTaskToComplete('${t.id}')">✓ Completar</button>`
+        : `${idx>0?`<button class="ca-btn" onclick="moveTask('${t.id}',-1)">← Atrás</button>`:''} ${idx<2?`<button class="ca-btn" onclick="moveTask('${t.id}',1)">Avanzar →</button>`:`<span style="font-size:11px;color:var(--text3)">Completada ✓</span>`}`
+      }
+      <button class="ca-del" onclick="delTask('${t.id}')" title="Eliminar">×</button>
+    </div>
+  </div>`;
+}
+
+function renderBoard(){
+  const list=getFiltered();
+  const cols={v:[],p:[],e:[],c:[]};
+  list.forEach(t=>{
+    const over=t.date&&isOver(t.date)&&t.status!=='c';
+    if(over) cols.v.push(t);
+    else if(cols[t.status]) cols[t.status].push(t);
+  });
+  // Sort each column: oldest date first (vencidas by most overdue first)
+  const sortByDate=(a,b)=>{
+    if(!a.date&&!b.date) return 0;
+    if(!a.date) return 1;
+    if(!b.date) return -1;
+    return a.date.localeCompare(b.date);
+  };
+  cols.v.sort(sortByDate); // most overdue first
+  cols.p.sort(sortByDate); // closest deadline first
+  cols.e.sort(sortByDate);
+  cols.c.sort((a,b)=>b.date?.localeCompare(a.date||'')||0); // newest completed first
+  const labels=['Vencidas','Pendiente','En progreso','Completada'];
+  const dotC=['#E24B4A','#B4B2A9','#378ADD','#639922'];
+  const keys=['v','p','e','c'];
+  let html='';
+  keys.forEach((s,i)=>{
+    const cards=cols[s];
+    if(s==='v'&&cards.length===0)return;
+    html+=`<div class="col-wrap">
+      <div class="col-header">
+        <span class="col-dot" style="background:${dotC[i]}"></span>
+        <span class="col-label">${labels[i]}</span>
+        <span class="col-cnt">${cards.length}</span>
+      </div>
+      <div class="col-body">
+        ${cards.length?cards.map(t=>cardHtml(t,false)).join(''):'<div class="empty-col">Sin tareas</div>'}
+        ${(s==='p'||s==='e')?`<button class="add-btn" onclick="toggleForm()">+ Agregar tarea</button>`:''}
+      </div>
+    </div>`;
+  });
+  document.getElementById('board').innerHTML=html;
+}
+
+function renderGlobal(){
+  if(window.tasks && window.tasks.length > 0) tasks = window.tasks;
+  const q=(document.getElementById('sq').value||'').toLowerCase();
+  const who=document.getElementById('fwho').value;
+  const monthFilter=document.getElementById('filter-month')?document.getElementById('filter-month').value:'';
+
+  let list=tasks.filter(t=>{
+    if(q&&!t.title.toLowerCase().includes(q))return false;
+    if(who&&t.who!==who)return false;
+    if(!applyDateFilter(t)) return false;
+    return true;
+  });
+
+  // Sort: vencidas first, then en progreso, then pendiente by days left
+  list.sort((a,b)=>{
+    const aOver = a.date&&isOver(a.date)&&a.status!=='c';
+    const bOver = b.date&&isOver(b.date)&&b.status!=='c';
+    if(aOver&&!bOver) return -1;
+    if(!aOver&&bOver) return 1;
+    const statusOrder = {e:0, p:1, c:2};
+    if(statusOrder[a.status]!==statusOrder[b.status]) return statusOrder[a.status]-statusOrder[b.status];
+    const da = daysLeft(a.date)??999;
+    const db = daysLeft(b.date)??999;
+    return da-db;
+  });
+
+  const BIZ_C=['#639922','#378ADD','#D85A30'];
+  const BIZ_N=['Gestor HH','Logístico','Montevra'];
+  const STATUS_LABEL={p:'Pendiente',e:'En progreso',c:'Completada'};
+  const STATUS_C={p:'#94a3b8',e:'#2563eb',c:'#16a34a'};
+
+  // Group by status for section headers
+  const vencidas = list.filter(t=>t.date&&isOver(t.date)&&t.status!=='c');
+  const enProgreso = list.filter(t=>t.status==='e'&&!(t.date&&isOver(t.date)));
+  const pendientes = list.filter(t=>t.status==='p'&&!(t.date&&isOver(t.date)));
+  const completadas = list.filter(t=>t.status==='c');
+
+  function taskRow(t){
+    const sem=semByDate(t);
+    const wa=WHO[t.who]||WHO.Anderson;
+    const ord=['p','e','c'];
+    const idx=ord.indexOf(t.status);
+    const over=t.date&&isOver(t.date)&&t.status!=='c';
+    const canAdvance=idx<2;
+    const canBack=idx>0;
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border:1px solid ${over?'#E24B4A':'var(--border)'};border-left:4px solid ${sem.c};border-radius:8px;margin-bottom:6px">
+      <!-- LEFT: advance buttons -->
+      <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
+        ${canBack?`<button onclick="moveTask('${t.id}',-1)" style="background:none;border:1px solid var(--border);border-radius:5px;padding:2px 7px;font-size:10px;cursor:pointer;color:var(--text3);font-family:inherit">←</button>`:'<div style="width:32px"></div>'}
+        ${canAdvance?`<button onclick="moveTask('${t.id}',1)" style="background:${over?'#E24B4A':'var(--blue)'};color:#fff;border:none;border-radius:5px;padding:2px 7px;font-size:10px;cursor:pointer;font-family:inherit">${over?'✓':'→'}</button>`:'<div style="width:32px"></div>'}
+      </div>
+      <!-- CONTENT -->
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${over?'<span style="background:#E24B4A;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;margin-right:6px">⚠ VENCIDA</span>':''}${t.title}</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap">
+          <span style="font-size:11px;padding:1px 7px;border-radius:999px;background:${sem.bg};color:${sem.tc}">${sem.label}</span>
+          ${t.date?`<span style="font-size:11px;color:var(--text3)">${fmtDate(t.date)}</span>`:''}
+          <span style="font-size:11px;padding:1px 7px;border-radius:999px;background:${BIZ_C[t.biz]||'#639922'}18;color:${BIZ_C[t.biz]||'#639922'}">${BIZ_N[t.biz]||''}</span>
+          ${t.notes&&t.notes.length?`<span style="font-size:10px;background:#E6F1FB;color:#0C447C;padding:1px 6px;border-radius:999px">${t.notes.length} nota${t.notes.length!==1?'s':''}</span>`:''}
+        </div>
+      </div>
+      <!-- RIGHT: avatar + delete -->
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <div style="width:28px;height:28px;border-radius:50%;background:${wa.bg};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:${wa.col}">${wa.init}</div>
+        <button onclick="delTask('${t.id}')" style="background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;line-height:1;padding:0 2px">×</button>
+      </div>
+    </div>`;
+  }
+
+  function section(title, color, dot, items){
+    if(!items.length) return '';
+    return `<div style="margin-bottom:18px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid ${color}">
+        <span style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block"></span>
+        <span style="font-size:13px;font-weight:600;color:var(--text)">${title}</span>
+        <span style="font-size:12px;color:var(--text3)">${items.length}</span>
+      </div>
+      ${items.map(taskRow).join('')}
+    </div>`;
+  }
+
+  let html='';
+  if(!list.length){
+    html='<div style="text-align:center;padding:40px;color:var(--text3);font-size:13px">No hay tareas que mostrar</div>';
+  } else {
+    html += section('⚠ Vencidas','#E24B4A','🔴',vencidas);
+    html += section('En progreso','#2563eb','🔵',enProgreso);
+    html += section('Pendientes','#94a3b8','⚪',pendientes);
+    html += section('Completadas','#16a34a','🟢',completadas);
+  }
+
+  document.getElementById('global-view').innerHTML=`<div style="padding:16px;overflow-y:auto;flex:1">${html}</div>`;
+}
+
+
+let dashFilter = {who:'', month:'', biz:'', week:''};
+
+function setDashFilter(key, val){
+  dashFilter[key] = val;
+  if(key==='who'){
+    ['all','anderson','raul','total'].forEach(k=>{
+      const el=document.getElementById('db-rb-'+k);
+      if(el) el.classList.toggle('act',(k==='all'&&val==='')||(k==='total'&&val==='')||(k===val.toLowerCase()));
+    });
+    // Sync with section-bar who filter
+    const fwho=document.getElementById('fwho');
+    if(fwho) fwho.value=val;
+  }
+  renderDashboard();
+}
+
+function getTasksForDash(){
+  if(window.tasks && window.tasks.length > 0) tasks = window.tasks;
+  return tasks.filter(t=>{
+    if(dashFilter.who && t.who!==dashFilter.who) return false;
+    if(dashFilter.biz!=='' && t.biz!==parseInt(dashFilter.biz)) return false;
+    if(!applyDashDateFilter(t)) return false;
+    return true;
+  });
+}
+
+function populateDashMonthFilter(){
+  const sel = document.getElementById('db-month');
+  if(!sel) return;
+  const cur = sel.value;
+  const months = new Set();
+  tasks.forEach(t=>{ if(t.date) months.add(t.date.substring(0,7)); });
+  const now = new Date();
+  months.add(`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`);
+  const sorted = [...months].sort();
+  const MES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  sel.innerHTML = '<option value="">Todos los meses</option>' +
+    sorted.map(m=>{ const[y,mo]=m.split('-'); return `<option value="${m}">${MES[parseInt(mo)-1]} ${y}</option>`; }).join('');
+  sel.value = cur;
+}
+
+function onDbMonthChange(){
+  const month = document.getElementById('db-month').value;
+  dashFilter.month = month;
+  dashFilter.week = '';
+  const fw = document.getElementById('db-week');
+  if(!fw) return;
+  if(!month){ fw.style.display='none'; fw.value=''; renderDashboard(); return; }
+  // Populate weeks
+  const [y,m] = month.split('-');
+  const year=parseInt(y), mo=parseInt(m)-1;
+  const firstDay=new Date(year,mo,1);
+  const lastDay=new Date(year,mo+1,0);
+  let d=new Date(firstDay);
+  while(d.getDay()!==1) d.setDate(d.getDate()-1);
+  const MES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  let weeks=[], wNum=1;
+  while(d<=lastDay){
+    const wStart=new Date(d), wEnd=new Date(d);
+    wEnd.setDate(wEnd.getDate()+6);
+    weeks.push({label:`Sem ${wNum}: ${wStart.getDate()} ${MES[wStart.getMonth()]} - ${wEnd.getDate()} ${MES[wEnd.getMonth()]}`,
+      val:`${wStart.toISOString().split('T')[0]}|${wEnd.toISOString().split('T')[0]}`});
+    d.setDate(d.getDate()+7); wNum++;
+  }
+  fw.innerHTML='<option value="">Todas las semanas</option>'+weeks.map(w=>`<option value="${w.val}">${w.label}</option>`).join('');
+  fw.style.display='block';
+  fw.value='';
+  renderDashboard();
+}
+
+function clearDashDate(){
+  dashFilter.month=''; dashFilter.week='';
+  const dm=document.getElementById('db-month'); if(dm) dm.value='';
+  const dw=document.getElementById('db-week'); if(dw){dw.value='';dw.style.display='none';}
+  renderDashboard();
+}
+
+function applyDashDateFilter(t){
+  // Vencidas always show
+  const over=t.date&&isOver(t.date)&&t.status!=='c';
+  if(over) return true;
+  // Use dashFilter state (persists across re-renders)
+  const weekVal=dashFilter.week||'';
+  const month=dashFilter.month||'';
+  if(weekVal){
+    const [wStart,wEnd]=weekVal.split('|');
+    if(!t.date||t.date<wStart||t.date>wEnd) return false;
+  } else if(month){
+    if(!t.date||!t.date.startsWith(month)) return false;
+  }
+  return true;
+}
+
+function renderDashboard(){
+  if(window.tasks && window.tasks.length > 0) tasks = window.tasks;
+  populateDashMonthFilter();
+  const filtered = getTasksForDash();
+  const totP=filtered.filter(t=>t.status==='p').length;
+  const totE=filtered.filter(t=>t.status==='e').length;
+  const totC=filtered.filter(t=>t.status==='c').length;
+  const tot=filtered.length;
+  let html=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+    <div class="dash-h" style="margin-bottom:0">Dashboard</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <div style="display:flex;gap:4px;flex-wrap:wrap" id="db-who-filters">
+        <button class="resp-btn act" data-who="" onclick="setDashFilter('who','')">Total</button>
+      </div>
+      <select id="db-biz" onchange="setDashFilter('biz',this.value)" style="height:28px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text2);background:var(--bg)">
+        <option value="">Todos los proyectos</option>
+        <option value="0">Gestor HH</option>
+        <option value="1">Logístico</option>
+        <option value="2">Montevra</option>
+      </select>
+      <select id="db-month" onchange="onDbMonthChange()" style="height:28px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text2);background:var(--bg)">
+        <option value="">Todos los meses</option>
+      </select>
+      <select id="db-week" onchange="dashFilter.week=this.value;renderDashboard()" style="height:28px;font-size:12px;border:1px solid var(--blue);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--blue);background:var(--blue-light);font-weight:600;display:none">
+        <option value="">Todas las semanas</option>
+      </select>
+      <button onclick="clearDashDate()" style="height:28px;padding:0 8px;font-size:11px;border:1px solid var(--border);border-radius:5px;background:var(--bg);cursor:pointer;color:var(--text3)">✕</button>
+    </div>
+  </div>
+  <div class="dash-sub" style="margin-top:2px">Resumen de tareas por unidad de negocio</div>
+  <div class="global-box">
+    <div class="global-box-title">Resumen general</div>
+    <div class="global-stats">
+      <div class="g-stat"><div class="g-n" style="color:#1a1a1a">${tot}</div><div class="g-l">Total</div></div>
+      <div class="g-stat"><div class="g-n" style="color:#B4B2A9">${totP}</div><div class="g-l">Pendiente</div></div>
+      <div class="g-stat"><div class="g-n" style="color:#378ADD">${totE}</div><div class="g-l">En progreso</div></div>
+      <div class="g-stat"><div class="g-n" style="color:#639922">${totC}</div><div class="g-l">Completada</div></div>
+    </div>
+  </div>
+  <div class="biz-grid">`;
+  [0,1,2].forEach(bi=>{
+    const bt=filtered.filter(t=>t.biz===bi);
+    const bp=bt.filter(t=>t.status==='p').length;
+    const be=bt.filter(t=>t.status==='e').length;
+    const bc=bt.filter(t=>t.status==='c').length;
+    const total=bt.length||1;
+    const pct=Math.round((bc/total)*100);
+    const anderson=bt.filter(t=>t.who==='Anderson'||t.who==='Ambos').length;
+    const raul=bt.filter(t=>t.who==='Raul'||t.who==='Ambos').length;
+    const urg=bt.filter(t=>t.pri==='urgente'&&t.status!=='c').length;
+    html+=`<div class="biz-card">
+      <div class="biz-card-top">
+        <span class="biz-dot" style="background:${BIZ_C[bi]}"></span>
+        <span class="biz-name">${BIZS[bi].name}</span>
+        ${urg>0?`<span class="urg-badge">⚠ ${urg} urgente${urg!==1?'s':''}</span>`:''}
+      </div>
+      <div class="biz-stats">
+        <div class="biz-stat"><div class="biz-stat-n" style="color:#B4B2A9">${bp}</div><div class="biz-stat-l">Pendiente</div></div>
+        <div class="biz-stat"><div class="biz-stat-n" style="color:#378ADD">${be}</div><div class="biz-stat-l">En prog.</div></div>
+        <div class="biz-stat"><div class="biz-stat-n" style="color:#639922">${bc}</div><div class="biz-stat-l">Completada</div></div>
+      </div>
+      <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${BIZ_C[bi]}"></div></div>
+      <div class="prog-labels"><span>Progreso</span><span style="font-weight:600;color:${BIZ_C[bi]}">${pct}%</span></div>
+      <div class="people-row">
+        <div class="person"><div class="person-name">Anderson</div><div class="person-n">${anderson}</div><div class="person-l">tareas</div></div>
+        <div class="person"><div class="person-name">Raul</div><div class="person-n">${raul}</div><div class="person-l">tareas</div></div>
+      </div>
+    </div>`;
+  });
+  html+='</div>';
+
+  // ── USER SECTION ─────────────────────────────────
+  const SEM_C = {urgente:'#E24B4A',alta:'#EF9F27',normal:'#639922'};
+  const BIZ_LABELS = ['Gestor HH','Logístico','Montevra'];
+  const dynUsers = getUsers();
+  const uColors = ['#2563eb','#0ea5e9','#7c3aed','#d97706'];
+  const USERS = dynUsers.map((u,i)=>({name:u.name,init:u.init,color:uColors[i%uColors.length],filterKeys:[u.name]}));
+
+  html += `<div class="user-section">
+    <div class="user-section-title">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Gestión por usuario
+    </div>
+    <div class="user-cards">`;
+
+  USERS.forEach(u => {
+    const myTasks = filtered.filter(t => u.filterKeys.includes(t.who));
+    const mP = myTasks.filter(t=>t.status==='p').length;
+    const mE = myTasks.filter(t=>t.status==='e').length;
+    const mC = myTasks.filter(t=>t.status==='c').length;
+    const mV = myTasks.filter(t=>t.date&&isOver(t.date)&&t.status!=='c').length;
+    const total = myTasks.length || 1;
+    const pct = Math.round((mC/total)*100);
+    // Open tasks sorted: vencidas first, then urgente, then alta, then normal
+    const openTasks = myTasks.filter(t=>t.status!=='c')
+      .sort((a,b)=>{
+        const scoreA = isOver(a.date)?0:a.pri==='urgente'?1:a.pri==='alta'?2:3;
+        const scoreB = isOver(b.date)?0:b.pri==='urgente'?1:b.pri==='alta'?2:3;
+        return scoreA - scoreB;
+      }).slice(0,5);
+
+    html += `<div class="user-card">
+      <div class="user-card-head">
+        <div class="user-avatar" style="background:${u.color}">${u.init}</div>
+        <div>
+          <div class="user-card-name">${u.name}</div>
+          <div class="user-card-sub">${myTasks.length} tarea${myTasks.length!==1?'s':''} asignada${myTasks.length!==1?'s':''}</div>
+        </div>
+        ${mV>0?`<span style="margin-left:auto;font-size:11px;background:#FCEBEB;color:#791F1F;padding:3px 9px;border-radius:999px;font-weight:600">⚠ ${mV} vencida${mV!==1?'s':''}</span>`:'<span style="margin-left:auto;font-size:11px;background:#dcfce7;color:#166534;padding:3px 9px;border-radius:999px;font-weight:600">✓ Al día</span>'}
+      </div>
+      <div class="user-stats-row">
+        <div class="user-stat"><div class="user-stat-n" style="color:#94a3b8">${mP}</div><div class="user-stat-l">Pend.</div></div>
+        <div class="user-stat"><div class="user-stat-n" style="color:#2563eb">${mE}</div><div class="user-stat-l">Prog.</div></div>
+        <div class="user-stat"><div class="user-stat-n" style="color:#16a34a">${mC}</div><div class="user-stat-l">Listas</div></div>
+        <div class="user-stat"><div class="user-stat-n" style="color:#E24B4A">${mV}</div><div class="user-stat-l">Venc.</div></div>
+      </div>
+      <div class="user-prog-label"><span>Progreso</span><span style="font-weight:600;color:${u.color}">${pct}%</span></div>
+      <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${u.color}"></div></div>
+      ${openTasks.length>0?`<div class="user-tasks-list">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Próximas tareas</div>
+        ${openTasks.map(t=>{
+          const over=t.date&&isOver(t.date);
+          const dotC=over?'#E24B4A':SEM_C[t.pri]||'#639922';
+          const biz=BIZ_LABELS[t.biz]||'';
+          const bizC=BIZ_C[t.biz]||'#639922';
+          return `<div class="user-task-item">
+            <span class="user-task-dot" style="background:${dotC}"></span>
+            <span class="user-task-title" title="${t.title}">${t.title}</span>
+            <span class="user-task-biz" style="background:${bizC}18;color:${bizC}">${biz}</span>
+            ${t.date?`<span class="user-task-date">${fmtDate(t.date)}</span>`:''}
+          </div>`;
+        }).join('')}
+      </div>`:'<div style="text-align:center;padding:12px;color:var(--text3);font-size:12px">Sin tareas abiertas ✓</div>'}
+    </div>`;
+  });
+
+  html += '</div></div>';
+  // ── END USER SECTION ─────────────────────────────
+
+  document.getElementById('dash-view').innerHTML=html;
+  // Build and sync dashboard user filter buttons
+  const dbWhoBar=document.getElementById('db-who-filters');
+  if(dbWhoBar){
+    const dUsers=getUsers();
+    dbWhoBar.innerHTML=`<button class="resp-btn${dashFilter.who===''?' act':''}" data-who="" onclick="setDashFilter('who','')">Total</button>`+
+      dUsers.map(u=>`<button class="resp-btn${dashFilter.who===u.name?' act':''}" data-who="${u.name}" onclick="setDashFilter('who','${u.name}')">${u.name}</button>`).join('');
+  }
+  // Restore biz filter
+  const dbBiz=document.getElementById('db-biz');
+  if(dbBiz) dbBiz.value=dashFilter.biz||'';
+  // Restore month and week filters
+  populateDashMonthFilter();
+  const dm=document.getElementById('db-month');
+  const dw=document.getElementById('db-week');
+  if(dm&&dashFilter.month){
+    dm.value=dashFilter.month;
+    // Repopulate weeks for this month
+    onDbMonthChange();
+    // Restore selected week
+    if(dw&&dashFilter.week){
+      dw.value=dashFilter.week;
+      dw.style.display='block';
+    }
+  }
+}
+</script>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, onSnapshot, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCxhnHG97zE_VY2yBcnlDv7wwjtdmVhQS0",
+  authDomain: "tablero-socios.firebaseapp.com",
+  projectId: "tablero-socios",
+  storageBucket: "tablero-socios.firebasestorage.app",
+  messagingSenderId: "48250300185",
+  appId: "1:48250300185:web:83a8e111c7b487a00fc788"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const DOC_REF = doc(db, 'hh-socios', 'tareas');
+
+// Override persist to save to Firebase + localStorage
+window.persistToFirebase = async function(taskList) {
+  try {
+    await setDoc(DOC_REF, { tasks: taskList, updatedAt: Date.now() });
+  } catch(e) {
+    console.warn('Firebase write error:', e);
+  }
+};
+
+// Listen for real-time changes from Firebase
+window.addEventListener('app-ready', () => {
+  onSnapshot(DOC_REF, (snap) => {
+    if (snap.exists()) {
+      const data = snap.data();
+      if (data.tasks && Array.isArray(data.tasks)) {
+        if (true) {
+          window.tasks = data.tasks;
+          localStorage.setItem('hh-socios-v3', JSON.stringify(data.tasks));
+          localStorage.setItem('hh-socios-updated', data.updatedAt);
+          if (typeof window.renderCurrent === 'function') window.renderCurrent();
+          // Show sync indicator
+          const ind = document.getElementById('sync-indicator');
+          if (ind) { ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0', 2000); }
+        }
+      }
+    }
+  });
+});
+
+// Add recurring badge to cards
+const _origCardHtml = cardHtml;
+
+</script>
+</body>
+</html>
