@@ -508,7 +508,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
             <select id="fa-pri"><option value="normal">Normal</option><option value="alta">Alta</option><option value="urgente">Urgente</option></select>
           </div>
           <div class="form-field">
-            <label>Fecha inicio</label>
+            <label>Fecha límite</label>
             <input id="fa-date" type="date">
           </div>
           <div class="form-field" id="fa-biz-wrap">
@@ -662,7 +662,23 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
         <button class="rte-btn" onclick="document.getElementById('rte-editor').innerHTML=''">&#128465;</button>
       </div>
       <div id="rte-editor" class="rte-editor" contenteditable="true"></div>
-      <div style="display:flex;gap:8px;margin-top:10px">
+      <!-- TAREAS DE REUNIÓN -->
+      <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
+        <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">📌 Tareas asignadas en esta reunión</div>
+        <div id="mt-tasks-list" style="margin-bottom:8px"></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end">
+          <input id="mt-task-title" type="text" placeholder="Título de la tarea..." style="flex:2;min-width:140px;height:32px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;outline:none;color:var(--text);background:var(--bg)">
+          <select id="mt-task-who" style="height:32px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text);background:var(--bg)"></select>
+          <input id="mt-task-date" type="date" style="height:32px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text);background:var(--bg)">
+          <select id="mt-task-pri" style="height:32px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text);background:var(--bg)">
+            <option value="normal">Normal</option>
+            <option value="alta">Alta</option>
+            <option value="urgente">Urgente</option>
+          </select>
+          <button onclick="addMeetingTask()" style="height:32px;padding:0 12px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:500">+ Agregar</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px">
         <button class="btn-save" onclick="saveMeeting()" style="background:var(--blue)">💾 Guardar reunión</button>
         <button class="btn-cancel" onclick="toggleMeetingForm()">Cancelar</button>
       </div>
@@ -844,6 +860,7 @@ function showSection(s){
   if(s==='reuniones'){
     renderMeetings();
     setTimeout(initRTE,200);
+    setTimeout(populateMtTaskWho,300);
   } else {
     renderCurrent();
   }
@@ -1047,10 +1064,58 @@ function toggleMeetingForm(){
 function rte(cmd,val){const ed=document.getElementById('rte-editor');if(ed)ed.focus();document.execCommand(cmd,false,val||null);}
 function initRTE(){const ed=document.getElementById('rte-editor');if(ed)ed.focus();}
 
+// ── MEETING TASKS ─────────────────────────────────────────────
+let meetingTasks = [];
+
+function populateMtTaskWho(){
+  const sel = document.getElementById('mt-task-who');
+  if(!sel) return;
+  const users = getUsers();
+  sel.innerHTML = users.map(u=>`<option value="${u.name}">${u.name}</option>`).join('');
+}
+
+function addMeetingTask(){
+  const title = document.getElementById('mt-task-title').value.trim();
+  if(!title) return;
+  const who = document.getElementById('mt-task-who').value;
+  const date = document.getElementById('mt-task-date').value;
+  const pri = document.getElementById('mt-task-pri').value;
+  meetingTasks.push({id:'mt'+Date.now()+Math.random(), title, who, date, pri});
+  document.getElementById('mt-task-title').value='';
+  renderMeetingTasksList();
+}
+
+function removeMeetingTask(id){
+  meetingTasks = meetingTasks.filter(t=>t.id!==id);
+  renderMeetingTasksList();
+}
+
+function renderMeetingTasksList(){
+  const container = document.getElementById('mt-tasks-list');
+  if(!container) return;
+  if(!meetingTasks.length){
+    container.innerHTML='';
+    return;
+  }
+  const priColors={urgente:'#E24B4A',alta:'#EF9F27',normal:'#639922'};
+  container.innerHTML = meetingTasks.map(t=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg2);border-radius:6px;margin-bottom:4px;font-size:12px">
+      <span style="width:8px;height:8px;border-radius:50%;background:${priColors[t.pri]||'#639922'};flex-shrink:0;display:inline-block"></span>
+      <span style="flex:1;color:var(--text)">${t.title}</span>
+      <span style="color:var(--text2)">${t.who}</span>
+      ${t.date?`<span style="color:var(--text3)">${t.date}</span>`:''}
+      <button onclick="removeMeetingTask('${t.id}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;line-height:1;padding:0">×</button>
+    </div>
+  `).join('');
+}
+
 function clearMeetingForm(){
   const today = new Date().toISOString().split('T')[0];
   if(document.getElementById('mt-title')) document.getElementById('mt-title').value='';
+  meetingTasks=[];
   const rted=document.getElementById('rte-editor');if(rted){rted.innerHTML='';rted.focus();}
+  renderMeetingTasksList();
+  populateMtTaskWho();
   if(document.getElementById('mt-biz')) document.getElementById('mt-biz').value='';
   if(document.getElementById('mt-date')) document.getElementById('mt-date').value=today;
   if(document.getElementById('mt-title')) document.getElementById('mt-title').focus();
@@ -1075,8 +1140,27 @@ function saveMeeting(){
     biz: biz===''?null:parseInt(biz),
     date: dateFmt,
     dateISO: dateVal,
-    author: 'HH Socios'
+    author: 'HH Socios',
+    meetingTasks: [...meetingTasks]
   });
+  // Save meeting tasks to main tasks board
+  if(meetingTasks.length > 0){
+    const bizVal = document.getElementById('mt-biz').value;
+    const bizInt = bizVal===''?0:parseInt(bizVal);
+    meetingTasks.forEach(t=>{
+      tasks.push({
+        id: 'mrt'+Date.now()+Math.random().toString(36).slice(2),
+        title: t.title,
+        who: t.who,
+        pri: t.pri,
+        date: t.date,
+        status: 'p',
+        biz: bizInt,
+        fromMeeting: true
+      });
+    });
+    persist();
+  }
   persistMeetings();
   clearMeetingForm();
   renderMeetings();
@@ -1133,6 +1217,10 @@ function renderMeetings(){
           </div>
           <div id="mc-body-${m.id}" style="display:none">
             <div class="meeting-body">${m.body}</div>
+            ${m.meetingTasks&&m.meetingTasks.length?`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+              <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px">📌 Tareas asignadas (${m.meetingTasks.length})</div>
+              ${m.meetingTasks.map(t=>`<div style="font-size:11px;color:var(--text2);padding:2px 0">• ${t.title} → <b>${t.who}</b></div>`).join('')}
+            </div>`:''}
             <div class="meeting-footer" onclick="event.stopPropagation()">
               <span class="meeting-author">📝 ${m.author}</span>
             </div>
