@@ -2371,114 +2371,6 @@ function cardHtml(t,showBiz){
 }
 
 function renderBoard(){
-  try{
-  // Build user progress mini-bar
-  const users=getUsers();
-  const uColors=['#2563eb','#0ea5e9','#7c3aed','#d97706'];
-  const allTasks=window.tasks&&window.tasks.length?window.tasks:tasks;
-  const boardEl=document.getElementById('board');
-  // Remove old progress bar if exists
-  const oldBar=document.getElementById('user-progress-bar');
-  if(oldBar) oldBar.remove();
-  // Create mini progress widget
-  const progBar=document.createElement('div');
-  progBar.id='user-progress-bar';
-  progBar.style.cssText='display:flex;gap:8px;padding:6px 16px;background:#fff;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;align-items:center';
-  // Get current month/week
-  const nowP=new Date();
-  const curMonthP=`${nowP.getFullYear()}-${String(nowP.getMonth()+1).padStart(2,'0')}`;
-  let curWeekStartP=new Date(nowP);
-  while(curWeekStartP.getDay()!==1) curWeekStartP.setDate(curWeekStartP.getDate()-1);
-  const curWeekEndP=new Date(curWeekStartP);
-  curWeekEndP.setDate(curWeekEndP.getDate()+6);
-  const cwsStr=curWeekStartP.toISOString().split('T')[0];
-  const cweStr=curWeekEndP.toISOString().split('T')[0];
-
-  let pbHtml='<span style="font-size:11px;color:var(--text2);font-weight:600;white-space:nowrap">Avance:</span>';
-  // Load checklist data for combined progress
-  loadChecklist();
-  const curWkKey=getCurrentWeekKey();
-  const curWkChecks=ckChecks[curWkKey]||{};
-
-  // Get current filters
-  const curWhoFilter=document.getElementById('fwho')?document.getElementById('fwho').value:'';
-  const curMonthFilter=getMonthFilter();
-  const curWeekFilter=getWeekFilter();
-
-  users.forEach((u,i)=>{
-    // If who filter is active and doesn't match this user, skip
-    if(curWhoFilter && curWhoFilter!==u.name) return;
-
-    const col=uColors[i%uColors.length];
-
-    // Apply month/week filter to task calculations
-    let filterStart=cwsStr, filterEnd=cweStr, filterMonth=curMonthP;
-    if(curWeekFilter){
-      const [ws,we]=curWeekFilter.split('|');
-      filterStart=ws; filterEnd=we;
-    }
-    if(curMonthFilter) filterMonth=curMonthFilter;
-
-    // Weekly tasks (filtered by selected week or current week)
-    const weekTasks=allTasks.filter(t=>t.who===u.name&&t.date&&t.date>=filterStart&&t.date<=filterEnd);
-    // Count checklist completions for this week too
-    const ckUserItems=ckItems.filter(it=>it.who===u.name);
-    const ckDoneCount=ckUserItems.filter(it=>curWkChecks[it.id]?.[u.name]).length;
-    const weekDone=weekTasks.filter(t=>t.status==='c').length + ckDoneCount;
-    const weekTotalAdj=weekTasks.length + ckUserItems.length;
-
-    // Monthly tasks (filtered by selected month or current month)
-    const monthTasks=allTasks.filter(t=>t.who===u.name&&t.date&&t.date.startsWith(filterMonth));
-    // Add monthly ck completions
-    const monthCkDone=ckItems.filter(it=>it.who===u.name&&it.freq==='monthly').filter(it=>{
-      // Check any week in this month
-      return Object.keys(ckChecks).some(wk=>wk.startsWith(filterMonth.substring(0,7))&&ckChecks[wk][it.id]?.[u.name]);
-    }).length;
-    const monthDone=monthTasks.filter(t=>t.status==='c').length + monthCkDone;
-    const monthCkItems=ckItems.filter(it=>it.who===u.name&&it.freq==='monthly');
-    const monthTotalAdj=monthTasks.length+monthCkItems.length;
-
-    // Skip user if no tasks at all
-    if(!weekTasks.length && !monthTasks.length && !ckUserItems.length) return;
-
-    const weekPct=weekTotalAdj?Math.round((weekDone/weekTotalAdj)*100):0;
-    const monthPct=monthTotalAdj?Math.round((monthDone/monthTotalAdj)*100):0;
-    const pctColor=weekPct>=80?'#16a34a':weekPct>=50?'#EF9F27':'#E24B4A';
-    const mPctColor=monthPct>=80?'#16a34a':monthPct>=50?'#EF9F27':'#E24B4A';
-
-    pbHtml+=`<div style="display:flex;align-items:center;gap:6px;background:var(--bg2);border-radius:8px;padding:4px 8px 4px 4px">
-      <div style="width:24px;height:24px;border-radius:50%;background:${col};color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0">${u.init}</div>
-      <div>
-        <div style="font-size:10px;color:var(--text3);margin-bottom:2px">${u.name}</div>
-        <div style="display:flex;align-items:center;gap:6px">
-          ${weekTotal?`<div style="display:flex;align-items:center;gap:3px">
-            <span style="font-size:9px;color:var(--text3)">Sem</span>
-            <div style="width:40px;height:5px;background:#f0f0ee;border-radius:999px;overflow:hidden">
-              <div style="width:${weekPct}%;height:100%;background:${col};border-radius:999px"></div>
-            </div>
-            <span style="font-size:10px;font-weight:700;color:${pctColor}">${weekPct!==null?weekPct+'%':''}</span>
-          </div>`:''}
-          ${weekTotal&&monthTotal?'<div style="width:1px;height:12px;background:var(--border)"></div>':''}
-          ${monthTotal?`<div style="display:flex;align-items:center;gap:3px">
-            <span style="font-size:9px;color:var(--text3)">Mes</span>
-            <div style="width:40px;height:5px;background:#f0f0ee;border-radius:999px;overflow:hidden">
-              <div style="width:${monthPct}%;height:100%;background:${col}88;border-radius:999px"></div>
-            </div>
-            <span style="font-size:10px;font-weight:700;color:${mPctColor}">${monthPct}%</span>
-          </div>`:''}
-        </div>
-      </div>
-    </div>`;
-  });
-  // Only show if there's user data
-  const hasUserData = pbHtml.includes('border-radius:8px');
-  if(hasUserData){
-    progBar.innerHTML=pbHtml;
-    if(boardEl&&boardEl.parentElement){
-      boardEl.parentElement.insertBefore(progBar, boardEl);
-    }
-  }
-  }catch(pbErr){ console.warn('Progress bar error:',pbErr); }
   const list=getFiltered();
   const cols={v:[],p:[],e:[],c:[]};
   list.forEach(t=>{
@@ -2744,54 +2636,45 @@ function renderDashboard(){
   <div class="dash-sub" style="margin-top:2px">Resumen de tareas por unidad de negocio</div>
   <div style="display:flex;gap:8px;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid var(--border);margin-bottom:12px">
     ${dynUsersD.filter(u=>{
-      // Only show users with tasks (respecting filters)
       if(dashFilter.who&&dashFilter.who!==u.name) return false;
       return allT.some(t=>t.who===u.name);
     }).map((u,i)=>{
       const col=uColorsD[i%uColorsD.length];
-      const nowD=new Date();
-      // Use dashboard month/week filter if active
-      const dWkVal=dashFilter.week||'';
-      const dMoVal=dashFilter.month||'';
-      let cwsD,cweD,curMo;
-      if(dWkVal){ const[ws,we]=dWkVal.split('|'); cwsD=ws; cweD=we; }
-      else {
-        let cwS=new Date(nowD);
-        while(cwS.getDay()!==1) cwS.setDate(cwS.getDate()-1);
-        const cwE=new Date(cwS); cwE.setDate(cwE.getDate()+6);
-        cwsD=cwS.toISOString().split('T')[0]; cweD=cwE.toISOString().split('T')[0];
-      }
-      curMo=dMoVal||`${nowD.getFullYear()}-${String(nowD.getMonth()+1).padStart(2,'0')}`;
-      const wt=allT.filter(t=>t.who===u.name&&t.date&&t.date>=cwsD&&t.date<=cweD);
-      const wDone=wt.filter(t=>t.status==='c').length;
-      const wPct=wt.length?Math.round((wDone/wt.length)*100):0;
-      const mt=allT.filter(t=>t.who===u.name&&t.date&&t.date.startsWith(curMo));
-      const mDone=mt.filter(t=>t.status==='c').length;
-      const mPct=mt.length?Math.round((mDone/mt.length)*100):0;
-      const wColor=wPct>=80?'#16a34a':wPct>=50?'#EF9F27':'#E24B4A';
-      const mColor=mPct>=80?'#16a34a':mPct>=50?'#EF9F27':'#E24B4A';
-      // Skip if no tasks in filtered period
-      if(!wt.length&&!mt.length) return '';
+      // Simple: total tasks done vs total tasks for this user
+      const uAllTasks=allT.filter(t=>t.who===u.name);
+      if(!uAllTasks.length) return '';
+      const uDone=uAllTasks.filter(t=>t.status==='c').length;
+      const uTotal=uAllTasks.length;
+      const pct=Math.round((uDone/uTotal)*100);
+      const pctColor=pct>=80?'#16a34a':pct>=50?'#EF9F27':'#E24B4A';
+      // Checklist this week
+      loadChecklist();
+      const curWk=getCurrentWeekKey();
+      const wkChecks=ckChecks[curWk]||{};
+      const ckDone=ckItems.filter(it=>it.who===u.name&&wkChecks[it.id]?.[u.name]).length;
+      const ckTotal=ckItems.filter(it=>it.who===u.name).length;
+      const ckPct=ckTotal?Math.round((ckDone/ckTotal)*100):null;
+      const ckColor=ckPct>=80?'#16a34a':ckPct>=50?'#EF9F27':'#E24B4A';
       return `<div style="display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:6px 12px 6px 6px">
         <div style="width:30px;height:30px;border-radius:50%;background:${col};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${u.init}</div>
         <div>
           <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px">${u.name}</div>
           <div style="display:flex;gap:8px;align-items:center">
             <div style="display:flex;align-items:center;gap:4px">
-              <span style="font-size:10px;color:var(--text3)">Sem:</span>
-              <div style="width:50px;height:6px;background:#f0f0ee;border-radius:999px;overflow:hidden">
-                <div style="width:${wPct}%;height:100%;background:${col};border-radius:999px"></div>
+              <span style="font-size:10px;color:var(--text3)">Tareas:</span>
+              <div style="width:60px;height:6px;background:#f0f0ee;border-radius:999px;overflow:hidden">
+                <div style="width:${pct}%;height:100%;background:${col};border-radius:999px"></div>
               </div>
-              <span style="font-size:11px;font-weight:700;color:${wColor}">${wPct}%</span>
+              <span style="font-size:11px;font-weight:700;color:${pctColor}">${uDone}/${uTotal}</span>
             </div>
-            <div style="width:1px;height:14px;background:var(--border)"></div>
+            ${ckTotal?`<div style="width:1px;height:14px;background:var(--border)"></div>
             <div style="display:flex;align-items:center;gap:4px">
-              <span style="font-size:10px;color:var(--text3)">Mes:</span>
-              <div style="width:50px;height:6px;background:#f0f0ee;border-radius:999px;overflow:hidden">
-                <div style="width:${mPct}%;height:100%;background:${col}88;border-radius:999px"></div>
+              <span style="font-size:10px;color:var(--text3)">CK:</span>
+              <div style="width:40px;height:6px;background:#f0f0ee;border-radius:999px;overflow:hidden">
+                <div style="width:${ckPct}%;height:100%;background:#7c3aed;border-radius:999px"></div>
               </div>
-              <span style="font-size:11px;font-weight:700;color:${mColor}">${mPct}%</span>
-            </div>
+              <span style="font-size:11px;font-weight:700;color:${ckColor}">${ckDone}/${ckTotal}</span>
+            </div>`:''}
           </div>
         </div>
       </div>`;
