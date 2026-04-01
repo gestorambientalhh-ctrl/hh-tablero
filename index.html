@@ -2371,6 +2371,7 @@ function cardHtml(t,showBiz){
 }
 
 function renderBoard(){
+  try{
   // Build user progress mini-bar
   const users=getUsers();
   const uColors=['#2563eb','#0ea5e9','#7c3aed','#d97706'];
@@ -2477,6 +2478,7 @@ function renderBoard(){
       boardEl.parentElement.insertBefore(progBar, boardEl);
     }
   }
+  }catch(pbErr){ console.warn('Progress bar error:',pbErr); }
   const list=getFiltered();
   const cols={v:[],p:[],e:[],c:[]};
   list.forEach(t=>{
@@ -2967,7 +2969,9 @@ window.addEventListener('app-ready', () => {
           window.tasks = data.tasks;
           localStorage.setItem('hh-socios-v3', JSON.stringify(data.tasks));
           localStorage.setItem('hh-socios-updated', data.updatedAt);
-          if (typeof window.renderCurrent === 'function') window.renderCurrent();
+          tasks = data.tasks;
+        window.tasks = tasks;
+        if (typeof window.renderCurrent === 'function') window.renderCurrent();
           // Show sync indicator
           const ind = document.getElementById('sync-indicator');
           if (ind) { ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0', 2000); }
