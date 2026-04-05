@@ -1668,13 +1668,7 @@ function toggleCkItem(itemId, userId){
   ckChecks[wk][itemId][userId] = !ckChecks[wk][itemId][userId];
   saveCkData();
   renderChecklist();
-  // Update progress bars in board/dashboard if visible
-  if(curSection==='tablero'||curSection==='dashboard'){
-    renderCurrent();
-  }
-  // Show sync indicator
-  const ind=document.getElementById('sync-indicator');
-  if(ind){ind.style.opacity='1';setTimeout(()=>ind.style.opacity='0',1500);}
+  if(curSection==='dashboard') renderDashboard();
 }
 
 function deleteCkItem(id){
@@ -2373,53 +2367,6 @@ function cardHtml(t,showBiz){
 }
 
 function renderBoard(){
-  // ── Mini progress bar (simple & reliable)
-  try{
-    const boardEl=document.getElementById('board');
-    const oldBar=document.getElementById('user-progress-bar');
-    if(oldBar) oldBar.remove();
-    const allT=window.tasks&&window.tasks.length?window.tasks:tasks;
-    const uList=getUsers();
-    const uColors=['#2563eb','#0ea5e9','#7c3aed','#d97706'];
-    // Load checklist
-    loadChecklist();
-    const curWk=getCurrentWeekKey();
-    const wkCks=ckChecks[curWk]||{};
-    let pbHtml='<span style="font-size:11px;color:var(--text2);font-weight:600;margin-right:4px">Avance:</span>';
-    let hasAny=false;
-    uList.forEach((u,i)=>{
-      const uTasks=allT.filter(t=>t.who===u.name);
-      if(!uTasks.length) return;
-      const done=uTasks.filter(t=>t.status==='c').length;
-      const pct=Math.round((done/uTasks.length)*100);
-      const col=uColors[i%uColors.length];
-      const pctCol=pct>=80?'#16a34a':pct>=50?'#EF9F27':'#E24B4A';
-      // Checklist
-      const ckUser=ckItems.filter(it=>it.who===u.name);
-      const ckDone=ckUser.filter(it=>wkCks[it.id]?.[u.name]).length;
-      hasAny=true;
-      pbHtml+=`<div style="display:flex;align-items:center;gap:5px;background:#f8f9fa;border-radius:8px;padding:3px 8px 3px 4px">
-        <div style="width:22px;height:22px;border-radius:50%;background:${col};color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700">${u.init}</div>
-        <div>
-          <div style="font-size:10px;color:var(--text3)">${u.name}</div>
-          <div style="display:flex;align-items:center;gap:4px">
-            <div style="width:50px;height:5px;background:#eee;border-radius:999px;overflow:hidden">
-              <div style="width:${pct}%;height:100%;background:${col};border-radius:999px"></div>
-            </div>
-            <span style="font-size:10px;font-weight:700;color:${pctCol}">${done}/${uTasks.length}</span>
-            ${ckUser.length?`<span style="font-size:10px;color:#7c3aed;font-weight:600">✅${ckDone}/${ckUser.length}</span>`:''}
-          </div>
-        </div>
-      </div>`;
-    });
-    if(hasAny){
-      const bar=document.createElement('div');
-      bar.id='user-progress-bar';
-      bar.style.cssText='display:flex;align-items:center;gap:6px;padding:5px 16px;background:#fff;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap';
-      bar.innerHTML=pbHtml;
-      if(boardEl&&boardEl.parentElement) boardEl.parentElement.insertBefore(bar,boardEl);
-    }
-  }catch(e){ console.warn('Progress bar:',e); }
   const list=getFiltered();
   const cols={v:[],p:[],e:[],c:[]};
   list.forEach(t=>{
@@ -2559,15 +2506,6 @@ let dashFilter = {who:'', month:'', biz:'', week:''};
 
 function setDashFilter(key, val){
   dashFilter[key] = val;
-  if(key==='who'){
-    ['all','anderson','raul','total'].forEach(k=>{
-      const el=document.getElementById('db-rb-'+k);
-      if(el) el.classList.toggle('act',(k==='all'&&val==='')||(k==='total'&&val==='')||(k===val.toLowerCase()));
-    });
-    // Sync with section-bar who filter
-    const fwho=document.getElementById('fwho');
-    if(fwho) fwho.value=val;
-  }
   renderDashboard();
 }
 
@@ -2665,7 +2603,6 @@ function renderDashboard(){
     <div class="dash-h" style="margin-bottom:0">Dashboard</div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
       <div style="display:flex;gap:4px;flex-wrap:wrap" id="db-who-filters">
-        <button class="resp-btn act" data-who="" onclick="setDashFilter('who','')">Total</button>
       </div>
       <select id="db-biz" onchange="setDashFilter('biz',this.value)" style="height:28px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text2);background:var(--bg)">
         <option value="">Todos los proyectos</option>
@@ -2839,14 +2776,15 @@ function renderDashboard(){
   // ── END USER SECTION ─────────────────────────────
 
   document.getElementById('dash-view').innerHTML=html;
-  // Build and sync dashboard user filter buttons
+  // Build dashboard who filter buttons with correct active state
   const dbWhoBar=document.getElementById('db-who-filters');
   if(dbWhoBar){
     const dUsers=getUsers();
-    dbWhoBar.innerHTML=`<button class="resp-btn${dashFilter.who===''?' act':''}" data-who="" onclick="setDashFilter('who','')">Total</button>`+
-      dUsers.map(u=>`<button class="resp-btn${dashFilter.who===u.name?' act':''}" data-who="${u.name}" onclick="setDashFilter('who','${u.name}')">${u.name}</button>`).join('');
+    dbWhoBar.innerHTML=
+      `<button class="resp-btn${dashFilter.who===''?' act':''}" onclick="setDashFilter('who','')">Total</button>`+
+      dUsers.map(u=>`<button class="resp-btn${dashFilter.who===u.name?' act':''}" onclick="setDashFilter('who','${u.name}')">${u.name}</button>`).join('');
   }
-  // Restore biz filter
+  // Restore biz and month selects
   const dbBiz=document.getElementById('db-biz');
   if(dbBiz) dbBiz.value=dashFilter.biz||'';
   // Restore month and week filters
