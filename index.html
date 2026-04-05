@@ -2845,22 +2845,22 @@ window.persistMeetingsToFirebase = async function(meetingList) {
   }
 };
 
-// ── Listen for real-time changes — Firebase ALWAYS wins
-window.addEventListener('app-ready', () => {
-  // Listen for meetings changes
-  onSnapshot(MEETINGS_REF, (snap) => {
-    if (snap.exists()) {
-      const data = snap.data();
-      if (data.meetings && Array.isArray(data.meetings)) {
-        meetings = data.meetings;
-        localStorage.setItem('hh-meetings-v1', JSON.stringify(data.meetings));
-        if (typeof renderMeetings === 'function' && typeof curSection !== 'undefined' && curSection === 'reuniones') {
-          renderMeetings();
-        }
+// ── Listen for meetings in real-time (starts immediately)
+onSnapshot(MEETINGS_REF, (snap) => {
+  if (snap.exists()) {
+    const data = snap.data();
+    if (data.meetings && Array.isArray(data.meetings)) {
+      if(typeof meetings !== 'undefined') meetings = data.meetings;
+      localStorage.setItem('hh-meetings-v1', JSON.stringify(data.meetings));
+      if (typeof renderMeetings === 'function' && typeof curSection !== 'undefined' && curSection === 'reuniones') {
+        renderMeetings();
       }
     }
-  });
+  }
+});
 
+// ── Listen for tasks in real-time
+window.addEventListener('app-ready', () => {
   onSnapshot(DOC_REF, (snap) => {
     if (snap.exists()) {
       const data = snap.data();
