@@ -1240,7 +1240,10 @@ let meetingFormOpen = false;
 function loadMeetings(){
   const s = localStorage.getItem('hh-meetings-v1');
   meetings = s ? JSON.parse(s) : [];
-  if(window.persistMeetingsToFirebase) window.persistMeetingsToFirebase(meetings);
+  // Sync to Firebase if we have local data not in cloud
+  if(meetings.length && window.persistMeetingsToFirebase) {
+    window.persistMeetingsToFirebase(meetings);
+  }
 }
 
 function persistMeetings(){
@@ -2820,7 +2823,9 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const DOC_REF = doc(db, 'hh-socios', 'tareas');
 
-// ── Persist to Firebase
+const MEETINGS_REF = doc(db, 'hh-socios', 'reuniones');
+
+// ── Persist tasks to Firebase
 window.persistToFirebase = async function(taskList) {
   try {
     await setDoc(DOC_REF, { tasks: taskList, updatedAt: Date.now() });
@@ -2831,8 +2836,31 @@ window.persistToFirebase = async function(taskList) {
   }
 };
 
+// ── Persist meetings to Firebase
+window.persistMeetingsToFirebase = async function(meetingList) {
+  try {
+    await setDoc(MEETINGS_REF, { meetings: meetingList, updatedAt: Date.now() });
+  } catch(e) {
+    console.warn('Firebase meetings write error:', e);
+  }
+};
+
 // ── Listen for real-time changes — Firebase ALWAYS wins
 window.addEventListener('app-ready', () => {
+  // Listen for meetings changes
+  onSnapshot(MEETINGS_REF, (snap) => {
+    if (snap.exists()) {
+      const data = snap.data();
+      if (data.meetings && Array.isArray(data.meetings)) {
+        meetings = data.meetings;
+        localStorage.setItem('hh-meetings-v1', JSON.stringify(data.meetings));
+        if (typeof renderMeetings === 'function' && typeof curSection !== 'undefined' && curSection === 'reuniones') {
+          renderMeetings();
+        }
+      }
+    }
+  });
+
   onSnapshot(DOC_REF, (snap) => {
     if (snap.exists()) {
       const data = snap.data();
