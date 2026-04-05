@@ -1609,15 +1609,15 @@ function manualRefresh(){
     document.head.appendChild(st);
   }
   // Force Firebase re-sync
-  window.dispatchEvent(new Event('app-ready'));
+  // Force Firebase to re-render
+  if(typeof window.renderCurrent==='function') window.renderCurrent();
   setTimeout(()=>{
     if(btn) btn.style.opacity='1';
     if(icon) icon.style.animation='';
-    // Show sync indicator
     const ind=document.getElementById('sync-indicator');
     if(ind){ind.style.opacity='1';setTimeout(()=>ind.style.opacity='0',2000);}
     renderCurrent();
-  }, 1200);
+  }, 1000);
 }
 
 
@@ -1867,7 +1867,7 @@ function loadTasks(){
   buildRespButtons();
   setTimeout(checkRecurringOnLoad, 1500);
   window.dispatchEvent(new Event('app-ready'));
-  setInterval(()=>window.dispatchEvent(new Event('app-ready')), 10000);
+  // Firebase listener handles real-time sync automatically
 }
 
 // ── RECURRING TASKS ──────────────────────────────────────────
@@ -2825,83 +2825,85 @@ function renderDashboard(){
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getFirestore, doc, onSnapshot, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
-const firebaseConfig = {
+const app = initializeApp({
   apiKey: "AIzaSyCxhnHG97zE_VY2yBcnlDv7wwjtdmVhQS0",
   authDomain: "tablero-socios.firebaseapp.com",
   projectId: "tablero-socios",
   storageBucket: "tablero-socios.firebasestorage.app",
   messagingSenderId: "48250300185",
   appId: "1:48250300185:web:83a8e111c7b487a00fc788"
-};
+});
 
-const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const DOC_REF = doc(db, 'hh-socios', 'tareas');
-
+const TASKS_REF = doc(db, 'hh-socios', 'tareas');
 const MEETINGS_REF = doc(db, 'hh-socios', 'reuniones');
 
-// ── Persist tasks to Firebase
-window.persistToFirebase = async function(taskList) {
-  try {
-    await setDoc(DOC_REF, { tasks: taskList, updatedAt: Date.now() });
-    const ind = document.getElementById('sync-indicator');
-    if(ind){ ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0', 2000); }
-  } catch(e) {
-    console.warn('Firebase write error:', e);
-  }
+// Debounce timers - prevent write spam
+let tasksWriteTimer = null;
+let meetingsWriteTimer = null;
+
+// Write tasks to Firebase (debounced 800ms)
+window.persistToFirebase = function(taskList) {
+  clearTimeout(tasksWriteTimer);
+  tasksWriteTimer = setTimeout(async () => {
+    try {
+      await setDoc(TASKS_REF, { tasks: taskList, updatedAt: Date.now() });
+      const ind = document.getElementById('sync-indicator');
+      if(ind){ ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0',2000); }
+    } catch(e) { console.warn('Tasks write error:', e); }
+  }, 800);
 };
 
-// ── Persist meetings to Firebase
-window.persistMeetingsToFirebase = async function(meetingList) {
-  try {
-    await setDoc(MEETINGS_REF, { meetings: meetingList, updatedAt: Date.now() });
-  } catch(e) {
-    console.warn('Firebase meetings write error:', e);
-  }
+// Write meetings to Firebase (debounced 800ms)
+window.persistMeetingsToFirebase = function(meetingList) {
+  clearTimeout(meetingsWriteTimer);
+  meetingsWriteTimer = setTimeout(async () => {
+    try {
+      await setDoc(MEETINGS_REF, { meetings: meetingList, updatedAt: Date.now() });
+    } catch(e) { console.warn('Meetings write error:', e); }
+  }, 800);
 };
 
-// ── Listen for meetings in real-time (starts immediately)
-onSnapshot(MEETINGS_REF, (snap) => {
-  if (snap.exists()) {
+// TASKS listener - starts ONCE on app-ready
+let tasksStarted = false;
+window.addEventListener('app-ready', () => {
+  if (tasksStarted) return;
+  tasksStarted = true;
+  onSnapshot(TASKS_REF, snap => {
+    if (!snap.exists()) return;
     const data = snap.data();
-    if (data.meetings && Array.isArray(data.meetings)) {
-      if(typeof meetings !== 'undefined') meetings = data.meetings;
-      localStorage.setItem('hh-meetings-v1', JSON.stringify(data.meetings));
-      if (typeof renderMeetings === 'function' && typeof curSection !== 'undefined' && curSection === 'reuniones') {
-        renderMeetings();
-      }
-    }
-  }
+    if (!data.tasks || !Array.isArray(data.tasks)) return;
+    window.tasks = data.tasks;
+    if (typeof tasks !== 'undefined') tasks = data.tasks;
+    localStorage.setItem('hh-socios-v3', JSON.stringify(data.tasks));
+    if (typeof window.renderCurrent === 'function') window.renderCurrent();
+    const ind = document.getElementById('sync-indicator');
+    if(ind){ ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0',2000); }
+  });
 });
 
-// ── Listen for tasks in real-time
-window.addEventListener('app-ready', () => {
-  onSnapshot(DOC_REF, (snap) => {
-    if (snap.exists()) {
-      const data = snap.data();
-      if (data.tasks && Array.isArray(data.tasks)) {
-        // Firebase always wins over localStorage
-        window.tasks = data.tasks;
-        if(typeof tasks !== 'undefined') tasks = data.tasks;
-        localStorage.setItem('hh-socios-v3', JSON.stringify(data.tasks));
-        localStorage.setItem('hh-socios-updated', String(data.updatedAt || Date.now()));
-        if (typeof window.renderCurrent === 'function') window.renderCurrent();
-        const ind = document.getElementById('sync-indicator');
-        if (ind) { ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0', 2000); }
-      }
-    } else {
-      // No data in Firebase — clear local too
-      window.tasks = [];
-      if(typeof tasks !== 'undefined') tasks = [];
-      localStorage.removeItem('hh-socios-v3');
-      localStorage.removeItem('hh-socios-updated');
-      if (typeof window.renderCurrent === 'function') window.renderCurrent();
+// MEETINGS listener - starts immediately, ONCE
+let meetingsStarted = false;
+function startMeetingsListener() {
+  if (meetingsStarted) return;
+  meetingsStarted = true;
+  onSnapshot(MEETINGS_REF, snap => {
+    if (!snap.exists()) return;
+    const data = snap.data();
+    if (!data.meetings || !Array.isArray(data.meetings)) return;
+    if (typeof meetings !== 'undefined') meetings = data.meetings;
+    localStorage.setItem('hh-meetings-v1', JSON.stringify(data.meetings));
+    if (typeof curSection !== 'undefined' && curSection === 'reuniones') {
+      if (typeof renderMeetings === 'function') renderMeetings();
     }
   });
-
-  // Re-trigger every 10 seconds to keep alive
-  setInterval(() => window.dispatchEvent(new Event('app-ready')), 10000);
-});
+}
+// Start meetings listener after DOM ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startMeetingsListener);
+} else {
+  startMeetingsListener();
+}
 </script>
 </body>
 </html>
