@@ -710,7 +710,9 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
         <div class="rte-sep"></div>
         <button class="rte-btn" onclick="document.getElementById('rte-editor').innerHTML=''">&#128465;</button>
       </div>
-      <div id="rte-editor" class="rte-editor" contenteditable="true"></div>
+      <div id="rte-editor" class="rte-editor" contenteditable="true" style="min-height:100px"></div>
+      <textarea id="mt-body-fallback" placeholder="Escribe aquí si el editor no funciona..." style="display:none;width:100%;min-height:100px;font-size:13px;border:1px solid var(--border);border-radius:8px;padding:10px;font-family:inherit;resize:vertical;outline:none;color:var(--text);background:var(--bg2);box-sizing:border-box;margin-top:4px"></textarea>
+      <button onclick="toggleFallbackEditor()" style="font-size:11px;color:var(--text3);background:none;border:none;cursor:pointer;padding:2px 0;font-family:inherit">¿Editor no funciona? Toca aquí para usar texto simple</button>
       <!-- TAREAS DE REUNIÓN -->
       <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
         <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">📌 Tareas asignadas en esta reunión</div>
@@ -1306,7 +1308,13 @@ function clearMeetingForm(){
   const today = new Date().toISOString().split('T')[0];
   if(document.getElementById('mt-title')) document.getElementById('mt-title').value='';
   meetingTasks=[];
-  const rted=document.getElementById('rte-editor');if(rted){rted.innerHTML='';rted.focus();}
+  const rted=document.getElementById('rte-editor');
+  if(rted){rted.innerHTML='';rted.style.display='block';}
+  const fallTa=document.getElementById('mt-body-fallback');
+  if(fallTa){fallTa.value='';fallTa.style.display='none';}
+  const tb=document.querySelector('.rte-toolbar');
+  if(tb) tb.style.display='flex';
+  if(rted) rted.focus();
   renderMeetingTasksList();
   populateMtTaskWho();
   if(document.getElementById('mt-biz')) document.getElementById('mt-biz').value='';
@@ -1319,10 +1327,17 @@ function saveMeeting(){
   const bizEl = document.getElementById('mt-biz');
   if(!titleEl||!bizEl) return;
   const title = titleEl.value.trim();
+  // Get body from RTE or fallback textarea
   const rted2=document.getElementById('rte-editor');
-  const body=rted2?rted2.innerHTML.trim():'';
+  const fallbackTa=document.getElementById('mt-body-fallback');
+  let body='';
+  if(rted2&&rted2.innerHTML.trim()&&rted2.innerHTML.trim()!=='<br>'){
+    body=rted2.innerHTML.trim();
+  } else if(fallbackTa&&fallbackTa.value.trim()){
+    body=fallbackTa.value.trim();
+  }
   const biz=bizEl.value;
-  if(!body||body==='<br>'){if(rted2)rted2.focus();return;}
+  // Body is optional — allow saving without it
   const dateVal = document.getElementById('mt-date').value || new Date().toISOString().split('T')[0];
   const dateObj = new Date(dateVal+'T00:00:00');
   const dateFmt = dateObj.toLocaleDateString('es-CO',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
