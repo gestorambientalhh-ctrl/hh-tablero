@@ -1839,6 +1839,7 @@ function renderChecklist(){
 }
 
 function loadTasks(){
+  // Load from localStorage temporarily while Firebase loads
   const local = localStorage.getItem('hh-socios-v3');
   tasks = local ? JSON.parse(local) : [];
   window.tasks = tasks;
@@ -2159,9 +2160,10 @@ function delTask(id){
 }
 function persist(){
   window.tasks = tasks;
-  localStorage.setItem('hh-socios-v3',JSON.stringify(tasks));
-  localStorage.setItem('hh-socios-updated', Date.now());
-  if(window.persistToFirebase) window.persistToFirebase(tasks);
+  localStorage.setItem('hh-socios-v3', JSON.stringify(tasks));
+  localStorage.setItem('hh-socios-updated', String(Date.now()));
+  // Always sync to Firebase
+  if(window.persistToFirebase) window.persistToFirebase([...tasks]);
 }
 
 function autoAdvanceTasks(){
@@ -2371,6 +2373,53 @@ function cardHtml(t,showBiz){
 }
 
 function renderBoard(){
+  // ── Mini progress bar (simple & reliable)
+  try{
+    const boardEl=document.getElementById('board');
+    const oldBar=document.getElementById('user-progress-bar');
+    if(oldBar) oldBar.remove();
+    const allT=window.tasks&&window.tasks.length?window.tasks:tasks;
+    const uList=getUsers();
+    const uColors=['#2563eb','#0ea5e9','#7c3aed','#d97706'];
+    // Load checklist
+    loadChecklist();
+    const curWk=getCurrentWeekKey();
+    const wkCks=ckChecks[curWk]||{};
+    let pbHtml='<span style="font-size:11px;color:var(--text2);font-weight:600;margin-right:4px">Avance:</span>';
+    let hasAny=false;
+    uList.forEach((u,i)=>{
+      const uTasks=allT.filter(t=>t.who===u.name);
+      if(!uTasks.length) return;
+      const done=uTasks.filter(t=>t.status==='c').length;
+      const pct=Math.round((done/uTasks.length)*100);
+      const col=uColors[i%uColors.length];
+      const pctCol=pct>=80?'#16a34a':pct>=50?'#EF9F27':'#E24B4A';
+      // Checklist
+      const ckUser=ckItems.filter(it=>it.who===u.name);
+      const ckDone=ckUser.filter(it=>wkCks[it.id]?.[u.name]).length;
+      hasAny=true;
+      pbHtml+=`<div style="display:flex;align-items:center;gap:5px;background:#f8f9fa;border-radius:8px;padding:3px 8px 3px 4px">
+        <div style="width:22px;height:22px;border-radius:50%;background:${col};color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700">${u.init}</div>
+        <div>
+          <div style="font-size:10px;color:var(--text3)">${u.name}</div>
+          <div style="display:flex;align-items:center;gap:4px">
+            <div style="width:50px;height:5px;background:#eee;border-radius:999px;overflow:hidden">
+              <div style="width:${pct}%;height:100%;background:${col};border-radius:999px"></div>
+            </div>
+            <span style="font-size:10px;font-weight:700;color:${pctCol}">${done}/${uTasks.length}</span>
+            ${ckUser.length?`<span style="font-size:10px;color:#7c3aed;font-weight:600">✅${ckDone}/${ckUser.length}</span>`:''}
+          </div>
+        </div>
+      </div>`;
+    });
+    if(hasAny){
+      const bar=document.createElement('div');
+      bar.id='user-progress-bar';
+      bar.style.cssText='display:flex;align-items:center;gap:6px;padding:5px 16px;background:#fff;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap';
+      bar.innerHTML=pbHtml;
+      if(boardEl&&boardEl.parentElement) boardEl.parentElement.insertBefore(bar,boardEl);
+    }
+  }catch(e){ console.warn('Progress bar:',e); }
   const list=getFiltered();
   const cols={v:[],p:[],e:[],c:[]};
   list.forEach(t=>{
@@ -2833,40 +2882,45 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const DOC_REF = doc(db, 'hh-socios', 'tareas');
 
-// Override persist to save to Firebase + localStorage
+// ── Persist to Firebase
 window.persistToFirebase = async function(taskList) {
   try {
     await setDoc(DOC_REF, { tasks: taskList, updatedAt: Date.now() });
+    const ind = document.getElementById('sync-indicator');
+    if(ind){ ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0', 2000); }
   } catch(e) {
     console.warn('Firebase write error:', e);
   }
 };
 
-// Listen for real-time changes from Firebase
+// ── Listen for real-time changes — Firebase ALWAYS wins
 window.addEventListener('app-ready', () => {
   onSnapshot(DOC_REF, (snap) => {
     if (snap.exists()) {
       const data = snap.data();
       if (data.tasks && Array.isArray(data.tasks)) {
-        if (true) {
-          window.tasks = data.tasks;
-          localStorage.setItem('hh-socios-v3', JSON.stringify(data.tasks));
-          localStorage.setItem('hh-socios-updated', data.updatedAt);
-          tasks = data.tasks;
-        window.tasks = tasks;
+        // Firebase always wins over localStorage
+        window.tasks = data.tasks;
+        if(typeof tasks !== 'undefined') tasks = data.tasks;
+        localStorage.setItem('hh-socios-v3', JSON.stringify(data.tasks));
+        localStorage.setItem('hh-socios-updated', String(data.updatedAt || Date.now()));
         if (typeof window.renderCurrent === 'function') window.renderCurrent();
-          // Show sync indicator
-          const ind = document.getElementById('sync-indicator');
-          if (ind) { ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0', 2000); }
-        }
+        const ind = document.getElementById('sync-indicator');
+        if (ind) { ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0', 2000); }
       }
+    } else {
+      // No data in Firebase — clear local too
+      window.tasks = [];
+      if(typeof tasks !== 'undefined') tasks = [];
+      localStorage.removeItem('hh-socios-v3');
+      localStorage.removeItem('hh-socios-updated');
+      if (typeof window.renderCurrent === 'function') window.renderCurrent();
     }
   });
+
+  // Re-trigger every 10 seconds to keep alive
+  setInterval(() => window.dispatchEvent(new Event('app-ready')), 10000);
 });
-
-// Add recurring badge to cards
-const _origCardHtml = cardHtml;
-
 </script>
 </body>
 </html>
