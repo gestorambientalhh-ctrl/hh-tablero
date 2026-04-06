@@ -2673,16 +2673,15 @@ function renderGlobal(){
     <button class="resp-btn${!who?' act':''}" onclick="setResp('')">Todos</button>
     ${users.map(u=>`<button class="resp-btn${who===u.name?' act':''}" onclick="setResp('${u.name}')">${u.name}</button>`).join('')}
     <div style="width:1px;height:18px;background:var(--border)"></div>
+    <button class="resp-btn${_globalBizFilter===''?' act':''}" onclick="setGlobalBizFilter('')">Todos los proyectos</button>
+    <button class="resp-btn${_globalBizFilter==='0'?' act':''}" onclick="setGlobalBizFilter('0')" style="${_globalBizFilter==='0'?'background:#63992218;color:#639922;border-color:#639922;font-weight:600':''}">Gestor HH</button>
+    <button class="resp-btn${_globalBizFilter==='1'?' act':''}" onclick="setGlobalBizFilter('1')" style="${_globalBizFilter==='1'?'background:#378ADD18;color:#378ADD;border-color:#378ADD;font-weight:600':''}">Logístico</button>
+    <button class="resp-btn${_globalBizFilter==='2'?' act':''}" onclick="setGlobalBizFilter('2')" style="${_globalBizFilter==='2'?'background:#D85A3018;color:#D85A30;border-color:#D85A30;font-weight:600':''}">Montevra</button>
+    <div style="width:1px;height:18px;background:var(--border)"></div>
     <select onchange="setGlobalMonth(this.value)" style="height:28px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text2);background:var(--bg)" id="g-month">
       <option value="">Todos los meses</option>
     </select>
     ${weekDropdown}
-    <select onchange="setGlobalBizFilter(this.value)" style="height:28px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text2);background:var(--bg)">
-      <option value="">Todos los proyectos</option>
-      <option value="0">Gestor HH</option>
-      <option value="1">Logístico</option>
-      <option value="2">Montevra</option>
-    </select>
     <button onclick="clearGlobalFilters()" style="height:28px;padding:0 8px;font-size:11px;border:1px solid var(--border);border-radius:5px;background:var(--bg);cursor:pointer;color:var(--text3)">✕</button>
   </div>
 
