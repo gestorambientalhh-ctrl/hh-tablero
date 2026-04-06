@@ -437,7 +437,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 .tag{font-size:10px!important;padding:1px 5px!important;filter:saturate(.5)!important}
 .tag-date{font-size:10px!important;color:#787774!important}
 .tag-date.over{color:#a16207!important}
-.card-actions{opacity:0!important;transition:opacity .15s!important}
+.card-actions{opacity:1!important;transition:opacity .15s!important}
 .card:hover .card-actions{opacity:1!important}
 .ca-btn{background:#f4f4f2!important;color:#6d6e6f!important;border:1px solid #e8e8e6!important;border-radius:4px!important;font-size:11px!important}
 .ca-btn.act{background:#eef2f9!important;color:#2d4a7a!important;border-color:#c5d3e8!important}
@@ -2463,6 +2463,7 @@ function cardHtml(t,showBiz){
         ? `<button class="ca-btn" style="background:#E24B4A;color:#fff;border-color:#E24B4A" onclick="moveTaskToComplete('${t.id}')">✓ Completar</button>`
         : `${idx>0?`<button class="ca-btn" onclick="moveTask('${t.id}',-1)">← Atrás</button>`:''} ${idx<2?`<button class="ca-btn" onclick="moveTask('${t.id}',1)">Avanzar →</button>`:`<span style="font-size:11px;color:var(--text3)">Completada ✓</span>`}`
       }
+      <button class="ca-btn" onclick="openEdit('${t.id}')" title="Editar" style="margin-left:auto">✏️</button>
       <button class="ca-del" onclick="delTask('${t.id}')" title="Eliminar">×</button>
     </div>
   </div>`;
@@ -2601,6 +2602,8 @@ function renderGlobal(){
         <div style="display:flex;align-items:center;gap:4px">
           ${statusBtns}
           <div style="width:20px;height:20px;border-radius:50%;background:${whoData.col};color:#fff;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0;margin-left:4px">${whoData.init}</div>
+          ${!isViewer?`<button onclick="openEdit('${t.id}')" title="Editar" style="background:none;border:1px solid #e2e8f0;border-radius:5px;padding:2px 6px;font-size:11px;cursor:pointer;color:#64748b;margin-left:2px">✏️</button>`:''}
+          ${!isViewer?`<button onclick="delTask('${t.id}')" title="Eliminar" style="background:none;border:none;font-size:15px;cursor:pointer;color:#cbd5e1;padding:0 2px;line-height:1">×</button>`:''}
         </div>
       </div>
     </div>`;
