@@ -2605,7 +2605,10 @@ function applyDashDateFilter(t){
   return true;
 }
 
+let _dashRendering = false;
 function renderDashboard(){
+  if(_dashRendering) return;
+  _dashRendering = true;
   if(window.tasks && window.tasks.length > 0) tasks = window.tasks;
   populateDashMonthFilter();
   const filtered = getTasksForDash();
@@ -2656,7 +2659,7 @@ function renderDashboard(){
       <select id="db-month" onchange="onDbMonthChange()" style="height:28px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text2);background:var(--bg)">
         <option value="">Todos los meses</option>
       </select>
-      <select id="db-week" onchange="dashFilter.week=this.value;renderDashboard()" style="height:28px;font-size:12px;border:1px solid var(--blue);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--blue);background:var(--blue-light);font-weight:600;display:none">
+      <select id="db-week" onchange="dashFilter.week=this.value;setTimeout(renderDashboard,0)" style="height:28px;font-size:12px;border:1px solid var(--blue);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--blue);background:var(--blue-light);font-weight:600;display:none">
         <option value="">Todas las semanas</option>
       </select>
       <button onclick="clearDashDate()" style="height:28px;padding:0 8px;font-size:11px;border:1px solid var(--border);border-radius:5px;background:var(--bg);cursor:pointer;color:var(--text3)">✕</button>
@@ -2801,12 +2804,12 @@ function renderDashboard(){
   const dw=document.getElementById('db-week');
   if(dm&&dashFilter.month){
     dm.value=dashFilter.month;
-    onDbMonthChange();
+    // Restore week dropdown without triggering renderDashboard
     if(dw&&dashFilter.week){
-      dw.value=dashFilter.week;
       dw.style.display='block';
     }
   }
+  _dashRendering = false;
 }
 </script>
 <script type="module">
