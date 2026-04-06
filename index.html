@@ -480,7 +480,11 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 .search-top{border:1px solid #ebebeb!important;background:#f7f7f5!important}
 .fsel-top{border:1px solid #ebebeb!important;background:#f7f7f5!important;color:#787774!important}
 
-/* ── KANBAN CARD: cajas blancas individuales (como screenshot) ── */
+/* KPI BAR BOTTOM */
+.kpi-bar{position:fixed;bottom:0;left:0;right:0;height:48px;background:#fff;border-top:1px solid #e2e8f0;display:none;align-items:center;justify-content:center;z-index:90;box-shadow:0 -2px 8px rgba(0,0,0,.06)}
+.kpi-bar.visible{display:flex}
+@media(max-width:700px){.kpi-bar{bottom:56px}}
+
 .col-body{background:transparent!important;border:none!important;border-radius:0!important;padding:4px 0!important;display:flex!important;flex-direction:column!important;gap:6px!important;overflow-y:auto!important}
 .card{background:#fff!important;border:1px solid #e8e8e6!important;border-radius:8px!important;border-left:none!important;box-shadow:0 1px 3px rgba(0,0,0,.04)!important;margin:0!important;padding:11px 12px!important}
 .card:last-child{border-bottom:1px solid #e8e8e6!important}
@@ -586,7 +590,6 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
       <!-- SECTION BAR (Tablero / Dashboard) con semáforo -->
       <div class="section-bar">
         <button class="sec-tab act" id="sec-tablero" onclick="showSection('tablero')">Tablero</button>
-        <button class="sec-tab" id="sec-dashboard" onclick="showSection('dashboard')">Dashboard</button>
         <button class="sec-tab" id="sec-reuniones" onclick="showSection('reuniones')">📋 Reuniones</button>
         <div style="width:1px;height:18px;background:var(--border);margin:0 4px"></div>
         <button onclick="toggleForm()" style="display:flex;align-items:center;gap:5px;height:28px;padding:0 12px;background:#2d4a7a;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap">
@@ -987,15 +990,14 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
     </div>
   </div>
 
+  <!-- KPI BAR FIJO ABAJO -->
+  <div class="kpi-bar" id="kpi-bar"></div>
+
   <!-- MOBILE BOTTOM NAV -->->
   <nav class="mob-nav">
     <button class="mob-nav-btn act" id="mobnav-tablero" onclick="showSection('tablero')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
       Tablero
-    </button>
-    <button class="mob-nav-btn" id="mobnav-dashboard" onclick="showSection('dashboard')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-      Dashboard
     </button>
     <button class="mob-nav-btn" id="mobnav-reuniones" onclick="showSection('reuniones')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
@@ -2412,9 +2414,11 @@ window.renderCurrent=function renderCurrent(){
   // tablero section
   if(biz===3){
     document.getElementById('global-view').style.display='block';
+    document.getElementById('kpi-bar').classList.add('visible');
     renderGlobal();
   } else {
     document.getElementById('board').style.display='flex';
+    document.getElementById('kpi-bar').classList.remove('visible');
     renderBoard();
   }
 }
@@ -2685,20 +2689,6 @@ function renderGlobal(){
     <button onclick="clearGlobalFilters()" style="height:28px;padding:0 8px;font-size:11px;border:1px solid var(--border);border-radius:5px;background:var(--bg);cursor:pointer;color:var(--text3)">✕</button>
   </div>
 
-  <!-- KPI ROW -->
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
-    ${[
-      {n:filtered.length,l:'Total',c:'#1e293b',bg:'#f8fafc'},
-      {n:venc.length,l:'Vencidas',c:'#dc2626',bg:'#fff5f5'},
-      {n:prog.length,l:'En Progreso',c:'#3b82f6',bg:'#eff6ff'},
-      {n:pend.length,l:'Pendiente',c:'#d97706',bg:'#fffbeb'},
-      {n:comp.length,l:'Completadas',c:'#16a34a',bg:'#f0fdf4'},
-    ].map(k=>`<div style="background:${k.bg};border:1px solid ${k.c}22;border-radius:10px;padding:6px 14px;display:flex;align-items:center;gap:8px">
-      <span style="font-size:22px;font-weight:800;color:${k.c}">${k.n}</span>
-      <span style="font-size:10px;color:${k.c};font-weight:600;text-transform:uppercase;letter-spacing:.4px;line-height:1.2">${k.l}</span>
-    </div>`).join('')}
-  </div>
-
   <!-- 4 COLUMNAS -->
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px">
     ${colDef.map(col=>`
@@ -2714,6 +2704,24 @@ function renderGlobal(){
   </div>`;
 
   document.getElementById('global-view').innerHTML = html;
+
+  // Actualizar barra KPI fija abajo
+  const kpiBar = document.getElementById('kpi-bar');
+  if(kpiBar){
+    const kpiData = [
+      {n:filtered.length, l:'Total',       c:'#1e293b'},
+      {n:venc.length,     l:'Vencidas',    c:'#dc2626'},
+      {n:prog.length,     l:'En Progreso', c:'#3b82f6'},
+      {n:pend.length,     l:'Pendiente',   c:'#d97706'},
+      {n:comp.length,     l:'Completadas', c:'#16a34a'},
+    ];
+    kpiBar.innerHTML = kpiData.map(k=>
+      `<div style="display:flex;align-items:center;gap:6px;padding:0 16px;border-right:1px solid #e2e8f0">
+        <span style="font-size:20px;font-weight:800;color:${k.c}">${k.n}</span>
+        <span style="font-size:10px;font-weight:600;color:${k.c};text-transform:uppercase;letter-spacing:.4px;line-height:1.2">${k.l}</span>
+      </div>`
+    ).join('');
+  }
   // Populate month filter
   const gm = document.getElementById('g-month');
   if(gm){
