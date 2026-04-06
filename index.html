@@ -2609,19 +2609,43 @@ function renderDashboard(){
   if(window.tasks && window.tasks.length > 0) tasks = window.tasks;
   populateDashMonthFilter();
   const filtered = getTasksForDash();
+  const allT = window.tasks && window.tasks.length ? window.tasks : tasks;
+
+  // ── KPI TOTALS
   const totP=filtered.filter(t=>t.status==='p').length;
   const totE=filtered.filter(t=>t.status==='e').length;
   const totC=filtered.filter(t=>t.status==='c').length;
+  const totV=filtered.filter(t=>t.date&&isOver(t.date)&&t.status!=='c').length;
   const tot=filtered.length;
-  // Build user progress summary for dashboard top
-  const allT=window.tasks&&window.tasks.length?window.tasks:tasks;
-  const uColorsD=['#2563eb','#0ea5e9','#7c3aed','#d97706'];
-  const dynUsersD=getUsers();
+  const progPct=tot?Math.round((totC/tot)*100):0;
 
-  let html=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
-    <div class="dash-h" style="margin-bottom:0">Dashboard</div>
+  // ── DATE CONTEXT
+  const nowD=new Date();
+  const curMo=`${nowD.getFullYear()}-${String(nowD.getMonth()+1).padStart(2,'0')}`;
+  const MES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const mesLabel=MES[nowD.getMonth()]+' '+nowD.getFullYear();
+
+  // ── BIZ DATA
+  const BIZ=[{name:'Gestor HH',col:'#16a34a',bg:'#dcfce7'},{name:'Logístico',col:'#2563eb',bg:'#dbeafe'},{name:'Montevra',col:'#dc2626',bg:'#fee2e2'}];
+  const dynUsers=getUsers().filter(u=>u.active!==false);
+  const uColors=['#2563eb','#0ea5e9','#7c3aed','#d97706'];
+
+  // ── USER PROGRESS (checklist)
+  loadChecklist();
+  const curWkD=getCurrentWeekKey();
+  const wkCksD=ckChecks[curWkD]||{};
+
+  let html=`
+  <!-- DASHBOARD HEADER -->
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+    <div>
+      <div style="font-size:18px;font-weight:700;color:var(--text)">Dashboard Operativo</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:2px">${mesLabel} · ${tot} tareas en seguimiento</div>
+    </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
       <div style="display:flex;gap:4px;flex-wrap:wrap" id="db-who-filters">
+        <button class="resp-btn${dashFilter.who===''?' act':''}" data-who="" onclick="setDashFilter('who','')">Todos</button>
+        ${dynUsers.map(u=>`<button class="resp-btn${dashFilter.who===u.name?' act':''}" data-who="${u.name}" onclick="setDashFilter('who','${u.name}')">${u.name}</button>`).join('')}
       </div>
       <select id="db-biz" onchange="setDashFilter('biz',this.value)" style="height:28px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text2);background:var(--bg)">
         <option value="">Todos los proyectos</option>
@@ -2638,183 +2662,146 @@ function renderDashboard(){
       <button onclick="clearDashDate()" style="height:28px;padding:0 8px;font-size:11px;border:1px solid var(--border);border-radius:5px;background:var(--bg);cursor:pointer;color:var(--text3)">✕</button>
     </div>
   </div>
-  <div class="dash-sub" style="margin-top:2px">Resumen de tareas por unidad de negocio</div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid var(--border);margin-bottom:12px">
-    ${dynUsersD.filter(u=>{
-      if(dashFilter.who&&dashFilter.who!==u.name) return false;
-      return allT.some(t=>t.who===u.name);
-    }).map((u,i)=>{
-      const col=uColorsD[i%uColorsD.length];
-      // Simple: total tasks done vs total tasks for this user
-      const uAllTasks=allT.filter(t=>t.who===u.name);
-      if(!uAllTasks.length) return '';
-      const uDone=uAllTasks.filter(t=>t.status==='c').length;
-      const uTotal=uAllTasks.length;
-      const pct=Math.round((uDone/uTotal)*100);
-      const pctColor=pct>=80?'#16a34a':pct>=50?'#EF9F27':'#E24B4A';
-      // Checklist this week
-      loadChecklist();
-      const curWk=getCurrentWeekKey();
-      const wkChecks=ckChecks[curWk]||{};
-      const ckDone=ckItems.filter(it=>it.who===u.name&&wkChecks[it.id]?.[u.name]).length;
-      const ckTotal=ckItems.filter(it=>it.who===u.name).length;
-      const ckPct=ckTotal?Math.round((ckDone/ckTotal)*100):null;
-      const ckColor=ckPct>=80?'#16a34a':ckPct>=50?'#EF9F27':'#E24B4A';
-      return `<div style="display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:6px 12px 6px 6px">
-        <div style="width:30px;height:30px;border-radius:50%;background:${col};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${u.init}</div>
-        <div>
-          <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px">${u.name}</div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <div style="display:flex;align-items:center;gap:4px">
-              <span style="font-size:10px;color:var(--text3)">Tareas:</span>
-              <div style="width:60px;height:6px;background:#f0f0ee;border-radius:999px;overflow:hidden">
-                <div style="width:${pct}%;height:100%;background:${col};border-radius:999px"></div>
-              </div>
-              <span style="font-size:11px;font-weight:700;color:${pctColor}">${uDone}/${uTotal}</span>
-            </div>
-            ${ckTotal?`<div style="width:1px;height:14px;background:var(--border)"></div>
-            <div style="display:flex;align-items:center;gap:4px">
-              <span style="font-size:10px;color:var(--text3)">CK:</span>
-              <div style="width:40px;height:6px;background:#f0f0ee;border-radius:999px;overflow:hidden">
-                <div style="width:${ckPct}%;height:100%;background:#7c3aed;border-radius:999px"></div>
-              </div>
-              <span style="font-size:11px;font-weight:700;color:${ckColor}">${ckDone}/${ckTotal}</span>
-            </div>`:''}
-          </div>
-        </div>
-      </div>`;
-    }).filter(Boolean).join('')}
-  </div>
-  <div class="global-box">
-    <div class="global-box-title">Resumen general</div>
-    <div class="global-stats">
-      <div class="g-stat"><div class="g-n" style="color:#1a1a1a">${tot}</div><div class="g-l">Total</div></div>
-      <div class="g-stat"><div class="g-n" style="color:#B4B2A9">${totP}</div><div class="g-l">Pendiente</div></div>
-      <div class="g-stat"><div class="g-n" style="color:#378ADD">${totE}</div><div class="g-l">En progreso</div></div>
-      <div class="g-stat"><div class="g-n" style="color:#639922">${totC}</div><div class="g-l">Completada</div></div>
+
+  <!-- KPI CARDS -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px">
+    <div style="background:linear-gradient(135deg,#1e40af,#2563eb);border-radius:12px;padding:16px;color:#fff;position:relative;overflow:hidden">
+      <div style="font-size:11px;opacity:.8;font-weight:500;text-transform:uppercase;letter-spacing:.5px">Total</div>
+      <div style="font-size:36px;font-weight:800;line-height:1.1;margin:4px 0">${tot}</div>
+      <div style="font-size:11px;opacity:.7">tareas activas</div>
+      <div style="position:absolute;right:-10px;top:-10px;width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.1)"></div>
+    </div>
+    <div style="background:linear-gradient(135deg,#92400e,#d97706);border-radius:12px;padding:16px;color:#fff;position:relative;overflow:hidden">
+      <div style="font-size:11px;opacity:.8;font-weight:500;text-transform:uppercase;letter-spacing:.5px">Pendiente</div>
+      <div style="font-size:36px;font-weight:800;line-height:1.1;margin:4px 0">${totP}</div>
+      <div style="font-size:11px;opacity:.7">por iniciar</div>
+      <div style="position:absolute;right:-10px;top:-10px;width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.1)"></div>
+    </div>
+    <div style="background:linear-gradient(135deg,#1e4d8c,#3b82f6);border-radius:12px;padding:16px;color:#fff;position:relative;overflow:hidden">
+      <div style="font-size:11px;opacity:.8;font-weight:500;text-transform:uppercase;letter-spacing:.5px">En Progreso</div>
+      <div style="font-size:36px;font-weight:800;line-height:1.1;margin:4px 0">${totE}</div>
+      <div style="font-size:11px;opacity:.7">en ejecución</div>
+      <div style="position:absolute;right:-10px;top:-10px;width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.1)"></div>
+    </div>
+    <div style="background:linear-gradient(135deg,#14532d,#16a34a);border-radius:12px;padding:16px;color:#fff;position:relative;overflow:hidden">
+      <div style="font-size:11px;opacity:.8;font-weight:500;text-transform:uppercase;letter-spacing:.5px">Completada</div>
+      <div style="font-size:36px;font-weight:800;line-height:1.1;margin:4px 0">${totC}</div>
+      <div style="font-size:11px;opacity:.7">${progPct}% del total</div>
+      <div style="position:absolute;right:-10px;top:-10px;width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.1)"></div>
+    </div>
+    <div style="background:linear-gradient(135deg,#7f1d1d,#dc2626);border-radius:12px;padding:16px;color:#fff;position:relative;overflow:hidden">
+      <div style="font-size:11px;opacity:.8;font-weight:500;text-transform:uppercase;letter-spacing:.5px">Vencidas</div>
+      <div style="font-size:36px;font-weight:800;line-height:1.1;margin:4px 0">${totV}</div>
+      <div style="font-size:11px;opacity:.7">requieren atención</div>
+      <div style="position:absolute;right:-10px;top:-10px;width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.1)"></div>
     </div>
   </div>
-  <div class="biz-grid">`;
-  [0,1,2].forEach(bi=>{
+
+  <!-- PROGRESS BAR GENERAL -->
+  <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="font-size:13px;font-weight:600;color:var(--text)">Progreso general del periodo</div>
+      <div style="font-size:20px;font-weight:800;color:${progPct>=80?'#16a34a':progPct>=50?'#d97706':'#dc2626'}">${progPct}%</div>
+    </div>
+    <div style="height:12px;background:#f0f0ee;border-radius:999px;overflow:hidden">
+      <div style="height:100%;width:${progPct}%;background:${progPct>=80?'linear-gradient(90deg,#16a34a,#4ade80)':progPct>=50?'linear-gradient(90deg,#d97706,#fbbf24)':'linear-gradient(90deg,#dc2626,#f87171)'};border-radius:999px;transition:width .5s"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:10px;color:var(--text3)">
+      <span>0%</span><span>50%</span><span>100%</span>
+    </div>
+  </div>
+
+  <!-- PROYECTOS ROW -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:16px">
+  ${BIZ.map((bz,bi)=>{
     const bt=filtered.filter(t=>t.biz===bi);
     const bp=bt.filter(t=>t.status==='p').length;
     const be=bt.filter(t=>t.status==='e').length;
     const bc=bt.filter(t=>t.status==='c').length;
-    const total=bt.length||1;
-    const pct=Math.round((bc/total)*100);
-    const anderson=bt.filter(t=>t.who==='Anderson'||t.who==='Ambos').length;
-    const raul=bt.filter(t=>t.who==='Raul'||t.who==='Ambos').length;
-    const urg=bt.filter(t=>t.pri==='urgente'&&t.status!=='c').length;
-    html+=`<div class="biz-card">
-      <div class="biz-card-top">
-        <span class="biz-dot" style="background:${BIZ_C[bi]}"></span>
-        <span class="biz-name">${BIZS[bi].name}</span>
-        ${urg>0?`<span class="urg-badge">⚠ ${urg} urgente${urg!==1?'s':''}</span>`:''}
+    const bv=bt.filter(t=>t.date&&isOver(t.date)&&t.status!=='c').length;
+    const bpct=bt.length?Math.round((bc/bt.length)*100):0;
+    return `<div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:14px;border-top:4px solid ${bz.col}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <div style="width:10px;height:10px;border-radius:50%;background:${bz.col}"></div>
+        <div style="font-size:13px;font-weight:700;color:var(--text)">${bz.name}</div>
+        <div style="margin-left:auto;font-size:18px;font-weight:800;color:${bz.col}">${bpct}%</div>
       </div>
-      <div class="biz-stats">
-        <div class="biz-stat"><div class="biz-stat-n" style="color:#B4B2A9">${bp}</div><div class="biz-stat-l">Pendiente</div></div>
-        <div class="biz-stat"><div class="biz-stat-n" style="color:#378ADD">${be}</div><div class="biz-stat-l">En prog.</div></div>
-        <div class="biz-stat"><div class="biz-stat-n" style="color:#639922">${bc}</div><div class="biz-stat-l">Completada</div></div>
+      <div style="height:6px;background:#f0f0ee;border-radius:999px;overflow:hidden;margin-bottom:10px">
+        <div style="height:100%;width:${bpct}%;background:${bz.col};border-radius:999px"></div>
       </div>
-      <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${BIZ_C[bi]}"></div></div>
-      <div class="prog-labels"><span>Progreso</span><span style="font-weight:600;color:${BIZ_C[bi]}">${pct}%</span></div>
-      <div class="people-row">
-        <div class="person"><div class="person-name">Anderson</div><div class="person-n">${anderson}</div><div class="person-l">tareas</div></div>
-        <div class="person"><div class="person-name">Raul</div><div class="person-n">${raul}</div><div class="person-l">tareas</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;text-align:center">
+        <div><div style="font-size:16px;font-weight:700;color:#92400e">${bp}</div><div style="font-size:9px;color:var(--text3)">PEND.</div></div>
+        <div><div style="font-size:16px;font-weight:700;color:#2563eb">${be}</div><div style="font-size:9px;color:var(--text3)">PROG.</div></div>
+        <div><div style="font-size:16px;font-weight:700;color:#16a34a">${bc}</div><div style="font-size:9px;color:var(--text3)">LISTAS</div></div>
+        <div><div style="font-size:16px;font-weight:700;color:#dc2626">${bv}</div><div style="font-size:9px;color:var(--text3)">VENC.</div></div>
       </div>
     </div>`;
-  });
-  html+='</div>';
+  }).join('')}
+  </div>
 
-  // ── USER SECTION ─────────────────────────────────
-  const SEM_C = {urgente:'#E24B4A',alta:'#EF9F27',normal:'#639922'};
-  const BIZ_LABELS = ['Gestor HH','Logístico','Montevra'];
-  const dynUsers = getUsers();
-  const uColors = ['#2563eb','#0ea5e9','#7c3aed','#d97706'];
-  const USERS = dynUsers.map((u,i)=>({name:u.name,init:u.init,color:uColors[i%uColors.length],filterKeys:[u.name]}));
-
-  html += `<div class="user-section">
-    <div class="user-section-title">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      Gestión por usuario
-    </div>
-    <div class="user-cards">`;
-
-  USERS.forEach(u => {
-    const myTasks = filtered.filter(t => u.filterKeys.includes(t.who));
-    const mP = myTasks.filter(t=>t.status==='p').length;
-    const mE = myTasks.filter(t=>t.status==='e').length;
-    const mC = myTasks.filter(t=>t.status==='c').length;
-    const mV = myTasks.filter(t=>t.date&&isOver(t.date)&&t.status!=='c').length;
-    const total = myTasks.length || 1;
-    const pct = Math.round((mC/total)*100);
-    // Open tasks sorted: vencidas first, then urgente, then alta, then normal
-    const openTasks = myTasks.filter(t=>t.status!=='c')
-      .sort((a,b)=>{
-        const scoreA = isOver(a.date)?0:a.pri==='urgente'?1:a.pri==='alta'?2:3;
-        const scoreB = isOver(b.date)?0:b.pri==='urgente'?1:b.pri==='alta'?2:3;
-        return scoreA - scoreB;
-      }).slice(0,5);
-
-    html += `<div class="user-card">
-      <div class="user-card-head">
-        <div class="user-avatar" style="background:${u.color}">${u.init}</div>
-        <div>
-          <div class="user-card-name">${u.name}</div>
-          <div class="user-card-sub">${myTasks.length} tarea${myTasks.length!==1?'s':''} asignada${myTasks.length!==1?'s':''}</div>
+  <!-- GESTIÓN POR USUARIO -->
+  <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:10px">👤 Gestión por usuario</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px;margin-bottom:16px">
+  ${dynUsers.filter(u=>{
+    if(dashFilter.who&&dashFilter.who!==u.name) return false;
+    return true;
+  }).map((u,i)=>{
+    const col=uColors[i%uColors.length];
+    const uTasks=filtered.filter(t=>t.who===u.name);
+    const uP=uTasks.filter(t=>t.status==='p').length;
+    const uE=uTasks.filter(t=>t.status==='e').length;
+    const uC=uTasks.filter(t=>t.status==='c').length;
+    const uV=uTasks.filter(t=>t.date&&isOver(t.date)&&t.status!=='c').length;
+    const uPct=uTasks.length?Math.round((uC/uTasks.length)*100):0;
+    const pctCol=uPct>=80?'#16a34a':uPct>=50?'#d97706':'#dc2626';
+    const ckUser=ckItems.filter(it=>it.who===u.name);
+    const ckDone=ckUser.filter(it=>wkCksD[it.id]?.[u.name]).length;
+    const statusLabel=uV>0?`⚠️ ${uV} vencida${uV>1?'s':''}`:uPct>=80?'✅ Al día':uE>0?'🔄 En curso':'📋 Pendiente';
+    const statusCol=uV>0?'#dc2626':uPct>=80?'#16a34a':uE>0?'#2563eb':'#92400e';
+    return `<div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:16px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <div style="width:42px;height:42px;border-radius:50%;background:${col};color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">${u.init}</div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:700;color:var(--text)">${u.name}</div>
+          <div style="font-size:11px;color:${statusCol};font-weight:600">${statusLabel}</div>
         </div>
-        ${mV>0?`<span style="margin-left:auto;font-size:11px;background:#FCEBEB;color:#791F1F;padding:3px 9px;border-radius:999px;font-weight:600">⚠ ${mV} vencida${mV!==1?'s':''}</span>`:'<span style="margin-left:auto;font-size:11px;background:#dcfce7;color:#166534;padding:3px 9px;border-radius:999px;font-weight:600">✓ Al día</span>'}
+        <div style="text-align:right">
+          <div style="font-size:22px;font-weight:800;color:${pctCol}">${uPct}%</div>
+          <div style="font-size:10px;color:var(--text3)">${uC}/${uTasks.length}</div>
+        </div>
       </div>
-      <div class="user-stats-row">
-        <div class="user-stat"><div class="user-stat-n" style="color:#94a3b8">${mP}</div><div class="user-stat-l">Pend.</div></div>
-        <div class="user-stat"><div class="user-stat-n" style="color:#2563eb">${mE}</div><div class="user-stat-l">Prog.</div></div>
-        <div class="user-stat"><div class="user-stat-n" style="color:#16a34a">${mC}</div><div class="user-stat-l">Listas</div></div>
-        <div class="user-stat"><div class="user-stat-n" style="color:#E24B4A">${mV}</div><div class="user-stat-l">Venc.</div></div>
+      <div style="height:8px;background:#f0f0ee;border-radius:999px;overflow:hidden;margin-bottom:10px">
+        <div style="height:100%;width:${uPct}%;background:${col};border-radius:999px"></div>
       </div>
-      <div class="user-prog-label"><span>Progreso</span><span style="font-weight:600;color:${u.color}">${pct}%</span></div>
-      <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${u.color}"></div></div>
-      ${openTasks.length>0?`<div class="user-tasks-list">
-        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Próximas tareas</div>
-        ${openTasks.map(t=>{
-          const over=t.date&&isOver(t.date);
-          const dotC=over?'#E24B4A':SEM_C[t.pri]||'#639922';
-          const biz=BIZ_LABELS[t.biz]||'';
-          const bizC=BIZ_C[t.biz]||'#639922';
-          return `<div class="user-task-item">
-            <span class="user-task-dot" style="background:${dotC}"></span>
-            <span class="user-task-title" title="${t.title}">${t.title}</span>
-            <span class="user-task-biz" style="background:${bizC}18;color:${bizC}">${biz}</span>
-            ${t.date?`<span class="user-task-date">${fmtDate(t.date)}</span>`:''}
-          </div>`;
-        }).join('')}
-      </div>`:'<div style="text-align:center;padding:12px;color:var(--text3);font-size:12px">Sin tareas abiertas ✓</div>'}
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;text-align:center;margin-bottom:${ckUser.length?'10px':'0'}">
+        <div style="background:#fef3c7;border-radius:8px;padding:6px"><div style="font-size:18px;font-weight:700;color:#92400e">${uP}</div><div style="font-size:9px;color:#92400e;font-weight:500">PEND.</div></div>
+        <div style="background:#dbeafe;border-radius:8px;padding:6px"><div style="font-size:18px;font-weight:700;color:#2563eb">${uE}</div><div style="font-size:9px;color:#2563eb;font-weight:500">PROG.</div></div>
+        <div style="background:#dcfce7;border-radius:8px;padding:6px"><div style="font-size:18px;font-weight:700;color:#16a34a">${uC}</div><div style="font-size:9px;color:#16a34a;font-weight:500">LISTAS</div></div>
+        <div style="background:#fee2e2;border-radius:8px;padding:6px"><div style="font-size:18px;font-weight:700;color:#dc2626">${uV}</div><div style="font-size:9px;color:#dc2626;font-weight:500">VENC.</div></div>
+      </div>
+      ${ckUser.length?`<div style="border-top:1px solid var(--border);padding-top:8px;display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:11px;color:var(--text2)">✅ Checklist semanal</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div style="width:80px;height:5px;background:#f0f0ee;border-radius:999px;overflow:hidden">
+            <div style="width:${ckUser.length?Math.round((ckDone/ckUser.length)*100):0}%;height:100%;background:#7c3aed;border-radius:999px"></div>
+          </div>
+          <span style="font-size:11px;font-weight:700;color:#7c3aed">${ckDone}/${ckUser.length}</span>
+        </div>
+      </div>`:''}
     </div>`;
-  });
-
-  html += '</div></div>';
-  // ── END USER SECTION ─────────────────────────────
+  }).join('')}
+  </div>`;
 
   document.getElementById('dash-view').innerHTML=html;
-  // Build dashboard who filter buttons with correct active state
-  const dbWhoBar=document.getElementById('db-who-filters');
-  if(dbWhoBar){
-    const dUsers=getUsers();
-    dbWhoBar.innerHTML=
-      `<button class="resp-btn${dashFilter.who===''?' act':''}" onclick="setDashFilter('who','')">Total</button>`+
-      dUsers.map(u=>`<button class="resp-btn${dashFilter.who===u.name?' act':''}" onclick="setDashFilter('who','${u.name}')">${u.name}</button>`).join('');
-  }
-  // Restore biz and month selects
+  // Restore filters
   const dbBiz=document.getElementById('db-biz');
   if(dbBiz) dbBiz.value=dashFilter.biz||'';
-  // Restore month and week filters
   populateDashMonthFilter();
   const dm=document.getElementById('db-month');
   const dw=document.getElementById('db-week');
   if(dm&&dashFilter.month){
     dm.value=dashFilter.month;
-    // Repopulate weeks for this month
     onDbMonthChange();
-    // Restore selected week
     if(dw&&dashFilter.week){
       dw.value=dashFilter.week;
       dw.style.display='block';
