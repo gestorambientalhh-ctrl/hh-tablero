@@ -928,7 +928,13 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
   <div id="section-flujo" style="display:none;position:fixed;top:52px;left:0;right:0;bottom:0;flex-direction:column;overflow:hidden;z-index:50;background:#f7f7f5">
     <!-- Header -->
     <div style="background:#fff;border-bottom:1px solid #ebebeb;padding:10px 16px;display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap">
-      <div id="flujo-proj-tabs" style="display:flex;gap:6px"></div>
+      <div id="flujo-proj-tabs" style="display:flex;gap:6px;align-items:center">
+      <button onclick="showSection('tablero')" style="display:flex;align-items:center;gap:5px;height:30px;padding:0 10px;font-size:12px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text2);cursor:pointer;font-family:inherit">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        Inicio
+      </button>
+      <div style="width:1px;height:18px;background:var(--border)"></div>
+    </div>
       <button onclick="openFlujoForm()" id="btn-flujo-new" style="margin-left:auto;height:32px;padding:0 14px;font-size:12px;font-weight:500;background:#2d4a7a;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Nueva tarea de flujo
@@ -3184,9 +3190,18 @@ function saveFlujoTask(){
 function renderFlujo(){
   if(window.tasks&&window.tasks.length>0)tasks=window.tasks;
   const tabsEl=document.getElementById('flujo-proj-tabs');
-  if(tabsEl)tabsEl.innerHTML=BIZ_NAMES_F.map((n,i)=>
-    `<button class="fl-proj-btn${flujoBiz===i?' act':''}" onclick="setFlujoBiz(${i})">${n}</button>`
-  ).join('');
+  if(tabsEl){
+    // Keep back button and separator, append project buttons
+    const existing = tabsEl.querySelectorAll('.fl-proj-btn');
+    existing.forEach(b=>b.remove());
+    BIZ_NAMES_F.forEach((n,i)=>{
+      const btn=document.createElement('button');
+      btn.className='fl-proj-btn'+(flujoBiz===i?' act':'');
+      btn.textContent=n;
+      btn.onclick=()=>setFlujoBiz(i);
+      tabsEl.appendChild(btn);
+    });
+  }
   renderFlujoBody();
 }
 function fmtMoney(v){
