@@ -1056,6 +1056,8 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 
   <!-- KPI BAR FIJO ABAJO -->
   <div class="kpi-bar" id="kpi-bar"></div>
+  <!-- INPUT OCULTO PARA SOPORTE -->
+  <input type="file" id="soporte-file-input" accept="image/*,.pdf" style="display:none" onchange="subirSoporte(this)">
 
   <!-- MOBILE BOTTOM NAV -->->
   <nav class="mob-nav">
@@ -3137,6 +3139,7 @@ function renderDashboard(){
 }
 
 // ── FLUJO MODULE ──────────────────────────────────────────────
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwSCVADRhqQJ2Mm_6owSm7N1UptNnXVsWkkpKKSe97-_waK1u5WHJUtkNrvlpUERVik/exec';
 let flujoBiz = 0;
 let flujoType = 'pago';
 const BIZ_NAMES_F = ['Gestor HH','Logístico','Montevra'];
@@ -3204,6 +3207,63 @@ function renderFlujo(){
   }
   renderFlujoBody();
 }
+function abrirSoporte(taskId){
+  const inp = document.getElementById('soporte-file-input');
+  if(!inp) return;
+  inp.dataset.taskId = taskId;
+  inp.value = '';
+  inp.click();
+}
+
+function subirSoporte(input){
+  const file = input.files[0];
+  if(!file) return;
+  const taskId = input.dataset.taskId;
+  const t = tasks.find(x=>x.id===taskId);
+  if(!t) return;
+
+  // Show loading state
+  const btn = document.getElementById('soporte-btn-'+taskId);
+  if(btn){ btn.textContent='⏳ Subiendo...'; btn.disabled=true; }
+
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const base64 = e.target.result.split(',')[1];
+    const payload = {
+      file: base64,
+      filename: file.name,
+      mimeType: file.type,
+      fecha: t.date ? fmtDate(t.date) : new Date().toLocaleDateString('es-CO'),
+      entidad: t.title,
+      descripcion: t.supportDesc || t.title,
+      tipo: t.flujoType || 'pago',
+      valor: t.flujoValue || 0
+    };
+    fetch(APPS_SCRIPT_URL, {
+      method:'POST',
+      body: JSON.stringify(payload)
+    })
+    .then(r=>r.json())
+    .then(data=>{
+      if(data.ok){
+        t.supportDone = true;
+        t.soporteUrl = data.url;
+        persist();
+        renderFlujoBody();
+        alert('✅ Soporte subido correctamente a Drive y registrado en la hoja.');
+      } else {
+        alert('❌ Error: ' + (data.error||'Error desconocido'));
+        if(btn){ btn.textContent='📎 Subir soporte'; btn.disabled=false; }
+      }
+    })
+    .catch(err=>{
+      alert('❌ Error de conexión: ' + err.message);
+      if(btn){ btn.textContent='📎 Subir soporte'; btn.disabled=false; }
+    });
+  };
+  reader.readAsDataURL(file);
+}
+
 function fmtMoney(v){
   if(!v)return'—';
   return '$'+Math.round(v).toLocaleString('es-CO');
@@ -3249,6 +3309,8 @@ function renderFlujoBody(){
         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px">
           ${t.flujoValue?`<span style="font-weight:600;color:${vc}">${fmtMoney(t.flujoValue)}</span>`:''}
           ${badge}
+          ${!done?`<button id="soporte-btn-${t.id}" onclick="abrirSoporte('${t.id}')" style="background:none;border:1px solid ${t.supportDone?'#16a34a':'#d97706'};border-radius:5px;padding:2px 7px;font-size:11px;cursor:pointer;color:${t.supportDone?'#16a34a':'#d97706'}">${t.supportDone?'✓ Soporte':'📎 Subir soporte'}</button>`:''}
+          ${t.soporteUrl?`<a href="${t.soporteUrl}" target="_blank" style="font-size:11px;color:#2d4a7a;text-decoration:none;border:1px solid #c5d3e8;border-radius:5px;padding:2px 7px">↗ Ver</a>`:''}
           ${!done&&!isViewer?`<button onclick="openEdit('${t.id}')" style="background:none;border:1px solid var(--border);border-radius:5px;padding:2px 5px;font-size:11px;cursor:pointer;color:var(--text2)">✏️</button>`:''}
           ${!isViewer?`<button onclick="delTask('${t.id}');renderFlujoBody()" style="background:none;border:none;font-size:15px;cursor:pointer;color:#d1cdc7;line-height:1;padding:0 2px">×</button>`:''}
         </div></div>`;
