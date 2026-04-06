@@ -2426,99 +2426,225 @@ function renderBoard(){
   document.getElementById('board').innerHTML=html;
 }
 
+function changeStatusFromGeneral(id, newStatus){
+  const t = tasks.find(x=>x.id===id);
+  if(!t) return;
+
+  // Vencidas: usar el mismo flujo del tablero (modal de notas obligatorio)
+  if(newStatus==='c' && t.date && isOver(t.date)){
+    // Pago sin soporte: verificar primero
+    if(t.isPayment && !t.supportDone){
+      const ok = confirm('⚠️ Esta tarea requiere soporte:\n"'+(t.supportDesc||'comprobante')+'".\n\n¿Ya dejaste el soporte en la carpeta?\n\nClic en Aceptar para confirmar que el soporte está listo.');
+      if(!ok) return;
+      t.supportDone = true;
+    }
+    window._afterNotesRefreshGeneral = true;
+    moveTaskToComplete(id);
+    return;
+  }
+
+  // Tareas de pago: verificar soporte antes de completar
+  if(newStatus==='c' && t.isPayment && !t.supportDone){
+    const ok = confirm('⚠️ Esta tarea requiere soporte:\n"'+(t.supportDesc||'comprobante')+'".\n\n¿Ya dejaste el soporte en la carpeta?\n\nClic en Aceptar para confirmar que el soporte está listo.');
+    if(!ok) return;
+    t.supportDone = true;
+  }
+
+  t.status = newStatus;
+  persist();
+  renderGlobal();
+}
+
 function renderGlobal(){
   if(window.tasks && window.tasks.length > 0) tasks = window.tasks;
-  const q=(document.getElementById('sq').value||'').toLowerCase();
-  const who=document.getElementById('fwho').value;
-  const monthFilter=document.getElementById('filter-month')?document.getElementById('filter-month').value:'';
+  const who = document.getElementById('fwho') ? document.getElementById('fwho').value : '';
+  const monthFilter = getMonthFilter();
+  const weekFilter = getWeekFilter();
 
-  let list=tasks.filter(t=>{
-    if(q&&!t.title.toLowerCase().includes(q))return false;
-    if(who&&t.who!==who)return false;
-    if(!applyDateFilter(t)) return false;
+  // Filter tasks
+  let filtered = tasks.filter(t => {
+    if(who && t.who !== who) return false;
+    if(_globalBizFilter !== '' && t.biz !== parseInt(_globalBizFilter)) return false;
     return true;
   });
 
-  // Sort: vencidas first, then en progreso, then pendiente by days left
-  list.sort((a,b)=>{
-    const aOver = a.date&&isOver(a.date)&&a.status!=='c';
-    const bOver = b.date&&isOver(b.date)&&b.status!=='c';
-    if(aOver&&!bOver) return -1;
-    if(!aOver&&bOver) return 1;
-    const statusOrder = {e:0, p:1, c:2};
-    if(statusOrder[a.status]!==statusOrder[b.status]) return statusOrder[a.status]-statusOrder[b.status];
-    const da = daysLeft(a.date)??999;
-    const db = daysLeft(b.date)??999;
-    return da-db;
-  });
+  // Apply date filter (vencidas always show)
+  filtered = filtered.filter(t => applyDateFilter(t));
 
-  const BIZ_C=['#639922','#378ADD','#D85A30'];
-  const BIZ_N=['Gestor HH','Logístico','Montevra'];
-  const STATUS_LABEL={p:'Pendiente',e:'En progreso',c:'Completada'};
-  const STATUS_C={p:'#94a3b8',e:'#2563eb',c:'#16a34a'};
+  // Separate by status
+  const venc = filtered.filter(t => t.date && isOver(t.date) && t.status !== 'c');
+  const prog = filtered.filter(t => t.status === 'e' && !(t.date && isOver(t.date)));
+  const pend = filtered.filter(t => t.status === 'p' && !(t.date && isOver(t.date)));
+  const comp = filtered.filter(t => t.status === 'c');
 
-  // Group by status for section headers
-  const vencidas = list.filter(t=>t.date&&isOver(t.date)&&t.status!=='c');
-  const enProgreso = list.filter(t=>t.status==='e'&&!(t.date&&isOver(t.date)));
-  const pendientes = list.filter(t=>t.status==='p'&&!(t.date&&isOver(t.date)));
-  const completadas = list.filter(t=>t.status==='c');
+  const BIZ = ['Gestor HH', 'Logístico', 'Montevra'];
+  const BIZ_COL = ['#16a34a', '#2563eb', '#dc2626'];
 
-  function taskRow(t){
-    const sem=semByDate(t);
-    const wa=WHO[t.who]||WHO.Anderson;
-    const ord=['p','e','c'];
-    const idx=ord.indexOf(t.status);
-    const over=t.date&&isOver(t.date)&&t.status!=='c';
-    const canAdvance=idx<2;
-    const canBack=idx>0;
-    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border:1px solid ${over?'#E24B4A':'var(--border)'};border-left:4px solid ${sem.c};border-radius:8px;margin-bottom:6px">
-      <!-- LEFT: advance buttons -->
-      <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
-        ${canBack?`<button onclick="moveTask('${t.id}',-1)" style="background:none;border:1px solid var(--border);border-radius:5px;padding:2px 7px;font-size:10px;cursor:pointer;color:var(--text3);font-family:inherit">←</button>`:'<div style="width:32px"></div>'}
-        ${canAdvance?`<button onclick="moveTask('${t.id}',1)" style="background:${over?'#E24B4A':'var(--blue)'};color:#fff;border:none;border-radius:5px;padding:2px 7px;font-size:10px;cursor:pointer;font-family:inherit">${over?'✓':'→'}</button>`:'<div style="width:32px"></div>'}
-      </div>
-      <!-- CONTENT -->
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${over?'<span style="background:#E24B4A;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;margin-right:6px">⚠ VENCIDA</span>':''}${t.title}</div>
-        <div style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap">
-          <span style="font-size:11px;padding:1px 7px;border-radius:999px;background:${sem.bg};color:${sem.tc}">${sem.label}</span>
-          ${t.date?`<span style="font-size:11px;color:var(--text3)">${fmtDate(t.date)}</span>`:''}
-          <span style="font-size:11px;padding:1px 7px;border-radius:999px;background:${BIZ_C[t.biz]||'#639922'}18;color:${BIZ_C[t.biz]||'#639922'}">${BIZ_N[t.biz]||''}</span>
-          ${t.notes&&t.notes.length?`<span style="font-size:10px;background:#E6F1FB;color:#0C447C;padding:1px 6px;border-radius:999px">${t.notes.length} nota${t.notes.length!==1?'s':''}</span>`:''}
+  function taskCard(t, borderCol, bgCol, dateCol){
+    const bizName = BIZ[t.biz] || '';
+    const bizCol = BIZ_COL[t.biz] || '#64748b';
+    const dl = daysLeft(t.date);
+    const dateLabel = t.date ? (isOver(t.date) ? t.date.slice(5).replace('-',' ') : (dl !== null ? (dl === 0 ? 'Hoy' : dl === 1 ? 'Mañana' : dl + ' días') : t.date.slice(5).replace('-',' '))) : '';
+    const whoMap = getWHO();
+    const whoData = whoMap[t.who] || {bg:'#e2e8f0', col:'#64748b', init: t.who ? t.who.substring(0,2).toUpperCase() : '?'};
+
+    // Status action buttons — igual que en Tablero
+    const isOver_ = t.date && isOver(t.date) && t.status!=='c';
+    let statusBtns = '';
+    if(isOver_){
+      // Vencidas: SOLO pueden ir a Completada (con modal de notas)
+      statusBtns += `<button onclick="changeStatusFromGeneral('${t.id}','c')" style="background:#dcfce7;color:#16a34a;border:none;border-radius:5px;padding:3px 7px;font-size:10px;font-weight:600;cursor:pointer">✓ Completar</button>`;
+    } else {
+      if(t.status==='p'){
+        statusBtns += `<button onclick="changeStatusFromGeneral('${t.id}','e')" style="background:#dbeafe;color:#2563eb;border:none;border-radius:5px;padding:3px 7px;font-size:10px;font-weight:600;cursor:pointer">→ Progreso</button>`;
+        statusBtns += `<button onclick="changeStatusFromGeneral('${t.id}','c')" style="background:#dcfce7;color:#16a34a;border:none;border-radius:5px;padding:3px 7px;font-size:10px;font-weight:600;cursor:pointer;margin-left:3px">✓ Listo</button>`;
+      }
+      if(t.status==='e'){
+        statusBtns += `<button onclick="changeStatusFromGeneral('${t.id}','c')" style="background:#dcfce7;color:#16a34a;border:none;border-radius:5px;padding:3px 7px;font-size:10px;font-weight:600;cursor:pointer">✓ Listo</button>`;
+        statusBtns += `<button onclick="changeStatusFromGeneral('${t.id}','p')" style="background:#f1f5f9;color:#64748b;border:none;border-radius:5px;padding:3px 7px;font-size:10px;font-weight:600;cursor:pointer;margin-left:3px">← Pend.</button>`;
+      }
+    }
+
+    return `<div style="background:${bgCol};border:1px solid ${borderCol}44;border-left:3px solid ${borderCol};border-radius:8px;padding:8px 10px;margin-bottom:5px">
+      <div style="font-size:12px;font-weight:500;color:#1e293b;line-height:1.3;margin-bottom:6px">${t.title}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px">
+        <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+          <div style="width:6px;height:6px;border-radius:50%;background:${bizCol};flex-shrink:0"></div>
+          <span style="font-size:10px;color:#64748b">${bizName}</span>
+          ${dateLabel ? `<span style="font-size:10px;color:${dateCol};font-weight:600;margin-left:2px">· ${dateLabel}</span>` : ''}
+          ${t.isPayment && !t.supportDone ? '<span style="font-size:9px;background:#fef3c7;color:#d97706;padding:1px 5px;border-radius:4px;font-weight:600;margin-left:2px">💰 Pendiente soporte</span>' : ''}
+          ${t.isPayment && t.supportDone ? '<span style="font-size:9px;background:#dcfce7;color:#16a34a;padding:1px 5px;border-radius:4px;font-weight:600;margin-left:2px">✓ Soporte ok</span>' : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:4px">
+          ${statusBtns}
+          <div style="width:20px;height:20px;border-radius:50%;background:${whoData.col};color:#fff;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0;margin-left:4px">${whoData.init}</div>
         </div>
       </div>
-      <!-- RIGHT: avatar + delete -->
-      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-        <div style="width:28px;height:28px;border-radius:50%;background:${wa.bg};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:${wa.col}">${wa.init}</div>
-        <button onclick="delTask('${t.id}')" style="background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;line-height:1;padding:0 2px">×</button>
-      </div>
     </div>`;
   }
 
-  function section(title, color, dot, items){
-    if(!items.length) return '';
-    return `<div style="margin-bottom:18px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid ${color}">
-        <span style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block"></span>
-        <span style="font-size:13px;font-weight:600;color:var(--text)">${title}</span>
-        <span style="font-size:12px;color:var(--text3)">${items.length}</span>
+
+
+  const colDef = [
+    { list: venc, label: '⚠ Vencidas', grad: 'linear-gradient(135deg,#7f1d1d,#dc2626)', col: '#dc2626', bg: '#fff5f5', dateCol: '#dc2626' },
+    { list: prog, label: '🔄 En Progreso', grad: 'linear-gradient(135deg,#1e40af,#3b82f6)', col: '#3b82f6', bg: '#eff6ff', dateCol: '#3b82f6' },
+    { list: pend, label: '📋 Pendiente', grad: 'linear-gradient(135deg,#78350f,#d97706)', col: '#d97706', bg: '#fffbeb', dateCol: '#d97706' },
+  ];
+
+  // Build week dropdown
+  let weekDropdown = '';
+  if(monthFilter){
+    const [y,m] = monthFilter.split('-');
+    const year=parseInt(y), mo=parseInt(m)-1;
+    let d=new Date(year,mo,1);
+    while(d.getDay()!==1) d.setDate(d.getDate()-1);
+    const lastDay=new Date(year,mo+1,0);
+    const MES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    let weeks=[],wn=1;
+    while(d<=lastDay){
+      const ws=new Date(d),we=new Date(d);
+      we.setDate(we.getDate()+6);
+      weeks.push({label:`Sem ${wn}: ${ws.getDate()} ${MES[ws.getMonth()]} - ${we.getDate()} ${MES[we.getMonth()]}`,val:`${ws.toISOString().split('T')[0]}|${we.toISOString().split('T')[0]}`});
+      d.setDate(d.getDate()+7);wn++;
+    }
+    weekDropdown = `<select id="g-week" onchange="setGlobalWeek(this.value)" style="height:28px;font-size:12px;border:1px solid #3b82f6;border-radius:6px;padding:0 8px;font-family:inherit;color:#3b82f6;background:#eff6ff;font-weight:600">
+      <option value="">Todas las semanas</option>
+      ${weeks.map(w=>`<option value="${w.val}" ${weekFilter===w.val?'selected':''}>${w.label}</option>`).join('')}
+    </select>`;
+  }
+
+  const MES2=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const users = getUsers().filter(u=>u.active!==false);
+
+  let html = `
+  <!-- FILTROS BAR -->
+  <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:10px 16px;background:#fff;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;margin:-12px -16px 16px">
+    <span style="font-size:11px;color:var(--text2);font-weight:600">Ver:</span>
+    <button class="resp-btn${!who?' act':''}" onclick="setResp('')">Todos</button>
+    ${users.map(u=>`<button class="resp-btn${who===u.name?' act':''}" onclick="setResp('${u.name}')">${u.name}</button>`).join('')}
+    <div style="width:1px;height:18px;background:var(--border)"></div>
+    <select onchange="setGlobalMonth(this.value)" style="height:28px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text2);background:var(--bg)" id="g-month">
+      <option value="">Todos los meses</option>
+    </select>
+    ${weekDropdown}
+    <select onchange="setGlobalBizFilter(this.value)" style="height:28px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text2);background:var(--bg)">
+      <option value="">Todos los proyectos</option>
+      <option value="0">Gestor HH</option>
+      <option value="1">Logístico</option>
+      <option value="2">Montevra</option>
+    </select>
+    <button onclick="clearGlobalFilters()" style="height:28px;padding:0 8px;font-size:11px;border:1px solid var(--border);border-radius:5px;background:var(--bg);cursor:pointer;color:var(--text3)">✕</button>
+  </div>
+
+  <!-- KPI ROW -->
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+    ${[
+      {n:filtered.length,l:'Total',c:'#1e293b',bg:'#f8fafc'},
+      {n:venc.length,l:'Vencidas',c:'#dc2626',bg:'#fff5f5'},
+      {n:prog.length,l:'En Progreso',c:'#3b82f6',bg:'#eff6ff'},
+      {n:pend.length,l:'Pendiente',c:'#d97706',bg:'#fffbeb'},
+      {n:comp.length,l:'Completadas',c:'#16a34a',bg:'#f0fdf4'},
+    ].map(k=>`<div style="background:${k.bg};border:1px solid ${k.c}22;border-radius:10px;padding:6px 14px;display:flex;align-items:center;gap:8px">
+      <span style="font-size:22px;font-weight:800;color:${k.c}">${k.n}</span>
+      <span style="font-size:10px;color:${k.c};font-weight:600;text-transform:uppercase;letter-spacing:.4px;line-height:1.2">${k.l}</span>
+    </div>`).join('')}
+  </div>
+
+  <!-- 3 COLUMNAS -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+    ${colDef.map(col=>`
+    <div style="background:var(--bg);border-radius:14px;overflow:hidden;box-shadow:0 1px 8px rgba(0,0,0,.06)">
+      <div style="background:${col.grad};padding:12px 14px;display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:13px;font-weight:700;color:#fff">${col.label}</span>
+        <span style="background:rgba(255,255,255,.25);color:#fff;font-size:12px;font-weight:700;padding:2px 10px;border-radius:999px">${col.list.length}</span>
       </div>
-      ${items.map(taskRow).join('')}
-    </div>`;
-  }
+      <div style="padding:10px;max-height:60vh;overflow-y:auto">
+        ${col.list.length ? col.list.map(t=>taskCard(t,col.col,col.bg,col.dateCol)).join('') : `<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px">✓ Sin tareas</div>`}
+      </div>
+    </div>`).join('')}
+  </div>`;
 
-  let html='';
-  if(!list.length){
-    html='<div style="text-align:center;padding:40px;color:var(--text3);font-size:13px">No hay tareas que mostrar</div>';
-  } else {
-    html += section('⚠ Vencidas','#E24B4A','🔴',vencidas);
-    html += section('En progreso','#2563eb','🔵',enProgreso);
-    html += section('Pendientes','#94a3b8','⚪',pendientes);
-    html += section('Completadas','#16a34a','🟢',completadas);
+  document.getElementById('global-view').innerHTML = html;
+  // Populate month filter
+  const gm = document.getElementById('g-month');
+  if(gm){
+    const months = new Set();
+    tasks.forEach(t=>{ if(t.date) months.add(t.date.substring(0,7)); });
+    const now = new Date();
+    months.add(`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`);
+    const sorted = [...months].sort();
+    gm.innerHTML = '<option value="">Todos los meses</option>' +
+      sorted.map(m=>{ const[y,mo]=m.split('-'); return `<option value="${m}" ${monthFilter===m?'selected':''}>${MES2[parseInt(mo)-1]} ${y}</option>`; }).join('');
   }
-
-  document.getElementById('global-view').innerHTML=`<div style="padding:16px;overflow-y:auto;flex:1">${html}</div>`;
 }
+
+// Helper filter functions for general view
+let _globalBizFilter = '';
+function setGlobalMonth(val){
+  const sel = document.getElementById('fmonth');
+  if(sel) sel.value = val;
+  const gw = document.getElementById('g-week');
+  if(gw && !val) { gw && gw.parentElement && (gw.outerHTML = ''); }
+  renderGlobal();
+}
+function setGlobalWeek(val){
+  const sel = document.getElementById('fweek');
+  if(sel) sel.value = val;
+  renderGlobal();
+}
+function setGlobalBizFilter(val){
+  _globalBizFilter = val;
+  renderGlobal();
+}
+function clearGlobalFilters(){
+  const fm = document.getElementById('fmonth'); if(fm) fm.value = '';
+  const fw = document.getElementById('fweek'); if(fw) fw.value = '';
+  const fwho = document.getElementById('fwho'); if(fwho) fwho.value = '';
+  curResp = '';
+  _globalBizFilter = '';
+  renderGlobal();
+}
+
 
 
 let dashFilter = {who:'', month:'', biz:'', week:''};
