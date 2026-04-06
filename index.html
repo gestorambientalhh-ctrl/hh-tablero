@@ -3146,6 +3146,7 @@ function renderDashboard(){
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwSCVADRhqQJ2Mm_6owSm7N1UptNnXVsWkkpKKSe97-_waK1u5WHJUtkNrvlpUERVik/exec';
 let flujoBiz = 0;
 let flujoType = 'pago';
+let flujoMesFilter = '';
 const BIZ_NAMES_F = ['Gestor HH','Logístico','Montevra'];
 
 function setFlujoType(t){
@@ -3284,7 +3285,11 @@ function renderFlujoBody(){
   const wS=wStart.toISOString().split('T')[0];
   const wE=wEnd.toISOString().split('T')[0];
   const mKey=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-  const fl=tasks.filter(t=>t.isPayment&&t.biz===flujoBiz);
+  const fl=tasks.filter(t=>{
+    if(!t.isPayment || t.biz!==flujoBiz) return false;
+    if(flujoMesFilter && t.date && !t.date.startsWith(flujoMesFilter)) return false;
+    return true;
+  });
   const pagos=fl.filter(t=>t.flujoType!=='cobro');
   const cobros=fl.filter(t=>t.flujoType==='cobro');
   const sumPagos=pagos.filter(t=>t.status!=='c').reduce((s,t)=>s+(t.flujoValue||0),0);
@@ -3323,6 +3328,14 @@ function renderFlujoBody(){
     }).join('');
   }
   body.innerHTML=`
+  <!-- Filtro mes -->
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+    <span style="font-size:11px;font-weight:600;color:var(--text2)">Mes:</span>
+    <select id="flujo-mes-sel" onchange="flujoMesFilter=this.value;renderFlujoBody()" style="height:28px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 10px;font-family:inherit;color:var(--text2);background:var(--bg)">
+      <option value="">Todos los meses</option>
+    </select>
+    <button onclick="flujoMesFilter='';document.getElementById('flujo-mes-sel').value='';renderFlujoBody()" style="height:28px;padding:0 8px;font-size:11px;border:1px solid var(--border);border-radius:5px;background:var(--bg);cursor:pointer;color:var(--text3)">&times;</button>
+  </div>
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
     <div class="fl-kpi"><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">A pagar</div><div style="font-size:20px;font-weight:600;color:#dc2626">${fmtMoney(sumPagos)}</div><div style="font-size:10px;color:var(--text3)">${pagos.filter(t=>t.status!=='c').length} tareas</div></div>
     <div class="fl-kpi"><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">A cobrar</div><div style="font-size:20px;font-weight:600;color:#16a34a">${fmtMoney(sumCobros)}</div><div style="font-size:10px;color:var(--text3)">${cobros.filter(t=>t.status!=='c').length} tareas</div></div>
@@ -3335,6 +3348,21 @@ function renderFlujoBody(){
     <div><div style="font-size:11px;font-weight:600;color:#16a34a;margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px;display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#16a34a;display:inline-block"></span>Cobros / Ingresos</div>
     <div style="background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden">${mkCards(cobros,'cobro')}</div></div>
   </div>`;
+
+  // Poblar selector de meses
+  const mesSel = document.getElementById('flujo-mes-sel');
+  if(mesSel){
+    const meses = new Set();
+    tasks.filter(t=>t.isPayment&&t.biz===flujoBiz).forEach(t=>{ if(t.date) meses.add(t.date.substring(0,7)); });
+    const now2 = new Date();
+    meses.add(`${now2.getFullYear()}-${String(now2.getMonth()+1).padStart(2,'0')}`);
+    const MES3=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    mesSel.innerHTML='<option value="">Todos los meses</option>'+
+      [...meses].sort().reverse().map(m=>{
+        const[y,mo]=m.split('-');
+        return `<option value="${m}" ${flujoMesFilter===m?'selected':''}>${MES3[parseInt(mo)-1]} ${y}</option>`;
+      }).join('');
+  }
 }
 </script>
 <script type="module">
