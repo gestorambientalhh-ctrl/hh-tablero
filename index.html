@@ -559,6 +559,9 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
     </div>
 
     <div class="topnav-right">
+      <button onclick="toggleNotasPanel()" title="Notas" style="width:32px;height:32px;border-radius:8px;background:none;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" id="notas-btn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      </button>
       <input class="search-top" type="text" placeholder="Buscar..." id="sq" oninput="renderCurrent()">
       <div id="fwho-btns" style="display:flex;gap:4px"></div><input type="hidden" id="fwho" value="">
 <button onclick="openUserModal()" title="Configurar usuarios" style="width:32px;height:32px;border-radius:50%;background:var(--bg2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px">👥</button>
@@ -991,6 +994,36 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
     <!-- Body -->
     <div id="flujo-body" style="flex:1;overflow-y:auto;padding:14px 16px;-webkit-overflow-scrolling:touch"></div>
   </div>
+
+  <!-- NOTAS PANEL LATERAL (estilo Google Tasks) -->
+  <div id="notas-panel" style="position:fixed;top:52px;right:0;bottom:0;width:320px;background:#fff;border-left:1px solid #ebebeb;z-index:200;display:none;flex-direction:column;transform:translateX(100%);transition:transform .25s ease">
+    <!-- Header panel -->
+    <div style="padding:14px 16px;border-bottom:1px solid #ebebeb;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <span style="font-size:14px;font-weight:600;color:var(--text)">Notas</span>
+      <button onclick="toggleNotasPanel()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2);line-height:1;padding:0 4px">&times;</button>
+    </div>
+    <!-- Input rápido -->
+    <div style="padding:10px 14px;border-bottom:1px solid #f0f0ee;flex-shrink:0">
+      <input id="nota-input-titulo" type="text" placeholder="Agregar una nota..." onkeydown="if(event.key==='Enter')quickSaveNota()" style="width:100%;height:36px;font-size:13px;border:none;border-bottom:2px solid #2d4a7a;outline:none;background:transparent;font-family:inherit;color:var(--text);padding:0 2px">
+      <div id="nota-input-extra" style="display:none;margin-top:8px">
+        <textarea id="nota-input-contenido" placeholder="Detalles..." style="width:100%;height:70px;font-size:12px;border:0.5px solid #e2e8f0;border-radius:8px;padding:8px;font-family:inherit;outline:none;resize:none;color:var(--text);background:var(--bg2)"></textarea>
+        <div style="display:flex;gap:6px;margin-top:6px;align-items:center">
+          <input id="nota-input-fecha" type="date" style="font-size:11px;border:0.5px solid #e2e8f0;border-radius:6px;padding:3px 6px;font-family:inherit;color:var(--text2);background:var(--bg2)">
+          <select id="nota-input-biz" style="font-size:11px;border:0.5px solid #e2e8f0;border-radius:6px;padding:3px 6px;font-family:inherit;color:var(--text2);background:var(--bg2);flex:1">
+            <option value="">General</option>
+            <option value="0">Gestor HH</option>
+            <option value="1">Logístico</option>
+            <option value="2">Montevra</option>
+          </select>
+          <button onclick="quickSaveNota()" style="height:28px;padding:0 10px;font-size:11px;font-weight:500;background:#2d4a7a;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;white-space:nowrap">Guardar</button>
+        </div>
+      </div>
+    </div>
+    <!-- Lista notas -->
+    <div id="notas-body" style="flex:1;overflow-y:auto;padding:6px 0;-webkit-overflow-scrolling:touch"></div>
+  </div>
+  <!-- Overlay oscuro cuando panel abierto en móvil -->
+  <div id="notas-overlay-bg" onclick="toggleNotasPanel()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:199"></div>
 
   <!-- CHECKLIST SECTION -->
   <div id="section-checklist" style="display:none;position:fixed;top:52px;left:0;right:0;bottom:0;flex-direction:column;overflow:hidden;z-index:50;background:#eef2f7">
@@ -2329,7 +2362,10 @@ function toggleDone(id){
 }
 function delTask(id){
   if(!confirm('¿Eliminar esta tarea?'))return;
-  tasks=tasks.filter(x=>x.id!==id);persist();renderCurrent();
+  tasks=tasks.filter(x=>x.id!==id);
+  window.tasks=tasks;
+  persist();
+  renderCurrent();
 }
 function persist(){
   window.tasks = tasks;
@@ -3364,6 +3400,124 @@ function renderFlujoBody(){
       }).join('');
   }
 }
+
+// ── NOTAS MODULE ──────────────────────────────────────────────
+let notas = [];
+let notasPanelOpen = false;
+
+function loadNotas(){
+  const s = localStorage.getItem('hh-notas-v1');
+  notas = s ? JSON.parse(s) : [];
+  if(notas.length && window.persistNotasToFirebase) window.persistNotasToFirebase(notas);
+}
+
+function persistNotas(){
+  localStorage.setItem('hh-notas-v1', JSON.stringify(notas));
+  if(window.persistNotasToFirebase) window.persistNotasToFirebase(notas);
+}
+
+function toggleNotasPanel(){
+  const panel = document.getElementById('notas-panel');
+  const overlay = document.getElementById('notas-overlay-bg');
+  const btn = document.getElementById('notas-btn');
+  notasPanelOpen = !notasPanelOpen;
+  if(notasPanelOpen){
+    panel.style.display = 'flex';
+    setTimeout(()=>panel.style.transform='translateX(0)', 10);
+    if(window.innerWidth < 700 && overlay) overlay.style.display='block';
+    if(btn) btn.style.background='#eef2f9';
+    const inp = document.getElementById('nota-input-titulo');
+    if(inp) { inp.value=''; setTimeout(()=>inp.focus(),300); }
+    renderNotas();
+  } else {
+    panel.style.transform = 'translateX(100%)';
+    setTimeout(()=>panel.style.display='none', 250);
+    if(overlay) overlay.style.display='none';
+    if(btn) btn.style.background='none';
+  }
+}
+
+function quickSaveNota(){
+  const titulo = document.getElementById('nota-input-titulo').value.trim();
+  if(!titulo) return;
+  const contenido = document.getElementById('nota-input-contenido')?.value.trim()||'';
+  const fecha = document.getElementById('nota-input-fecha')?.value || new Date().toISOString().split('T')[0];
+  const biz = document.getElementById('nota-input-biz')?.value || '';
+  notas.unshift({
+    id: 'nota' + Date.now(),
+    titulo, contenido, fecha, biz,
+    creadaEn: new Date().toLocaleDateString('es-CO')
+  });
+  persistNotas();
+  document.getElementById('nota-input-titulo').value = '';
+  const extra = document.getElementById('nota-input-extra');
+  if(extra){ extra.style.display='none'; }
+  const cont = document.getElementById('nota-input-contenido');
+  if(cont) cont.value='';
+  renderNotas();
+}
+
+function delNota(id){
+  if(!confirm('¿Eliminar esta nota?')) return;
+  notas = notas.filter(n=>n.id!==id);
+  persistNotas();
+  renderNotas();
+}
+
+function toggleNota(id){
+  const body = document.getElementById('nota-body-'+id);
+  const arrow = document.getElementById('nota-arrow-'+id);
+  if(!body) return;
+  const open = body.style.display==='none'||body.style.display==='';
+  body.style.display = open ? 'block' : 'none';
+  if(arrow) arrow.style.transform = open ? 'rotate(180deg)' : '';
+}
+
+function renderNotas(){
+  loadNotas();
+  const body = document.getElementById('notas-body');
+  if(!body) return;
+  const BIZ_N = ['Gestor HH','Logístico','Montevra'];
+  const BIZ_C2 = ['#639922','#378ADD','#D85A30'];
+  const MES4 = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+  // Mostrar extra input al escribir
+  const inp = document.getElementById('nota-input-titulo');
+  if(inp && !inp._hasListener){
+    inp._hasListener = true;
+    inp.addEventListener('focus', ()=>{
+      const ex = document.getElementById('nota-input-extra');
+      if(ex) ex.style.display='block';
+      const f = document.getElementById('nota-input-fecha');
+      if(f && !f.value) f.value = new Date().toISOString().split('T')[0];
+    });
+  }
+
+  if(!notas.length){
+    body.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--text3);font-size:13px">Sin notas aún</div>`;
+    return;
+  }
+
+  let html = '';
+  notas.forEach(n=>{
+    const fechaFmt = n.fecha ? `${parseInt(n.fecha.split('-')[2])} ${MES4[parseInt(n.fecha.split('-')[1])-1]}` : '';
+    const bizColor = n.biz!==''&&n.biz!==undefined&&n.biz!==null ? BIZ_C2[n.biz] : null;
+    html += `<div style="border-bottom:1px solid #f0f0ee">
+      <div onclick="toggleNota('${n.id}')" style="display:flex;align-items:flex-start;gap:8px;padding:10px 14px;cursor:pointer">
+        <div style="width:6px;height:6px;border-radius:50%;margin-top:5px;background:${bizColor||'#b4b2a9'};flex-shrink:0"></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:500;color:var(--text);line-height:1.3">${n.titulo}</div>
+          ${fechaFmt?`<div style="font-size:11px;color:var(--text3);margin-top:2px">${fechaFmt}${n.biz!==''&&n.biz!==undefined&&n.biz!==null?' · '+BIZ_N[n.biz]:''}</div>`:''}
+        </div>
+        ${n.contenido?`<span id="nota-arrow-${n.id}" style="color:var(--text3);font-size:10px;margin-top:3px;transition:transform .2s;flex-shrink:0">▼</span>`:''}
+        ${!isViewer?`<button onclick="event.stopPropagation();delNota('${n.id}')" style="background:none;border:none;color:#d1cdc7;cursor:pointer;font-size:16px;line-height:1;padding:0;flex-shrink:0">&times;</button>`:''}
+      </div>
+      ${n.contenido?`<div id="nota-body-${n.id}" style="display:none;padding:0 14px 10px 28px;font-size:12px;color:var(--text2);line-height:1.6;white-space:pre-wrap">${n.contenido}</div>`:''}
+    </div>`;
+  });
+
+  body.innerHTML = html;
+}
 </script>
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -3387,14 +3541,17 @@ let tasksWriteTimer = null;
 let meetingsWriteTimer = null;
 
 // Write tasks to Firebase (debounced 800ms)
+let _isLocalWrite = false;
 window.persistToFirebase = function(taskList) {
   clearTimeout(tasksWriteTimer);
   tasksWriteTimer = setTimeout(async () => {
     try {
+      _isLocalWrite = true;
       await setDoc(TASKS_REF, { tasks: taskList, updatedAt: Date.now() });
+      setTimeout(()=>{ _isLocalWrite = false; }, 1000);
       const ind = document.getElementById('sync-indicator');
       if(ind){ ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0',2000); }
-    } catch(e) { console.warn('Tasks write error:', e); }
+    } catch(e) { console.warn('Tasks write error:', e); _isLocalWrite = false; }
   }, 800);
 };
 
@@ -3415,6 +3572,7 @@ window.addEventListener('app-ready', () => {
   tasksStarted = true;
   onSnapshot(TASKS_REF, snap => {
     if (!snap.exists()) return;
+    if (_isLocalWrite) return; // ignorar el echo de escritura propia
     const data = snap.data();
     if (!data.tasks || !Array.isArray(data.tasks)) return;
     window.tasks = data.tasks;
@@ -3448,6 +3606,28 @@ if (document.readyState === 'loading') {
 } else {
   startMeetingsListener();
 }
+
+// ── NOTAS FIREBASE SYNC ───────────────────────────────────────
+const NOTAS_REF = doc(db, 'hh-socios', 'notas');
+let notasSaveTimer = null;
+
+window.persistNotasToFirebase = function(notasList) {
+  if(notasSaveTimer) clearTimeout(notasSaveTimer);
+  notasSaveTimer = setTimeout(()=>{
+    setDoc(NOTAS_REF, { notas: notasList }, { merge: false }).catch(e=>console.error('Notas save error:', e));
+  }, 800);
+};
+
+onSnapshot(NOTAS_REF, snap => {
+  if(!snap.exists()) return;
+  const data = snap.data();
+  if(!data.notas || !Array.isArray(data.notas)) return;
+  if(typeof notas !== 'undefined') notas = data.notas;
+  localStorage.setItem('hh-notas-v1', JSON.stringify(data.notas));
+  if(typeof curSection !== 'undefined' && curSection === 'notas') {
+    if(typeof renderNotas === 'function') renderNotas();
+  }
+});
 </script>
 </body>
 </html>
