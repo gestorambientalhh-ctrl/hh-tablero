@@ -948,6 +948,10 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
           <label style="font-size:11px;color:var(--text2)">Descripción *</label>
           <input id="fl-title" type="text" placeholder="Ej: Pago Patricia Febrero" style="height:32px;font-size:13px;border:1px solid var(--border);border-radius:8px;padding:0 10px;font-family:inherit;outline:none;color:var(--text);background:var(--bg2)">
         </div>
+        <div style="flex:1;min-width:120px;display:flex;flex-direction:column;gap:3px">
+          <label style="font-size:11px;color:var(--text2)">Entidad</label>
+          <input id="fl-entidad" type="text" placeholder="Ej: Patricia Rodríguez" style="height:32px;font-size:13px;border:1px solid var(--border);border-radius:8px;padding:0 10px;font-family:inherit;outline:none;color:var(--text);background:var(--bg2)">
+        </div>
         <div style="display:flex;flex-direction:column;gap:3px">
           <label style="font-size:11px;color:var(--text2)">Tipo *</label>
           <div style="display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;height:32px">
@@ -3165,7 +3169,7 @@ function openFlujoForm(){
   if(sel) sel.innerHTML=getUsers().map(u=>`<option value="${u.name}">${u.name}</option>`).join('');
   const hint=document.getElementById('fl-biz-hint');if(hint)hint.textContent=BIZ_NAMES_F[flujoBiz];
   setFlujoType('pago');
-  ['fl-title','fl-value','fl-date','fl-soporte'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['fl-title','fl-entidad','fl-value','fl-date','fl-soporte'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   setTimeout(()=>document.getElementById('fl-title').focus(),100);
 }
 function closeFlujoForm(){
@@ -3174,6 +3178,7 @@ function closeFlujoForm(){
 function saveFlujoTask(){
   const title=document.getElementById('fl-title').value.trim();
   if(!title){document.getElementById('fl-title').focus();return;}
+  const entidad=document.getElementById('fl-entidad').value.trim();
   const valueRaw=document.getElementById('fl-value').value;
   const value=valueRaw?parseFloat(valueRaw):null;
   const date=document.getElementById('fl-date').value;
@@ -3182,6 +3187,7 @@ function saveFlujoTask(){
   tasks.push({
     id:Date.now()+'_fl_'+Math.random().toString(36).slice(2),
     title,who,pri:'normal',date,status:'p',biz:flujoBiz,
+    entidad: entidad || title,
     isPayment:true,flujoType,flujoValue:value,
     supportDesc:soporte||(flujoType==='pago'?'Comprobante de pago':'Comprobante de cobro'),
     supportDone:false,fromFlujo:true,
@@ -3234,7 +3240,7 @@ function subirSoporte(input){
       filename: file.name,
       mimeType: file.type,
       fecha: t.date ? fmtDate(t.date) : new Date().toLocaleDateString('es-CO'),
-      entidad: t.title,
+      entidad: t.entidad || t.title,
       descripcion: t.supportDesc || t.title,
       tipo: t.flujoType || 'pago',
       valor: t.flujoValue || 0
