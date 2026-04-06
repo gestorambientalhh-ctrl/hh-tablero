@@ -2446,6 +2446,7 @@ function cardHtml(t,showBiz){
     <div class="card-top">
       <div class="card-cb${done?' done':''}" onclick="toggleDone('${t.id}')"></div>
       <span class="card-title${done?' done':''}">${t.title}</span>
+      ${t.biz!==undefined?`<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;background:${BIZ_C[t.biz]}18;color:${BIZ_C[t.biz]};white-space:nowrap;flex-shrink:0">${BIZ_NAMES[t.biz]||''}</span>`:''}
     </div>
     <div class="card-meta">
       <span class="sem-pill" style="background:${sem.bg};color:${sem.tc}">
@@ -2463,7 +2464,7 @@ function cardHtml(t,showBiz){
         ? `<button class="ca-btn" style="background:#E24B4A;color:#fff;border-color:#E24B4A" onclick="moveTaskToComplete('${t.id}')">✓ Completar</button>`
         : `${idx>0?`<button class="ca-btn" onclick="moveTask('${t.id}',-1)">← Atrás</button>`:''} ${idx<2?`<button class="ca-btn" onclick="moveTask('${t.id}',1)">Avanzar →</button>`:`<span style="font-size:11px;color:var(--text3)">Completada ✓</span>`}`
       }
-      <button class="ca-btn" onclick="openEdit('${t.id}')" title="Editar" style="margin-left:auto">✏️</button>
+      ${!done?`<button class="ca-btn" onclick="openEdit('${t.id}')" title="Editar" style="margin-left:auto">✏️</button>`:'<span style="margin-left:auto"></span>'}
       <button class="ca-del" onclick="delTask('${t.id}')" title="Eliminar">×</button>
     </div>
   </div>`;
@@ -2514,9 +2515,8 @@ function changeStatusFromGeneral(id, newStatus){
   const t = tasks.find(x=>x.id===id);
   if(!t) return;
 
-  // Vencidas: usar el mismo flujo del tablero (modal de notas obligatorio)
+  // Vencidas: usar el flujo con modal de notas obligatorio
   if(newStatus==='c' && t.date && isOver(t.date)){
-    // Pago sin soporte: verificar primero
     if(t.isPayment && !t.supportDone){
       const ok = confirm('⚠️ Esta tarea requiere soporte:\n"'+(t.supportDesc||'comprobante')+'".\n\n¿Ya dejaste el soporte en la carpeta?\n\nClic en Aceptar para confirmar que el soporte está listo.');
       if(!ok) return;
@@ -2527,13 +2527,33 @@ function changeStatusFromGeneral(id, newStatus){
     return;
   }
 
-  // Tareas de pago: verificar soporte antes de completar
-  if(newStatus==='c' && t.isPayment && !t.supportDone){
-    const ok = confirm('⚠️ Esta tarea requiere soporte:\n"'+(t.supportDesc||'comprobante')+'".\n\n¿Ya dejaste el soporte en la carpeta?\n\nClic en Aceptar para confirmar que el soporte está listo.');
-    if(!ok) return;
-    t.supportDone = true;
+  // Cualquier tarea que va a Completada: abrir modal de notas primero
+  if(newStatus==='c'){
+    if(t.isPayment && !t.supportDone){
+      const ok = confirm('⚠️ Esta tarea requiere soporte:\n"'+(t.supportDesc||'comprobante')+'".\n\n¿Ya dejaste el soporte en la carpeta?\n\nClic en Aceptar para confirmar que el soporte está listo.');
+      if(!ok) return;
+      t.supportDone = true;
+    }
+    const ord=['p','e','c'];
+    const stepsToComplete = 2 - ord.indexOf(t.status);
+    pendingMove = {id, dir: stepsToComplete};
+    window._afterNotesRefreshGeneral = true;
+    document.getElementById('notes-title').textContent = 'Completar tarea';
+    document.getElementById('notes-sub').textContent = t.title;
+    document.getElementById('notes-input').value = '';
+    document.getElementById('notes-input').placeholder = 'Agrega una nota sobre cómo quedó (opcional)...';
+    const history = (t.notes||[]).slice().reverse();
+    document.getElementById('notes-history').innerHTML = history.length
+      ? history.map(n=>`<div class="notes-entry"><div class="notes-entry-txt">${n.text}</div><div class="notes-entry-meta">${n.date} · ${n.from}</div></div>`).join('')
+      : '';
+    document.getElementById('notes-footer-default').style.display='flex';
+    document.getElementById('notes-footer-vencida').style.display='none';
+    document.getElementById('notes-overlay').style.display='flex';
+    setTimeout(()=>document.getElementById('notes-input').focus(),100);
+    return;
   }
 
+  // Otros cambios de estado (→ Progreso, ← Pend.): directo sin modal
   t.status = newStatus;
   persist();
   renderGlobal();
@@ -2590,7 +2610,10 @@ function renderGlobal(){
     }
 
     return `<div style="background:${bgCol};border:1px solid ${borderCol}44;border-left:3px solid ${borderCol};border-radius:8px;padding:8px 10px;margin-bottom:5px">
-      <div style="font-size:12px;font-weight:500;color:#1e293b;line-height:1.3;margin-bottom:6px">${t.title}</div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:6px">
+        <div style="font-size:12px;font-weight:500;color:#1e293b;line-height:1.3">${t.title}</div>
+        <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;background:${bizCol}18;color:${bizCol};white-space:nowrap;flex-shrink:0">${bizName}</span>
+      </div>
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px">
         <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
           <div style="width:6px;height:6px;border-radius:50%;background:${bizCol};flex-shrink:0"></div>
@@ -2602,7 +2625,7 @@ function renderGlobal(){
         <div style="display:flex;align-items:center;gap:4px">
           ${statusBtns}
           <div style="width:20px;height:20px;border-radius:50%;background:${whoData.col};color:#fff;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0;margin-left:4px">${whoData.init}</div>
-          ${!isViewer?`<button onclick="openEdit('${t.id}')" title="Editar" style="background:none;border:1px solid #e2e8f0;border-radius:5px;padding:2px 6px;font-size:11px;cursor:pointer;color:#64748b;margin-left:2px">✏️</button>`:''}
+          ${!isViewer&&t.status!=='c'?`<button onclick="openEdit('${t.id}')" title="Editar" style="background:none;border:1px solid #e2e8f0;border-radius:5px;padding:2px 6px;font-size:11px;cursor:pointer;color:#64748b;margin-left:2px">✏️</button>`:''}
           ${!isViewer?`<button onclick="delTask('${t.id}')" title="Eliminar" style="background:none;border:none;font-size:15px;cursor:pointer;color:#cbd5e1;padding:0 2px;line-height:1">×</button>`:''}
         </div>
       </div>
