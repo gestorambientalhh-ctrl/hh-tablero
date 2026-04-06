@@ -596,14 +596,6 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Nueva tarea
         </button>
-        
-        <div style="display:flex;align-items:center;gap:5px;margin-left:10px">
-          <span style="font-size:11px;color:var(--text2);white-space:nowrap">Mes:</span>
-          <select id="filter-month" onchange="renderCurrent()" style="height:26px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text2);background:var(--bg)">
-            <option value="">Todos</option>
-          </select>
-          <button onclick="clearDateFilter()" title="Ver todos" style="height:26px;padding:0 7px;font-size:11px;border:1px solid var(--border);border-radius:5px;background:var(--bg);cursor:pointer;color:var(--text3)">✕</button>
-        </div>
         <div class="sem-leg">
           <span class="leg"><span class="leg-dot" style="background:#E24B4A"></span>Vencida</span>
           <span class="leg"><span class="leg-dot" style="background:#EF9F27"></span>≤5 días</span>
@@ -1221,7 +1213,7 @@ function initDragDrop(){
     // adjust for vencidas column
     const visibleCols = document.querySelectorAll('.col-wrap');
     const colLabels = [...visibleCols].map(w=>w.querySelector('.col-label').textContent.trim());
-    const statusByLabel = {'Vencidas':'p','Pendiente':'p','En progreso':'e','Completada':'c'};
+    const statusByLabel = {'Vencidas':'p','Programado':'p','En progreso':'e','Completada':'c'};
     const newStatus = statusByLabel[colLabels[colIndex]] || 'p';
     const taskId = e.dataTransfer.getData('text/plain');
     if(!taskId) return;
@@ -1261,7 +1253,7 @@ function initDragDrop(){
     const col = el && el.closest('.col-body');
     document.querySelectorAll('.col-body').forEach(c=>c.classList.remove('drag-over'));
     if(col && touchTask){
-      const colLabels = {'Vencidas':'p','Pendiente':'p','En progreso':'e','Completada':'c'};
+      const colLabels = {'Vencidas':'p','Programado':'p','En progreso':'e','Completada':'c'};
       const label = col.closest('.col-wrap').querySelector('.col-label').textContent.trim();
       const newStatus = colLabels[label] || 'p';
       const t = tasks.find(x=>x.id===touchTask);
@@ -2186,7 +2178,7 @@ function moveTask(id,dir){
   if(i+dir<0||i+dir>2)return;
   // Open notes modal before moving
   pendingMove={id,dir};
-  const labels={p:'Pendiente',e:'En progreso',c:'Completada'};
+  const labels={p:'Programado',e:'En progreso',c:'Completada'};
   const newStatus=ord[i+dir];
   document.getElementById('notes-title').textContent='Avance → '+labels[newStatus];
   document.getElementById('notes-sub').textContent=t.title;
@@ -2263,12 +2255,12 @@ function persist(){
 }
 
 function autoAdvanceTasks(){
-  // Tareas pendientes con 3 días o menos pasan automáticamente a En Progreso
+  // Tareas programadas con 5 días o menos pasan automáticamente a En Progreso
   let changed = false;
   tasks.forEach(t=>{
     if(t.status!=='p' || !t.date) return;
     const dl = daysLeft(t.date);
-    if(dl !== null && dl <= 3 && dl >= 0){
+    if(dl !== null && dl <= 5 && dl >= 0){
       t.status = 'e';
       changed = true;
     }
@@ -2493,7 +2485,7 @@ function renderBoard(){
   cols.p.sort(sortByDate); // closest deadline first
   cols.e.sort(sortByDate);
   cols.c.sort((a,b)=>b.date?.localeCompare(a.date||'')||0); // newest completed first
-  const labels=['Vencidas','Pendiente','En progreso','Completada'];
+  const labels=['Vencidas','Programado','En progreso','Completada'];
   const dotC=['#E24B4A','#B4B2A9','#378ADD','#639922'];
   const keys=['v','p','e','c'];
   let html='';
@@ -2557,7 +2549,7 @@ function changeStatusFromGeneral(id, newStatus){
     return;
   }
 
-  // Otros cambios de estado (→ Progreso, ← Pend.): directo sin modal
+  // Otros cambios de estado (→ Progreso, ← Program.): directo sin modal
   t.status = newStatus;
   persist();
   renderGlobal();
@@ -2566,18 +2558,28 @@ function changeStatusFromGeneral(id, newStatus){
 function renderGlobal(){
   if(window.tasks && window.tasks.length > 0) tasks = window.tasks;
   const who = document.getElementById('fwho') ? document.getElementById('fwho').value : '';
-  const monthFilter = getMonthFilter();
-  const weekFilter = getWeekFilter();
+  const monthFilter = _globalMonthFilter;
+  const weekFilter  = _globalWeekFilter;
 
-  // Filter tasks
+  // Filter tasks — vencidas siempre se muestran sin importar filtros
   let filtered = tasks.filter(t => {
     if(who && t.who !== who) return false;
     if(_globalBizFilter !== '' && t.biz !== parseInt(_globalBizFilter)) return false;
+    // Vencidas: siempre visibles
+    const isVenc = t.date && isOver(t.date) && t.status !== 'c';
+    if(isVenc) return true;
+    // Completadas: siempre visibles
+    if(t.status === 'c') return true;
+    // Filtro de semana
+    if(weekFilter){
+      const [wStart, wEnd] = weekFilter.split('|');
+      if(!t.date || t.date < wStart || t.date > wEnd) return false;
+    } else if(monthFilter){
+      // Filtro de mes
+      if(!t.date || !t.date.startsWith(monthFilter)) return false;
+    }
     return true;
   });
-
-  // Apply date filter (vencidas always show)
-  filtered = filtered.filter(t => applyDateFilter(t));
 
   // Separate by status
   const venc = filtered.filter(t => t.date && isOver(t.date) && t.status !== 'c');
@@ -2609,7 +2611,7 @@ function renderGlobal(){
       }
       if(t.status==='e'){
         statusBtns += `<button onclick="changeStatusFromGeneral('${t.id}','c')" style="background:#dcfce7;color:#16a34a;border:none;border-radius:5px;padding:3px 7px;font-size:10px;font-weight:600;cursor:pointer">✓ Listo</button>`;
-        statusBtns += `<button onclick="changeStatusFromGeneral('${t.id}','p')" style="background:#f1f5f9;color:#64748b;border:none;border-radius:5px;padding:3px 7px;font-size:10px;font-weight:600;cursor:pointer;margin-left:3px">← Pend.</button>`;
+        statusBtns += `<button onclick="changeStatusFromGeneral('${t.id}','p')" style="background:#f1f5f9;color:#64748b;border:none;border-radius:5px;padding:3px 7px;font-size:10px;font-weight:600;cursor:pointer;margin-left:3px">← Program.</button>`;
       }
     }
 
@@ -2641,7 +2643,7 @@ function renderGlobal(){
   const colDef = [
     { list: venc, label: '⚠ Vencidas', grad: 'linear-gradient(135deg,#7f1d1d,#dc2626)', col: '#dc2626', bg: '#fff5f5', dateCol: '#dc2626' },
     { list: prog, label: '🔄 En Progreso', grad: 'linear-gradient(135deg,#1e40af,#3b82f6)', col: '#3b82f6', bg: '#eff6ff', dateCol: '#3b82f6' },
-    { list: pend, label: '📋 Pendiente', grad: 'linear-gradient(135deg,#78350f,#d97706)', col: '#d97706', bg: '#fffbeb', dateCol: '#d97706' },
+    { list: pend, label: '📋 Programado', grad: 'linear-gradient(135deg,#78350f,#d97706)', col: '#d97706', bg: '#fffbeb', dateCol: '#d97706' },
     { list: comp, label: '✅ Completada', grad: 'linear-gradient(135deg,#14532d,#16a34a)', col: '#16a34a', bg: '#f0fdf4', dateCol: '#16a34a' },
   ];
 
@@ -2682,7 +2684,7 @@ function renderGlobal(){
     <button class="resp-btn${_globalBizFilter==='1'?' act':''}" onclick="setGlobalBizFilter('1')" style="${_globalBizFilter==='1'?'background:#378ADD18;color:#378ADD;border-color:#378ADD;font-weight:600':''}">Logístico</button>
     <button class="resp-btn${_globalBizFilter==='2'?' act':''}" onclick="setGlobalBizFilter('2')" style="${_globalBizFilter==='2'?'background:#D85A3018;color:#D85A30;border-color:#D85A30;font-weight:600':''}">Montevra</button>
     <div style="width:1px;height:18px;background:var(--border)"></div>
-    <select onchange="setGlobalMonth(this.value)" style="height:28px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text2);background:var(--bg)" id="g-month">
+    <select onchange="setGlobalMonth(this.value)" style="height:28px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:${monthFilter?'#2d4a7a':'var(--text2)'};background:${monthFilter?'#eef2f9':'var(--bg)'};font-weight:${monthFilter?'600':'400'}" id="g-month">
       <option value="">Todos los meses</option>
     </select>
     ${weekDropdown}
@@ -2712,7 +2714,7 @@ function renderGlobal(){
       {n:filtered.length, l:'Total',       c:'#1e293b'},
       {n:venc.length,     l:'Vencidas',    c:'#dc2626'},
       {n:prog.length,     l:'En Progreso', c:'#3b82f6'},
-      {n:pend.length,     l:'Pendiente',   c:'#d97706'},
+      {n:pend.length,     l:'Programado',   c:'#d97706'},
       {n:comp.length,     l:'Completadas', c:'#16a34a'},
     ];
     kpiBar.innerHTML = kpiData.map(k=>
@@ -2737,16 +2739,16 @@ function renderGlobal(){
 
 // Helper filter functions for general view
 let _globalBizFilter = '';
+let _globalMonthFilter = '';
+let _globalWeekFilter = '';
+
 function setGlobalMonth(val){
-  const sel = document.getElementById('fmonth');
-  if(sel) sel.value = val;
-  const gw = document.getElementById('g-week');
-  if(gw && !val) { gw && gw.parentElement && (gw.outerHTML = ''); }
+  _globalMonthFilter = val;
+  _globalWeekFilter = ''; // reset week when month changes
   renderGlobal();
 }
 function setGlobalWeek(val){
-  const sel = document.getElementById('fweek');
-  if(sel) sel.value = val;
+  _globalWeekFilter = val;
   renderGlobal();
 }
 function setGlobalBizFilter(val){
@@ -2754,11 +2756,11 @@ function setGlobalBizFilter(val){
   renderGlobal();
 }
 function clearGlobalFilters(){
-  const fm = document.getElementById('fmonth'); if(fm) fm.value = '';
-  const fw = document.getElementById('fweek'); if(fw) fw.value = '';
-  const fwho = document.getElementById('fwho'); if(fwho) fwho.value = '';
-  curResp = '';
+  _globalMonthFilter = '';
+  _globalWeekFilter = '';
   _globalBizFilter = '';
+  curResp = '';
+  const fwho = document.getElementById('fwho'); if(fwho) fwho.value = '';
   renderGlobal();
 }
 
@@ -2918,7 +2920,7 @@ function renderDashboard(){
       <div style="position:absolute;right:-10px;top:-10px;width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.1)"></div>
     </div>
     <div style="background:linear-gradient(135deg,#92400e,#d97706);border-radius:12px;padding:16px;color:#fff;position:relative;overflow:hidden">
-      <div style="font-size:11px;opacity:.8;font-weight:500;text-transform:uppercase;letter-spacing:.5px">Pendiente</div>
+      <div style="font-size:11px;opacity:.8;font-weight:500;text-transform:uppercase;letter-spacing:.5px">Programado</div>
       <div style="font-size:36px;font-weight:800;line-height:1.1;margin:4px 0">${totP}</div>
       <div style="font-size:11px;opacity:.7">por iniciar</div>
       <div style="position:absolute;right:-10px;top:-10px;width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.1)"></div>
