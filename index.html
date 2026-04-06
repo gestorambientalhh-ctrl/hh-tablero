@@ -2446,7 +2446,7 @@ function cardHtml(t,showBiz){
     <div class="card-top">
       <div class="card-cb${done?' done':''}" onclick="toggleDone('${t.id}')"></div>
       <span class="card-title${done?' done':''}">${t.title}</span>
-      ${t.biz!==undefined?`<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;background:${BIZ_C[t.biz]}18;color:${BIZ_C[t.biz]};white-space:nowrap;flex-shrink:0">${BIZ_NAMES[t.biz]||''}</span>`:''}
+      ${t.biz!==undefined?`<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;background:#fff;border:1.5px solid ${BIZ_C[t.biz]};color:${BIZ_C[t.biz]};white-space:nowrap;flex-shrink:0">${BIZ_NAMES[t.biz]||''}</span>`:''}
     </div>
     <div class="card-meta">
       <span class="sem-pill" style="background:${sem.bg};color:${sem.tc}">
@@ -2609,10 +2609,10 @@ function renderGlobal(){
       }
     }
 
-    return `<div style="background:${bgCol};border:1px solid ${borderCol}44;border-left:3px solid ${borderCol};border-radius:8px;padding:8px 10px;margin-bottom:5px">
+    return `<div style="background:${t.status==='c'?'#f0fdf4':'#fff'};border:1px solid ${t.status==='c'?'#bbf7d0':'#e8e8e6'};border-left:3px solid ${t.status==='c'?'#4ade80':borderCol};border-radius:8px;padding:8px 10px;margin-bottom:5px">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:6px">
-        <div style="font-size:12px;font-weight:500;color:#1e293b;line-height:1.3">${t.title}</div>
-        <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;background:${bizCol}18;color:${bizCol};white-space:nowrap;flex-shrink:0">${bizName}</span>
+        <div style="font-size:12px;font-weight:500;color:${t.status==='c'?'#6b7280':'#1e293b'};line-height:1.3;${t.status==='c'?'text-decoration:line-through;text-decoration-color:#9ca3af;text-decoration-thickness:1.5px;':''}">${t.title}</div>
+        <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;background:#fff;border:1.5px solid ${bizCol};color:${bizCol};white-space:nowrap;flex-shrink:0">${bizName}</span>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px">
         <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
