@@ -1981,6 +1981,7 @@ function generateRecurring(){
 }
 
 function checkRecurringOnLoad(){
+  // Auto-generate recurring tasks silently without showing banner
   loadRecurring();
   if(!recurring.length) return;
   const now = new Date();
@@ -1991,13 +1992,8 @@ function checkRecurringOnLoad(){
     !tasks.some(t => t.recurringId === r.id && t.monthKey === monthKey)
   );
   if(pending.length > 0){
-    const banner = document.createElement('div');
-    banner.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:#1d4ed8;color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;z-index:500;display:flex;align-items:center;gap:12px;box-shadow:0 4px 16px rgba(0,0,0,.2);white-space:nowrap';
-    banner.innerHTML = `<span>↻ ${pending.length} recurrente${pending.length!==1?'s':''} sin generar este mes</span>
-      <button onclick="generateRecurring();this.parentElement.remove()" style="background:#fff;color:#1d4ed8;border:none;border-radius:6px;padding:4px 12px;font-size:12px;font-weight:600;cursor:pointer">Generar</button>
-      <button onclick="this.parentElement.remove()" style="background:none;border:none;color:rgba(255,255,255,.7);font-size:18px;cursor:pointer;line-height:1">×</button>`;
-    document.body.appendChild(banner);
-    setTimeout(() => { if(banner.parentElement) banner.remove(); }, 8000);
+    // Auto-generate silently
+    generateRecurring();
   }
 }
 
