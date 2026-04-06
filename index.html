@@ -480,6 +480,13 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 .search-top{border:1px solid #ebebeb!important;background:#f7f7f5!important}
 .fsel-top{border:1px solid #ebebeb!important;background:#f7f7f5!important;color:#787774!important}
 
+.fl-proj-btn{height:28px;padding:0 14px;font-size:12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);cursor:pointer;font-family:inherit;color:var(--text2)}
+.fl-proj-btn.act{background:#2d4a7a;color:#fff;border-color:#2d4a7a;font-weight:500}
+.fl-kpi{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 14px;flex:1;min-width:120px}
+.fl-row{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-bottom:1px solid #f0f0ee;font-size:12px}
+.fl-row:last-child{border-bottom:none}
+.fl-row:hover{background:#fafaf8}
+
 /* KPI BAR BOTTOM */
 .kpi-bar{position:fixed;bottom:0;left:0;right:0;height:48px;background:#fff;border-top:1px solid #e2e8f0;display:none;align-items:center;justify-content:center;z-index:90;box-shadow:0 -2px 8px rgba(0,0,0,.06)}
 .kpi-bar.visible{display:flex}
@@ -591,6 +598,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
       <div class="section-bar">
         <button class="sec-tab act" id="sec-tablero" onclick="showSection('tablero')">Tablero</button>
         <button class="sec-tab" id="sec-reuniones" onclick="showSection('reuniones')">📋 Reuniones</button>
+        <button class="sec-tab" id="sec-flujo" onclick="showSection('flujo')">💸 Flujo</button>
         <div style="width:1px;height:18px;background:var(--border);margin:0 4px"></div>
         <button onclick="toggleForm()" style="display:flex;align-items:center;gap:5px;height:28px;padding:0 12px;background:#2d4a7a;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -916,6 +924,64 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
     </div>
   </div>
 
+  <!-- FLUJO SECTION -->
+  <div id="section-flujo" style="display:none;position:fixed;top:52px;left:0;right:0;bottom:0;flex-direction:column;overflow:hidden;z-index:50;background:#f7f7f5">
+    <!-- Header -->
+    <div style="background:#fff;border-bottom:1px solid #ebebeb;padding:10px 16px;display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap">
+      <div id="flujo-proj-tabs" style="display:flex;gap:6px"></div>
+      <button onclick="openFlujoForm()" id="btn-flujo-new" style="margin-left:auto;height:32px;padding:0 14px;font-size:12px;font-weight:500;background:#2d4a7a;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Nueva tarea de flujo
+      </button>
+    </div>
+    <!-- Form -->
+    <div id="flujo-form" style="display:none;background:#fff;border-bottom:1px solid #ebebeb;padding:14px 16px;flex-shrink:0">
+      <div style="font-size:12px;font-weight:600;color:#2d4a7a;margin-bottom:12px">Nueva tarea de flujo</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <div style="flex:2;min-width:140px;display:flex;flex-direction:column;gap:3px">
+          <label style="font-size:11px;color:var(--text2)">Descripción *</label>
+          <input id="fl-title" type="text" placeholder="Ej: Pago Patricia Febrero" style="height:32px;font-size:13px;border:1px solid var(--border);border-radius:8px;padding:0 10px;font-family:inherit;outline:none;color:var(--text);background:var(--bg2)">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:3px">
+          <label style="font-size:11px;color:var(--text2)">Tipo *</label>
+          <div style="display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;height:32px">
+            <button id="fl-type-pago" onclick="setFlujoType('pago')" style="flex:1;font-size:12px;font-weight:600;background:#fef2f2;color:#dc2626;border:none;border-right:1px solid var(--border);cursor:pointer;font-family:inherit;padding:0 10px">💸 Pago</button>
+            <button id="fl-type-cobro" onclick="setFlujoType('cobro')" style="flex:1;font-size:12px;background:var(--bg2);color:var(--text2);border:none;cursor:pointer;font-family:inherit;padding:0 10px">💰 Cobro</button>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:3px">
+          <label style="font-size:11px;color:var(--text2)">Valor (opcional)</label>
+          <div style="display:flex;height:32px">
+            <span style="display:flex;align-items:center;padding:0 8px;background:var(--bg2);border:1px solid var(--border);border-right:none;border-radius:8px 0 0 8px;font-size:13px;color:var(--text2)">$</span>
+            <input id="fl-value" type="number" placeholder="0" style="height:32px;font-size:13px;border:1px solid var(--border);border-radius:0 8px 8px 0;padding:0 10px;font-family:inherit;outline:none;color:var(--text);background:var(--bg2);width:120px">
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:3px">
+          <label style="font-size:11px;color:var(--text2)">Fecha límite</label>
+          <input id="fl-date" type="date" style="height:32px;font-size:12px;border:1px solid var(--border);border-radius:8px;padding:0 8px;font-family:inherit;outline:none;color:var(--text);background:var(--bg2)">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:3px">
+          <label style="font-size:11px;color:var(--text2)">Responsable</label>
+          <select id="fl-who" style="height:32px;font-size:12px;border:1px solid var(--border);border-radius:8px;padding:0 8px;font-family:inherit;color:var(--text);background:var(--bg2)"></select>
+        </div>
+        <div style="flex:1;min-width:120px;display:flex;flex-direction:column;gap:3px">
+          <label style="font-size:11px;color:var(--text2)">Soporte requerido</label>
+          <input id="fl-soporte" type="text" placeholder="Ej: Factura, recibo..." style="height:32px;font-size:13px;border:1px solid var(--border);border-radius:8px;padding:0 10px;font-family:inherit;outline:none;color:var(--text);background:var(--bg2)">
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#eef2f9;border-radius:8px;font-size:11px;color:#2d4a7a;margin-bottom:10px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Esta tarea se añadirá al <strong id="fl-biz-hint" style="margin:0 3px">Tablero</strong> como tarea de flujo con soporte requerido.
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button onclick="closeFlujoForm()" style="height:32px;padding:0 14px;font-size:12px;border:1px solid var(--border);border-radius:8px;background:none;cursor:pointer;color:var(--text2);font-family:inherit">Cancelar</button>
+        <button onclick="saveFlujoTask()" style="height:32px;padding:0 16px;font-size:12px;font-weight:500;background:#2d4a7a;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit">Crear y enviar al tablero →</button>
+      </div>
+    </div>
+    <!-- Body -->
+    <div id="flujo-body" style="flex:1;overflow-y:auto;padding:14px 16px;-webkit-overflow-scrolling:touch"></div>
+  </div>
+
   <!-- CHECKLIST SECTION -->
   <div id="section-checklist" style="display:none;position:fixed;top:52px;left:0;right:0;bottom:0;flex-direction:column;overflow:hidden;z-index:50;background:#eef2f7">
     <div class="ck-header">
@@ -994,6 +1060,10 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
     <button class="mob-nav-btn" id="mobnav-reuniones" onclick="showSection('reuniones')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
       Reuniones
+    </button>
+    <button class="mob-nav-btn" id="mobnav-flujo" onclick="showSection('flujo')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      Flujo
     </button>
     <button class="mob-nav-btn" id="mobnav-checklist" onclick="showSection('checklist')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
@@ -1084,14 +1154,14 @@ function setBiz(i){
 function showSection(s){
   curSection=s;
 
-  // ── Tabs desktop (section-bar)
-  ['tablero','dashboard','reuniones'].forEach(sec=>{
+  // ── Tabs desktop
+  ['tablero','dashboard','reuniones','flujo'].forEach(sec=>{
     const el=document.getElementById('sec-'+sec);
     if(el) el.classList.toggle('act',sec===s);
   });
 
-  // ── Tabs mobile (bottom nav)
-  ['tablero','dashboard','reuniones'].forEach(sec=>{
+  // ── Tabs mobile
+  ['tablero','dashboard','reuniones','flujo','checklist'].forEach(sec=>{
     const el=document.getElementById('mobnav-'+sec);
     if(el) el.classList.toggle('act',sec===s);
   });
@@ -1099,8 +1169,10 @@ function showSection(s){
   // ── Show/hide sections
   const secTab=document.getElementById('section-tablero');
   const secReu=document.getElementById('section-reuniones');
+  const secFl=document.getElementById('section-flujo');
   if(secTab) secTab.style.display=(s==='tablero'||s==='dashboard')?'flex':'none';
   if(secReu) secReu.style.display=s==='reuniones'?'flex':'none';
+  if(secFl)  secFl.style.display=s==='flujo'?'flex':'none';
 
   // ── Buttons
   document.getElementById('btn-add').style.display=(s==='tablero'&&biz<3)?'flex':'none';
@@ -1109,7 +1181,6 @@ function showSection(s){
   document.getElementById('form-area').style.display='none';
 
   // ── Render
-  // Show/hide checklist section
   const secCk=document.getElementById('section-checklist');
   if(secCk) secCk.style.display=s==='checklist'?'flex':'none';
   if(s==='reuniones'){
@@ -1119,6 +1190,8 @@ function showSection(s){
   } else if(s==='checklist'){
     populateCkWhoFilter();
     renderChecklist();
+  } else if(s==='flujo'){
+    renderFlujo();
   } else {
     renderCurrent();
   }
@@ -3055,6 +3128,130 @@ function renderDashboard(){
     }
   }
   _dashRendering = false;
+}
+
+// ── FLUJO MODULE ──────────────────────────────────────────────
+let flujoBiz = 0;
+let flujoType = 'pago';
+const BIZ_NAMES_F = ['Gestor HH','Logístico','Montevra'];
+
+function setFlujoType(t){
+  flujoType=t;
+  const pb=document.getElementById('fl-type-pago');
+  const cb=document.getElementById('fl-type-cobro');
+  if(pb){pb.style.background=t==='pago'?'#fef2f2':'var(--bg2)';pb.style.color=t==='pago'?'#dc2626':'var(--text2)';pb.style.fontWeight=t==='pago'?'600':'400';}
+  if(cb){cb.style.background=t==='cobro'?'#f0fdf4':'var(--bg2)';cb.style.color=t==='cobro'?'#16a34a':'var(--text2)';cb.style.fontWeight=t==='cobro'?'600':'400';}
+}
+function setFlujoBiz(i){
+  flujoBiz=i;
+  document.querySelectorAll('.fl-proj-btn').forEach((b,j)=>b.classList.toggle('act',j===i));
+  const hint=document.getElementById('fl-biz-hint');
+  if(hint) hint.textContent=BIZ_NAMES_F[i];
+  renderFlujoBody();
+}
+function openFlujoForm(){
+  const f=document.getElementById('flujo-form');if(!f)return;
+  f.style.display='block';
+  const sel=document.getElementById('fl-who');
+  if(sel) sel.innerHTML=getUsers().map(u=>`<option value="${u.name}">${u.name}</option>`).join('');
+  const hint=document.getElementById('fl-biz-hint');if(hint)hint.textContent=BIZ_NAMES_F[flujoBiz];
+  setFlujoType('pago');
+  ['fl-title','fl-value','fl-date','fl-soporte'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  setTimeout(()=>document.getElementById('fl-title').focus(),100);
+}
+function closeFlujoForm(){
+  const f=document.getElementById('flujo-form');if(f)f.style.display='none';
+}
+function saveFlujoTask(){
+  const title=document.getElementById('fl-title').value.trim();
+  if(!title){document.getElementById('fl-title').focus();return;}
+  const valueRaw=document.getElementById('fl-value').value;
+  const value=valueRaw?parseFloat(valueRaw):null;
+  const date=document.getElementById('fl-date').value;
+  const who=document.getElementById('fl-who').value;
+  const soporte=document.getElementById('fl-soporte').value.trim();
+  tasks.push({
+    id:Date.now()+'_fl_'+Math.random().toString(36).slice(2),
+    title,who,pri:'normal',date,status:'p',biz:flujoBiz,
+    isPayment:true,flujoType,flujoValue:value,
+    supportDesc:soporte||(flujoType==='pago'?'Comprobante de pago':'Comprobante de cobro'),
+    supportDone:false,fromFlujo:true,
+  });
+  persist();
+  closeFlujoForm();
+  renderFlujoBody();
+}
+function renderFlujo(){
+  if(window.tasks&&window.tasks.length>0)tasks=window.tasks;
+  const tabsEl=document.getElementById('flujo-proj-tabs');
+  if(tabsEl)tabsEl.innerHTML=BIZ_NAMES_F.map((n,i)=>
+    `<button class="fl-proj-btn${flujoBiz===i?' act':''}" onclick="setFlujoBiz(${i})">${n}</button>`
+  ).join('');
+  renderFlujoBody();
+}
+function fmtMoney(v){
+  if(!v)return'—';
+  return '$'+Math.round(v).toLocaleString('es-CO');
+}
+function renderFlujoBody(){
+  if(window.tasks&&window.tasks.length>0)tasks=window.tasks;
+  const body=document.getElementById('flujo-body');if(!body)return;
+  const now=new Date();now.setHours(0,0,0,0);
+  const dow=now.getDay()===0?7:now.getDay();
+  const wStart=new Date(now);wStart.setDate(now.getDate()-(dow-1));
+  const wEnd=new Date(wStart);wEnd.setDate(wStart.getDate()+6);
+  const wS=wStart.toISOString().split('T')[0];
+  const wE=wEnd.toISOString().split('T')[0];
+  const mKey=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const fl=tasks.filter(t=>t.isPayment&&t.biz===flujoBiz);
+  const pagos=fl.filter(t=>t.flujoType!=='cobro');
+  const cobros=fl.filter(t=>t.flujoType==='cobro');
+  const sumPagos=pagos.filter(t=>t.status!=='c').reduce((s,t)=>s+(t.flujoValue||0),0);
+  const sumCobros=cobros.filter(t=>t.status!=='c').reduce((s,t)=>s+(t.flujoValue||0),0);
+  const wNeto=fl.filter(t=>t.flujoType==='cobro'&&t.date&&t.date>=wS&&t.date<=wE).reduce((s,t)=>s+(t.flujoValue||0),0)
+             -fl.filter(t=>t.flujoType!=='cobro'&&t.date&&t.date>=wS&&t.date<=wE).reduce((s,t)=>s+(t.flujoValue||0),0);
+  const mNeto=fl.filter(t=>t.flujoType==='cobro'&&t.date&&t.date.startsWith(mKey)).reduce((s,t)=>s+(t.flujoValue||0),0)
+             -fl.filter(t=>t.flujoType!=='cobro'&&t.date&&t.date.startsWith(mKey)).reduce((s,t)=>s+(t.flujoValue||0),0);
+  const nc=v=>v>=0?'#16a34a':'#dc2626';
+  const ns=v=>v>=0?'+':'';
+  const MES2=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const wLabel=`${wStart.getDate()} ${MES2[wStart.getMonth()]}–${wEnd.getDate()} ${MES2[wEnd.getMonth()]}`;
+  function mkCards(list,tipo){
+    if(!list.length)return`<div style="text-align:center;padding:24px;color:var(--text3);font-size:12px">Sin ${tipo==='pago'?'pagos':'cobros'}</div>`;
+    return list.map(t=>{
+      const done=t.status==='c';
+      const dl=t.date?Math.round((new Date(t.date+'T00:00:00')-now)/(864e5)):null;
+      const over=dl!==null&&dl<0&&!done;
+      let badge='';
+      if(done)badge=`<span style="font-size:10px;padding:2px 7px;border-radius:999px;font-weight:500;background:#dcfce7;color:#166534">${tipo==='pago'?'Pagado':'Cobrado'} ✓</span>`;
+      else if(over)badge=`<span style="font-size:10px;padding:2px 7px;border-radius:999px;font-weight:500;background:#fcebeb;color:#791f1f">Vencida</span>`;
+      else if(dl!==null&&dl<=5)badge=`<span style="font-size:10px;padding:2px 7px;border-radius:999px;font-weight:500;background:#faeeda;color:#633806">${dl===0?'Hoy':dl+'d'}</span>`;
+      else if(dl!==null)badge=`<span style="font-size:10px;padding:2px 7px;border-radius:999px;font-weight:500;background:#eaf3de;color:#27500a">${dl}d</span>`;
+      const vc=tipo==='cobro'?'#16a34a':'#dc2626';
+      return `<div class="fl-row" style="opacity:${done?'.45':'1'}">
+        <div style="flex:1;min-width:0"><div style="font-weight:500;color:var(--text);${done?'text-decoration:line-through':''}overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.title}</div>
+        <div style="color:var(--text3);font-size:11px;margin-top:2px">${t.date?fmtDate(t.date)+' · ':''}${t.who||''}</div></div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px">
+          ${t.flujoValue?`<span style="font-weight:600;color:${vc}">${fmtMoney(t.flujoValue)}</span>`:''}
+          ${badge}
+          ${!done&&!isViewer?`<button onclick="openEdit('${t.id}')" style="background:none;border:1px solid var(--border);border-radius:5px;padding:2px 5px;font-size:11px;cursor:pointer;color:var(--text2)">✏️</button>`:''}
+          ${!isViewer?`<button onclick="delTask('${t.id}');renderFlujoBody()" style="background:none;border:none;font-size:15px;cursor:pointer;color:#d1cdc7;line-height:1;padding:0 2px">×</button>`:''}
+        </div></div>`;
+    }).join('');
+  }
+  body.innerHTML=`
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+    <div class="fl-kpi"><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">A pagar</div><div style="font-size:20px;font-weight:600;color:#dc2626">${fmtMoney(sumPagos)}</div><div style="font-size:10px;color:var(--text3)">${pagos.filter(t=>t.status!=='c').length} tareas</div></div>
+    <div class="fl-kpi"><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">A cobrar</div><div style="font-size:20px;font-weight:600;color:#16a34a">${fmtMoney(sumCobros)}</div><div style="font-size:10px;color:var(--text3)">${cobros.filter(t=>t.status!=='c').length} tareas</div></div>
+    <div class="fl-kpi"><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">Flujo semana</div><div style="font-size:20px;font-weight:600;color:${nc(wNeto)}">${ns(wNeto)}${fmtMoney(Math.abs(wNeto))}</div><div style="font-size:10px;color:var(--text3)">${wLabel}</div></div>
+    <div class="fl-kpi"><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">Flujo mes</div><div style="font-size:20px;font-weight:600;color:${nc(mNeto)}">${ns(mNeto)}${fmtMoney(Math.abs(mNeto))}</div><div style="font-size:10px;color:var(--text3)">${MES2[now.getMonth()]} ${now.getFullYear()}</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div><div style="font-size:11px;font-weight:600;color:#dc2626;margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px;display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#dc2626;display:inline-block"></span>Pagos / Egresos</div>
+    <div style="background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden">${mkCards(pagos,'pago')}</div></div>
+    <div><div style="font-size:11px;font-weight:600;color:#16a34a;margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px;display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#16a34a;display:inline-block"></span>Cobros / Ingresos</div>
+    <div style="background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden">${mkCards(cobros,'cobro')}</div></div>
+  </div>`;
 }
 </script>
 <script type="module">
