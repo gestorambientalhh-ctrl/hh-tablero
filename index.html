@@ -2632,12 +2632,28 @@ function cardHtml(t,showBiz){
       ${showBiz?`<span class="biz-pill" style="background:${BIZ_C[t.biz]}20;color:${BIZ_C[t.biz]}">${BIZ_NAMES[t.biz]||''}</span>`:''}
       <div class="avatar-sm" style="background:${wa.bg};color:${wa.col}">${wa.init}</div>
     </div>
-    ${t.isPayment&&!t.supportDone&&!done?`<button onclick="markSupportDone('${t.id}')" style="width:100%;margin-bottom:6px;height:28px;background:#FEF3C7;border:1.5px solid #F59E0B;border-radius:6px;font-size:11px;font-weight:600;color:#92400E;cursor:pointer;font-family:inherit">📎 Marcar soporte como registrado</button>`:''}
+    ${t.isPayment&&!t.supportDone&&!done&&!t.fromFlujo?`<button onclick="markSupportDone('${t.id}')" style="width:100%;margin-bottom:6px;height:28px;background:#FEF3C7;border:1.5px solid #F59E0B;border-radius:6px;font-size:11px;font-weight:600;color:#92400E;cursor:pointer;font-family:inherit">📎 Marcar soporte como registrado</button>`:''}
+    ${t.isPayment&&t.flujoValue&&!done?(()=>{
+      const parc=(t.pagosParciales||[]);
+      const pagado=parc.reduce((s,p)=>s+(p.valor||0),0);
+      const saldo=Math.max(0,(t.flujoValue||0)-pagado);
+      const pct=t.flujoValue>0?Math.min(100,Math.round((pagado/t.flujoValue)*100)):0;
+      return `<div style="margin-bottom:6px">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:3px">
+          <span>Pagado: <strong style="color:#16a34a">$${pagado.toLocaleString('es-CO')}</strong></span>
+          <span>Saldo: <strong style="color:#dc2626">$${saldo.toLocaleString('es-CO')}</strong></span>
+        </div>
+        <div style="height:5px;background:#e2e8f0;border-radius:999px;overflow:hidden">
+          <div style="height:100%;background:${pct>=100?'#16a34a':'#2d4a7a'};border-radius:999px;width:${pct}%"></div>
+        </div>
+      </div>`;
+    })():''}
     <div class="card-actions" style="${isViewer?'display:none':''}">
       ${sem.vencida
         ? `<button class="ca-btn" style="background:#E24B4A;color:#fff;border-color:#E24B4A" onclick="moveTaskToComplete('${t.id}')">✓ Completar</button>`
         : `${idx>0?`<button class="ca-btn" onclick="moveTask('${t.id}',-1)">← Atrás</button>`:''} ${idx<2?`<button class="ca-btn" onclick="moveTask('${t.id}',1)">Avanzar →</button>`:`<span style="font-size:11px;color:var(--text3)">Completada ✓</span>`}`
       }
+      ${t.isPayment&&!done?`<button class="ca-btn" onclick="abrirPagoParcial('${t.id}')" style="background:#2d4a7a;color:#fff;border-color:#2d4a7a">+ Pago</button>`:''}
       ${!done?`<button class="ca-btn" onclick="openEdit('${t.id}')" title="Editar" style="margin-left:auto">✏️</button>`:'<span style="margin-left:auto"></span>'}
       <button class="ca-del" onclick="delTask('${t.id}')" title="Eliminar">×</button>
     </div>
