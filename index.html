@@ -1025,6 +1025,63 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
   <!-- Overlay oscuro cuando panel abierto en móvil -->
   <div id="notas-overlay-bg" onclick="toggleNotasPanel()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:199"></div>
 
+  <!-- MODAL PAGO PARCIAL -->
+  <div id="pago-parcial-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:600;align-items:center;justify-content:center;padding:20px">
+    <div style="background:var(--bg);border-radius:12px;width:100%;max-width:440px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.18)">
+      <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:14px;font-weight:600;color:var(--text)">Registrar pago parcial</div>
+          <div id="pp-task-name" style="font-size:12px;color:var(--text2);margin-top:2px"></div>
+        </div>
+        <button onclick="closePagoParcial()" style="background:none;border:none;font-size:22px;color:var(--text2);cursor:pointer">×</button>
+      </div>
+      <div style="padding:16px 20px;display:flex;flex-direction:column;gap:10px">
+        <!-- Barra progreso -->
+        <div id="pp-progress-wrap" style="background:var(--bg2);border-radius:8px;padding:10px 12px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:6px">
+            <span>Pagado: <strong id="pp-paid-lbl" style="color:#16a34a">$0</strong></span>
+            <span>Saldo: <strong id="pp-saldo-lbl" style="color:#dc2626">$0</strong></span>
+            <span>Total: <strong id="pp-total-lbl">$0</strong></span>
+          </div>
+          <div style="height:6px;background:#e2e8f0;border-radius:999px;overflow:hidden">
+            <div id="pp-bar" style="height:100%;background:#16a34a;border-radius:999px;transition:width .3s;width:0%"></div>
+          </div>
+        </div>
+        <!-- Historial pagos anteriores -->
+        <div id="pp-history" style="display:none;max-height:120px;overflow-y:auto;font-size:11px;color:var(--text2)"></div>
+        <!-- Campos -->
+        <div style="display:flex;gap:8px">
+          <div style="flex:1;display:flex;flex-direction:column;gap:3px">
+            <label style="font-size:11px;color:var(--text2)">Valor a pagar *</label>
+            <div style="display:flex;height:32px">
+              <span style="display:flex;align-items:center;padding:0 8px;background:var(--bg2);border:1px solid var(--border);border-right:none;border-radius:8px 0 0 8px;font-size:13px;color:var(--text2)">$</span>
+              <input id="pp-valor" type="number" placeholder="0" oninput="updatePPBar()" style="height:32px;font-size:13px;border:1px solid var(--border);border-radius:0 8px 8px 0;padding:0 10px;font-family:inherit;outline:none;color:var(--text);background:var(--bg2);width:100%">
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <label style="font-size:11px;color:var(--text2)">Fecha</label>
+            <input id="pp-fecha" type="date" style="height:32px;font-size:12px;border:1px solid var(--border);border-radius:8px;padding:0 8px;font-family:inherit;outline:none;color:var(--text);background:var(--bg2)">
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:3px">
+          <label style="font-size:11px;color:var(--text2)">Descripción del pago</label>
+          <input id="pp-desc" type="text" placeholder="Ej: Primer cuota, abono inicial..." style="height:32px;font-size:13px;border:1px solid var(--border);border-radius:8px;padding:0 10px;font-family:inherit;outline:none;color:var(--text);background:var(--bg2)">
+        </div>
+        <div style="background:#eef2f9;border-radius:8px;padding:8px 10px;font-size:11px;color:#2d4a7a;display:flex;align-items:center;gap:6px">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Al guardar deberás adjuntar el soporte de este pago
+        </div>
+      </div>
+      <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end">
+        <button onclick="closePagoParcial()" style="height:32px;padding:0 14px;font-size:12px;border:1px solid var(--border);border-radius:8px;background:none;cursor:pointer;color:var(--text2);font-family:inherit">Cancelar</button>
+        <button onclick="savePagoParcial()" style="height:32px;padding:0 16px;font-size:12px;font-weight:500;background:#2d4a7a;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit">Registrar y subir soporte →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- INPUT SOPORTE PAGO PARCIAL -->
+  <input type="file" id="soporte-parcial-input" accept="image/*,.pdf" style="display:none" onchange="subirSoporteParcial(this)">
+
   <!-- CHECKLIST SECTION -->
   <div id="section-checklist" style="display:none;position:fixed;top:52px;left:0;right:0;bottom:0;flex-direction:column;overflow:hidden;z-index:50;background:#eef2f7">
     <div class="ck-header">
@@ -3328,8 +3385,14 @@ function renderFlujoBody(){
   });
   const pagos=fl.filter(t=>t.flujoType!=='cobro');
   const cobros=fl.filter(t=>t.flujoType==='cobro');
-  const sumPagos=pagos.filter(t=>t.status!=='c').reduce((s,t)=>s+(t.flujoValue||0),0);
-  const sumCobros=cobros.filter(t=>t.status!=='c').reduce((s,t)=>s+(t.flujoValue||0),0);
+  const sumPagos=pagos.filter(t=>t.status!=='c').reduce((s,t)=>{
+    const parciales=(t.pagosParciales||[]).reduce((a,p)=>a+(p.valor||0),0);
+    return s+Math.max(0,(t.flujoValue||0)-parciales);
+  },0);
+  const sumCobros=cobros.filter(t=>t.status!=='c').reduce((s,t)=>{
+    const parciales=(t.pagosParciales||[]).reduce((a,p)=>a+(p.valor||0),0);
+    return s+Math.max(0,(t.flujoValue||0)-parciales);
+  },0);
   const wNeto=fl.filter(t=>t.flujoType==='cobro'&&t.date&&t.date>=wS&&t.date<=wE).reduce((s,t)=>s+(t.flujoValue||0),0)
              -fl.filter(t=>t.flujoType!=='cobro'&&t.date&&t.date>=wS&&t.date<=wE).reduce((s,t)=>s+(t.flujoValue||0),0);
   const mNeto=fl.filter(t=>t.flujoType==='cobro'&&t.date&&t.date.startsWith(mKey)).reduce((s,t)=>s+(t.flujoValue||0),0)
@@ -3350,17 +3413,58 @@ function renderFlujoBody(){
       else if(dl!==null&&dl<=5)badge=`<span style="font-size:10px;padding:2px 7px;border-radius:999px;font-weight:500;background:#faeeda;color:#633806">${dl===0?'Hoy':dl+'d'}</span>`;
       else if(dl!==null)badge=`<span style="font-size:10px;padding:2px 7px;border-radius:999px;font-weight:500;background:#eaf3de;color:#27500a">${dl}d</span>`;
       const vc=tipo==='cobro'?'#16a34a':'#dc2626';
-      return `<div class="fl-row" style="opacity:${done?'.45':'1'}">
-        <div style="flex:1;min-width:0"><div style="font-weight:500;color:var(--text);${done?'text-decoration:line-through':''}overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.title}</div>
-        <div style="color:var(--text3);font-size:11px;margin-top:2px">${t.date?fmtDate(t.date)+' · ':''}${t.who||''}</div></div>
-        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px">
-          ${t.flujoValue?`<span style="font-weight:600;color:${vc}">${fmtMoney(t.flujoValue)}</span>`:''}
-          ${badge}
-          ${!done?`<button id="soporte-btn-${t.id}" onclick="abrirSoporte('${t.id}')" style="background:none;border:1px solid ${t.supportDone?'#16a34a':'#d97706'};border-radius:5px;padding:2px 7px;font-size:11px;cursor:pointer;color:${t.supportDone?'#16a34a':'#d97706'}">${t.supportDone?'✓ Soporte':'📎 Subir soporte'}</button>`:''}
-          ${t.soporteUrl?`<a href="${t.soporteUrl}" target="_blank" style="font-size:11px;color:#2d4a7a;text-decoration:none;border:1px solid #c5d3e8;border-radius:5px;padding:2px 7px">↗ Ver</a>`:''}
-          ${!done&&!isViewer?`<button onclick="openEdit('${t.id}')" style="background:none;border:1px solid var(--border);border-radius:5px;padding:2px 5px;font-size:11px;cursor:pointer;color:var(--text2)">✏️</button>`:''}
-          ${!isViewer?`<button onclick="delTask('${t.id}');renderFlujoBody()" style="background:none;border:none;font-size:15px;cursor:pointer;color:#d1cdc7;line-height:1;padding:0 2px">×</button>`:''}
-        </div></div>`;
+
+      // Pagos parciales
+      const parciales = t.pagosParciales || [];
+      const totalPagado = parciales.reduce((s,p)=>s+(p.valor||0),0);
+      const totalValor = t.flujoValue || 0;
+      const saldo = Math.max(0, totalValor - totalPagado);
+      const pct = totalValor > 0 ? Math.min(100, Math.round((totalPagado/totalValor)*100)) : 0;
+      const hasParciales = parciales.length > 0;
+
+      // Barra de progreso si tiene valor total
+      const progressBar = totalValor > 0 ? `
+        <div style="margin-top:6px">
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:3px">
+            <span>Pagado: <strong style="color:#16a34a">${fmtMoney(totalPagado)}</strong></span>
+            <span>Saldo: <strong style="color:${saldo>0?'#dc2626':'#16a34a'}">${fmtMoney(saldo)}</strong></span>
+          </div>
+          <div style="height:5px;background:#e2e8f0;border-radius:999px;overflow:hidden">
+            <div style="height:100%;background:${pct>=100?'#16a34a':'#2d4a7a'};border-radius:999px;width:${pct}%;transition:width .3s"></div>
+          </div>
+        </div>` : '';
+
+      // Historial de pagos parciales
+      const historial = hasParciales ? `
+        <div style="margin-top:6px;border-top:1px solid #f0f0ee;padding-top:6px">
+          ${parciales.map(p=>`
+            <div style="display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text2);padding:2px 0">
+              <span style="color:#16a34a;font-weight:600">✓</span>
+              <span>${p.desc||'Pago parcial'}</span>
+              <span style="color:#16a34a;font-weight:600;margin-left:auto">${fmtMoney(p.valor)}</span>
+              <span style="color:var(--text3)">${p.fecha||''}</span>
+              ${p.url?`<a href="${p.url}" target="_blank" style="color:#2d4a7a;text-decoration:none;font-size:10px">↗</a>`:''}
+            </div>`).join('')}
+        </div>` : '';
+
+      return `<div class="fl-row" style="opacity:${done?'.45':'1'};flex-direction:column;align-items:stretch">
+        <div style="display:flex;align-items:center;gap:6px">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:500;color:var(--text);${done?'text-decoration:line-through':''}overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.title}</div>
+            <div style="color:var(--text3);font-size:11px;margin-top:2px">${t.date?fmtDate(t.date)+' · ':''}${t.who||''}${t.entidad?' · '+t.entidad:''}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+            ${totalValor?`<span style="font-weight:600;color:${vc};font-size:12px">${fmtMoney(totalValor)}</span>`:''}
+            ${badge}
+            ${!done&&!isViewer?`<button onclick="abrirPagoParcial('${t.id}')" style="background:#2d4a7a;color:#fff;border:none;border-radius:5px;padding:2px 8px;font-size:11px;cursor:pointer;font-weight:500">+ Pago</button>`:''}
+            ${t.soporteUrl?`<a href="${t.soporteUrl}" target="_blank" style="font-size:11px;color:#2d4a7a;text-decoration:none;border:1px solid #c5d3e8;border-radius:5px;padding:2px 6px">↗</a>`:''}
+            ${!done&&!isViewer?`<button onclick="openEdit('${t.id}')" style="background:none;border:1px solid var(--border);border-radius:5px;padding:2px 5px;font-size:11px;cursor:pointer;color:var(--text2)">✏️</button>`:''}
+            ${!isViewer?`<button onclick="delTask('${t.id}');renderFlujoBody()" style="background:none;border:none;font-size:15px;cursor:pointer;color:#d1cdc7;line-height:1;padding:0 2px">×</button>`:''}
+          </div>
+        </div>
+        ${progressBar}
+        ${historial}
+      </div>`;
     }).join('');
   }
   body.innerHTML=`
@@ -3399,6 +3503,160 @@ function renderFlujoBody(){
         return `<option value="${m}" ${flujoMesFilter===m?'selected':''}>${MES3[parseInt(mo)-1]} ${y}</option>`;
       }).join('');
   }
+}
+
+// ── PAGOS PARCIALES ───────────────────────────────────────────
+let _ppTaskId = null;
+
+function abrirPagoParcial(taskId){
+  const t = tasks.find(x=>x.id===taskId);
+  if(!t) return;
+  _ppTaskId = taskId;
+  const parciales = t.pagosParciales || [];
+  const totalPagado = parciales.reduce((s,p)=>s+(p.valor||0),0);
+  const totalValor = t.flujoValue || 0;
+  const saldo = Math.max(0, totalValor - totalPagado);
+  const pct = totalValor > 0 ? Math.min(100, Math.round((totalPagado/totalValor)*100)) : 0;
+
+  // Poblar modal
+  document.getElementById('pp-task-name').textContent = t.title + (t.entidad?' · '+t.entidad:'');
+  document.getElementById('pp-paid-lbl').textContent = fmtMoney(totalPagado);
+  document.getElementById('pp-saldo-lbl').textContent = fmtMoney(saldo);
+  document.getElementById('pp-total-lbl').textContent = fmtMoney(totalValor);
+  document.getElementById('pp-bar').style.width = pct+'%';
+  document.getElementById('pp-valor').value = '';
+  document.getElementById('pp-desc').value = '';
+  document.getElementById('pp-fecha').value = new Date().toISOString().split('T')[0];
+
+  // Historial
+  const hist = document.getElementById('pp-history');
+  if(parciales.length){
+    hist.style.display='block';
+    hist.innerHTML=`<div style="font-size:10px;font-weight:600;color:var(--text2);margin-bottom:4px">Pagos anteriores:</div>`+
+      parciales.map(p=>`<div style="display:flex;gap:6px;padding:2px 0;color:var(--text2)">
+        <span style="color:#16a34a">✓</span>
+        <span style="flex:1">${p.desc||'Pago parcial'}</span>
+        <strong style="color:#16a34a">${fmtMoney(p.valor)}</strong>
+        <span>${p.fecha||''}</span>
+        ${p.url?`<a href="${p.url}" target="_blank" style="color:#2d4a7a">↗</a>`:''}
+      </div>`).join('');
+  } else {
+    hist.style.display='none';
+  }
+
+  document.getElementById('pago-parcial-overlay').style.display='flex';
+  setTimeout(()=>document.getElementById('pp-valor').focus(),100);
+}
+
+function closePagoParcial(){
+  document.getElementById('pago-parcial-overlay').style.display='none';
+  _ppTaskId = null;
+}
+
+function updatePPBar(){
+  const t = _ppTaskId ? tasks.find(x=>x.id===_ppTaskId) : null;
+  if(!t) return;
+  const parciales = t.pagosParciales || [];
+  const totalPagado = parciales.reduce((s,p)=>s+(p.valor||0),0);
+  const nuevoValor = parseFloat(document.getElementById('pp-valor').value)||0;
+  const totalValor = t.flujoValue || 0;
+  const nuevoTotal = totalPagado + nuevoValor;
+  const pct = totalValor > 0 ? Math.min(100, Math.round((nuevoTotal/totalValor)*100)) : 0;
+  document.getElementById('pp-bar').style.width = pct+'%';
+  document.getElementById('pp-paid-lbl').textContent = fmtMoney(nuevoTotal);
+  document.getElementById('pp-saldo-lbl').textContent = fmtMoney(Math.max(0, totalValor-nuevoTotal));
+}
+
+function savePagoParcial(){
+  const valorStr = document.getElementById('pp-valor').value;
+  if(!valorStr){ document.getElementById('pp-valor').focus(); return; }
+  const valor = parseFloat(valorStr);
+  if(!valor || valor <= 0){ alert('Ingresa un valor válido'); return; }
+  const t = tasks.find(x=>x.id===_ppTaskId);
+  if(!t) return;
+
+  // Verificar que no supere el saldo
+  const parciales = t.pagosParciales || [];
+  const totalPagado = parciales.reduce((s,p)=>s+(p.valor||0),0);
+  const saldo = (t.flujoValue||0) - totalPagado;
+  if(t.flujoValue && valor > saldo + 1){
+    if(!confirm(`El valor ($${valor.toLocaleString('es-CO')}) supera el saldo ($${saldo.toLocaleString('es-CO')}). ¿Continuar?`)) return;
+  }
+
+  // Guardar el pago parcial temporalmente (el soporte se añade después)
+  window._ppPendiente = {
+    id: 'pp'+Date.now(),
+    valor,
+    fecha: document.getElementById('pp-fecha').value,
+    desc: document.getElementById('pp-desc').value.trim() || 'Pago parcial',
+    url: null
+  };
+
+  closePagoParcial();
+  // Abrir selector de soporte
+  const inp = document.getElementById('soporte-parcial-input');
+  inp.dataset.taskId = _ppTaskId || t.id;
+  inp.click();
+}
+
+function subirSoporteParcial(input){
+  const file = input.files[0];
+  const taskId = input.dataset.taskId;
+  const t = tasks.find(x=>x.id===taskId);
+  const pago = window._ppPendiente;
+  if(!t || !pago) return;
+
+  if(!file){
+    // Guardar sin soporte si cancela
+    guardarPagoParcialEnTask(t, pago);
+    return;
+  }
+
+  const btn = document.querySelector(`[data-ppid="${taskId}"]`);
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const base64 = e.target.result.split(',')[1];
+    const payload = {
+      file: base64,
+      filename: `pago_parcial_${pago.id}_${file.name}`,
+      mimeType: file.type,
+      fecha: pago.fecha,
+      entidad: t.entidad || t.title,
+      descripcion: pago.desc + ' - ' + t.title,
+      tipo: t.flujoType || 'pago',
+      valor: pago.valor
+    };
+    fetch(APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify(payload) })
+    .then(r=>r.json())
+    .then(data=>{
+      if(data.ok) pago.url = data.url;
+      guardarPagoParcialEnTask(t, pago);
+    })
+    .catch(()=>{ guardarPagoParcialEnTask(t, pago); });
+  };
+  reader.readAsDataURL(file);
+}
+
+function guardarPagoParcialEnTask(t, pago){
+  if(!t.pagosParciales) t.pagosParciales = [];
+  t.pagosParciales.push(pago);
+
+  // Verificar si el saldo llegó a 0
+  const totalPagado = t.pagosParciales.reduce((s,p)=>s+(p.valor||0),0);
+  const saldo = (t.flujoValue||0) - totalPagado;
+  if(t.flujoValue && saldo <= 0){
+    t.status = 'c';
+    t.supportDone = true;
+    alert('✅ Pago completo. La tarea se marcó como completada.');
+  } else if(pago.url){
+    alert('✅ Pago parcial registrado y soporte subido a Drive.');
+  } else {
+    alert('✅ Pago parcial registrado.');
+  }
+
+  window._ppPendiente = null;
+  persist();
+  renderFlujoBody();
 }
 
 // ── NOTAS MODULE ──────────────────────────────────────────────
