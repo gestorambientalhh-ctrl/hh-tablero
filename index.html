@@ -2572,6 +2572,8 @@ function renderPapelera(){
   if(!list) return;
   const cnt = document.getElementById('papelera-cnt');
   if(cnt) cnt.textContent = deletedTasks.length ? `(${deletedTasks.length})` : '';
+  const btnVaciar = document.getElementById('btn-vaciar-papelera');
+  if(btnVaciar) btnVaciar.style.display = (!isViewer && deletedTasks.length) ? 'block' : 'none';
   if(!deletedTasks.length){
     list.innerHTML=`<div style="text-align:center;padding:40px 20px;color:#b3b3b0;font-size:13px">Sin tareas eliminadas</div>`;
     return;
@@ -2582,13 +2584,16 @@ function renderPapelera(){
     const dEl = t.deletedAt ? new Date(t.deletedAt).toLocaleDateString('es-CO',{day:'numeric',month:'short'}) : '';
     const bc = BIZ_C[t.biz]||'#888';
     const bn = BIZ_N[t.biz]||'';
-    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid #f0f0ee">
+    return `<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid #f0f0ee">
       <div style="width:8px;height:8px;border-radius:2px;background:${bc};flex-shrink:0"></div>
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title||t.text||'Sin título'}</div>
         <div style="font-size:11px;color:#9e9e9c;margin-top:2px">${bn}${dEl?' · Eliminada '+dEl:''}</div>
       </div>
-      ${!isViewer?`<button onclick="restoreTask('${t.id}')" style="height:28px;padding:0 12px;font-size:11px;font-weight:500;background:#eef2f9;color:#2d4a7a;border:1px solid #c5d3e8;border-radius:6px;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0">Restaurar</button>`:''}
+      ${!isViewer?`
+        <button onclick="restoreTask('${t.id}')" style="height:26px;padding:0 10px;font-size:11px;font-weight:500;background:#eef2f9;color:#2d4a7a;border:1px solid #c5d3e8;border-radius:6px;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0">Restaurar</button>
+        <button onclick="eliminarDefinitivo('${t.id}')" title="Eliminar definitivamente" style="height:26px;width:26px;padding:0;background:#fff0f0;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;cursor:pointer;font-size:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center">×</button>
+      `:''}
     </div>`;
   }).join('');
 }
@@ -2598,6 +2603,25 @@ function openPapelera(){
 }
 function closePapelera(){
   document.getElementById('papelera-modal').style.display='none';
+}
+function eliminarDefinitivo(id){
+  if(!confirm('¿Eliminar esta tarea definitivamente? No se puede deshacer.')) return;
+  deletedTasks = deletedTasks.filter(t=>t.id!==id);
+  window.deletedTasks = deletedTasks;
+  localStorage.setItem('hh-deleted-v1', JSON.stringify(deletedTasks));
+  if(window.persistDeletedImmediate) window.persistDeletedImmediate([...deletedTasks]);
+  renderPapelera();
+}
+function vaciarPapelera(){
+  if(!deletedTasks.length) return;
+  if(!confirm(`¿Vaciar la papelera? Se eliminarán definitivamente ${deletedTasks.length} tarea(s). Esta acción no se puede deshacer.`)) return;
+  deletedTasks = [];
+  window.deletedTasks = [];
+  localStorage.setItem('hh-deleted-v1', '[]');
+  if(window.persistDeletedImmediate) window.persistDeletedImmediate([]);
+  const cnt = document.getElementById('papelera-cnt');
+  if(cnt) cnt.textContent = '';
+  renderPapelera();
 }
 function persist(){
   window.tasks = tasks;
@@ -4296,7 +4320,10 @@ function guardarArchivoClienteLocal(nombre, tipo, url){
         <div style="font-size:14px;font-weight:600;color:#1a1a1a">🗑️ Papelera</div>
         <div style="font-size:11px;color:#9e9e9c;margin-top:2px">Tareas eliminadas — puedes restaurarlas</div>
       </div>
-      <button onclick="closePapelera()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#b3b3b0;line-height:1;padding:0 4px">&times;</button>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button onclick="vaciarPapelera()" id="btn-vaciar-papelera" style="height:28px;padding:0 12px;font-size:11px;font-weight:500;background:#fff;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;cursor:pointer;font-family:inherit;display:none">Vaciar papelera</button>
+        <button onclick="closePapelera()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#b3b3b0;line-height:1;padding:0 4px">&times;</button>
+      </div>
     </div>
     <div id="papelera-list" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
   </div>
@@ -4389,16 +4416,23 @@ window.addEventListener('app-ready', () => {
     if (!snap.exists()) return;
     const data = snap.data();
     if (!data.tasks || !Array.isArray(data.tasks)) return;
-    // Si Firebase tiene datos más viejos que nuestro último write local → ignorar
     const fbTime = data.updatedAt || 0;
     const localTime = _getLocalWriteTime();
     if (fbTime < localTime) {
       console.log('⏭️ onSnapshot ignorado — Firebase más viejo que write local', fbTime, '<', localTime);
       return;
     }
-    window.tasks = data.tasks;
-    if (typeof tasks !== 'undefined') tasks = data.tasks;
-    localStorage.setItem('hh-socios-v3', JSON.stringify(data.tasks));
+    // ── FILTRAR tareas que ya están en la papelera ──────────────
+    const deletedIds = new Set((window.deletedTasks||[]).map(d=>d.id));
+    const filtradas = data.tasks.filter(t => !deletedIds.has(t.id));
+    // Si hay diferencia, re-escribir Firebase limpio
+    if(filtradas.length < data.tasks.length && window.persistTasksImmediate){
+      console.log('🧹 Limpiando tareas eliminadas de Firebase:', data.tasks.length - filtradas.length);
+      window.persistTasksImmediate(filtradas);
+    }
+    window.tasks = filtradas;
+    if (typeof tasks !== 'undefined') tasks = filtradas;
+    localStorage.setItem('hh-socios-v3', JSON.stringify(filtradas));
     if (typeof window.renderCurrent === 'function') window.renderCurrent();
     const ind = document.getElementById('sync-indicator');
     if(ind){ ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0',2000); }
@@ -4453,6 +4487,15 @@ onSnapshot(DELETED_REF, snap => {
   if(typeof deletedTasks !== 'undefined') deletedTasks = data.deleted;
   window.deletedTasks = data.deleted;
   localStorage.setItem('hh-deleted-v1', JSON.stringify(data.deleted));
+  // Limpiar del array principal cualquier tarea que esté en eliminadas
+  const deletedIds = new Set(data.deleted.map(d=>d.id));
+  if(typeof tasks !== 'undefined' && tasks.some(t=>deletedIds.has(t.id))){
+    tasks = tasks.filter(t=>!deletedIds.has(t.id));
+    window.tasks = tasks;
+    localStorage.setItem('hh-socios-v3', JSON.stringify(tasks));
+    if(window.persistTasksImmediate) window.persistTasksImmediate([...tasks]);
+    if(typeof window.renderCurrent === 'function') window.renderCurrent();
+  }
   if(typeof renderPapelera === 'function') renderPapelera();
 });
 
