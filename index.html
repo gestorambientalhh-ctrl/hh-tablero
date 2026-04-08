@@ -3885,41 +3885,53 @@ const TASKS_REF = doc(db, 'hh-socios', 'tareas');
 const MEETINGS_REF = doc(db, 'hh-socios', 'reuniones');
 const DELETED_REF = doc(db, 'hh-socios', 'eliminadas');
 
-// Debounce timers - prevent write spam
+// Debounce timers
 let tasksWriteTimer = null;
 let meetingsWriteTimer = null;
 
-// Write tasks to Firebase (debounced 800ms)
-let _isLocalWrite = false;
-window.persistToFirebase = function(taskList) {
-  clearTimeout(tasksWriteTimer);
-  tasksWriteTimer = setTimeout(async () => {
-    try {
-      _isLocalWrite = true;
-      await setDoc(TASKS_REF, { tasks: taskList, updatedAt: Date.now() });
-      setTimeout(()=>{ _isLocalWrite = false; }, 1000);
-      const ind = document.getElementById('sync-indicator');
-      if(ind){ ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0',2000); }
-    } catch(e) { console.warn('Tasks write error:', e); _isLocalWrite = false; }
-  }, 800);
-};
+// ── PROTECCIÓN ANTI-SOBREESCRITURA ────────────────────────────
+// Guarda el timestamp del último write LOCAL en localStorage
+// para que sobreviva recargas de página
+function _setLocalWriteTime() {
+  const t = Date.now();
+  localStorage.setItem('hh-last-local-write', String(t));
+  return t;
+}
+function _getLocalWriteTime() {
+  return parseInt(localStorage.getItem('hh-last-local-write') || '0');
+}
 
-// ── ESCRITURA INMEDIATA (para deletes — sin debounce) ──────────
+// ── ESCRITURA INMEDIATA (para deletes y cambios críticos) ──────
 window.persistTasksImmediate = async function(taskList) {
-  _isLocalWrite = true;
+  const writeTime = _setLocalWriteTime();
   clearTimeout(tasksWriteTimer);
   try {
-    await setDoc(TASKS_REF, { tasks: taskList, updatedAt: Date.now() });
+    await setDoc(TASKS_REF, { tasks: taskList, updatedAt: writeTime });
     const ind = document.getElementById('sync-indicator');
     if(ind){ ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0',2000); }
-  } catch(e) { console.warn('Tasks immediate write error:', e); }
-  setTimeout(()=>{ _isLocalWrite = false; }, 2000);
+    console.log('✅ Delete guardado en Firebase:', writeTime);
+  } catch(e) {
+    console.error('❌ Error guardando delete en Firebase:', e);
+  }
 };
 
 window.persistDeletedImmediate = async function(deletedList) {
   try {
     await setDoc(DELETED_REF, { deleted: deletedList, updatedAt: Date.now() });
   } catch(e) { console.warn('Deleted write error:', e); }
+};
+
+// ── ESCRITURA NORMAL (debounced 800ms, para ediciones) ─────────
+window.persistToFirebase = function(taskList) {
+  clearTimeout(tasksWriteTimer);
+  tasksWriteTimer = setTimeout(async () => {
+    const writeTime = _setLocalWriteTime();
+    try {
+      await setDoc(TASKS_REF, { tasks: taskList, updatedAt: writeTime });
+      const ind = document.getElementById('sync-indicator');
+      if(ind){ ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0',2000); }
+    } catch(e) { console.warn('Tasks write error:', e); }
+  }, 800);
 };
 
 // Write meetings to Firebase (debounced 800ms)
@@ -3932,16 +3944,22 @@ window.persistMeetingsToFirebase = function(meetingList) {
   }, 800);
 };
 
-// TASKS listener - starts ONCE on app-ready
+// TASKS listener — solo aplica datos de Firebase si son MÁS NUEVOS que nuestro último write
 let tasksStarted = false;
 window.addEventListener('app-ready', () => {
   if (tasksStarted) return;
   tasksStarted = true;
   onSnapshot(TASKS_REF, snap => {
     if (!snap.exists()) return;
-    if (_isLocalWrite) return; // ignorar el echo de escritura propia
     const data = snap.data();
     if (!data.tasks || !Array.isArray(data.tasks)) return;
+    // Si Firebase tiene datos más viejos que nuestro último write local → ignorar
+    const fbTime = data.updatedAt || 0;
+    const localTime = _getLocalWriteTime();
+    if (fbTime < localTime) {
+      console.log('⏭️ onSnapshot ignorado — Firebase más viejo que write local', fbTime, '<', localTime);
+      return;
+    }
     window.tasks = data.tasks;
     if (typeof tasks !== 'undefined') tasks = data.tasks;
     localStorage.setItem('hh-socios-v3', JSON.stringify(data.tasks));
