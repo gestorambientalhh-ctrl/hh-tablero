@@ -3742,7 +3742,6 @@ let notasPanelOpen = false;
 function loadNotas(){
   const s = localStorage.getItem('hh-notas-v1');
   notas = s ? JSON.parse(s) : [];
-  if(notas.length && window.persistNotasToFirebase) window.persistNotasToFirebase(notas);
 }
 
 function persistNotas(){
@@ -3808,7 +3807,6 @@ function toggleNota(id){
 }
 
 function renderNotas(){
-  loadNotas();
   const body = document.getElementById('notas-body');
   if(!body) return;
   const BIZ_N = ['Gestor HH','Logístico','Montevra'];
