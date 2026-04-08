@@ -487,6 +487,26 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 .fl-row:last-child{border-bottom:none}
 .fl-row:hover{background:#fafaf8}
 
+/* PORTAL CLIENTE — Branding HH / Purina Care */
+:root{
+  --hh-green:#1e6b4a;
+  --hh-teal:#0e7f8a;
+  --hh-green-light:#e8f5ee;
+  --hh-teal-light:#e3f4f6;
+  --hh-gradient:linear-gradient(135deg,#1e6b4a 0%,#0e7f8a 100%);
+}
+.cp-ftag{padding:5px 14px;border-radius:999px;font-size:12px;border:1px solid #d4e8df;background:#fff;color:#5a7a6a;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;transition:all .15s}
+.cp-ftag.act{background:var(--hh-green);color:#fff;border-color:var(--hh-green);font-weight:500}
+.cp-card{background:#fff;border:1px solid #e0ede7;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px;transition:box-shadow .15s,border-color .15s}
+.cp-card:hover{box-shadow:0 4px 16px rgba(30,107,74,.1);border-color:#b8d9c8}
+.cp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.cp-month{font-size:11px;font-weight:600;color:#7aaa92;text-transform:uppercase;letter-spacing:.07em;margin:20px 0 10px;display:flex;align-items:center;gap:10px}
+.cp-month::after{content:'';flex:1;height:1px;background:#e0ede7}
+.cp-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.cp-dl{font-size:12px;color:#fff;background:var(--hh-green);border:none;border-radius:8px;padding:6px 14px;cursor:pointer;font-family:inherit;font-weight:500;text-decoration:none;display:inline-block;transition:background .15s}
+.cp-dl:hover{background:var(--hh-teal)}
+.cp-type-tag{font-size:10px;font-weight:600;padding:3px 8px;border-radius:5px;letter-spacing:.03em}
+
 /* KPI BAR BOTTOM */
 .kpi-bar{position:fixed;bottom:0;left:0;right:0;height:48px;background:#fff;border-top:1px solid #e2e8f0;display:none;align-items:center;justify-content:center;z-index:90;box-shadow:0 -2px 8px rgba(0,0,0,.06)}
 .kpi-bar.visible{display:flex}
@@ -526,6 +546,67 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
     </div>
   </div>
 </div>
+
+<!-- ═══════════════════════════════════════════════════════
+     PORTAL CLIENTE — Purina Care / Gestor Ambiental HH
+════════════════════════════════════════════════════════ -->
+<div id="client-portal" style="display:none;flex-direction:column;min-height:100vh;background:#f4f9f6">
+
+  <!-- Topbar -->
+  <div style="height:56px;background:#fff;border-bottom:1px solid #d4e8df;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:50;box-shadow:0 1px 4px rgba(30,107,74,.06)">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="width:34px;height:34px;border-radius:10px;background:var(--hh-gradient);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(30,107,74,.3)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      </div>
+      <div>
+        <div style="font-size:14px;font-weight:600;color:#1a1a1a;line-height:1.2">Gestor Ambiental HH</div>
+        <div style="font-size:10px;color:#7aaa92;letter-spacing:.04em;text-transform:uppercase">Portal de documentos</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="text-align:right">
+        <div id="cp-empresa" style="font-size:13px;font-weight:600;color:#1e6b4a">Purina Care</div>
+        <div style="font-size:10px;color:#9e9e9c">Cliente verificado ✓</div>
+      </div>
+      <button onclick="cerrarPortalCliente()" style="height:32px;padding:0 14px;font-size:12px;border:1px solid #d4e8df;border-radius:8px;background:none;color:#5a7a6a;cursor:pointer;font-family:inherit;transition:all .15s">Salir</button>
+    </div>
+  </div>
+
+  <!-- Hero banner -->
+  <div style="background:var(--hh-gradient);padding:28px 24px 24px;color:#fff">
+    <div style="max-width:860px;margin:0 auto">
+      <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.75;margin-bottom:6px">Bienvenido a su espacio de documentos</div>
+      <div style="font-size:22px;font-weight:600;margin-bottom:4px">Purina Care</div>
+      <div style="font-size:13px;opacity:.8">Aquí encontrará todos los documentos, fotos e informes que Gestor Ambiental HH ha preparado para usted.</div>
+      <div id="cp-stats" style="display:flex;gap:16px;margin-top:16px;flex-wrap:wrap"></div>
+    </div>
+  </div>
+
+  <!-- Filtros tipo -->
+  <div style="background:#fff;border-bottom:1px solid #d4e8df;padding:0 24px">
+    <div style="max-width:860px;margin:0 auto;display:flex;align-items:center;gap:8px;height:48px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none">
+      <button class="cp-ftag act" id="cpf-todos" onclick="cpFiltrar('todos',this)">Todos</button>
+      <button class="cp-ftag" id="cpf-pdf" onclick="cpFiltrar('pdf',this)">📄 Actas e informes</button>
+      <button class="cp-ftag" id="cpf-media" onclick="cpFiltrar('media',this)">🖼 Fotos y videos</button>
+    </div>
+  </div>
+  <!-- Filtro por mes -->
+  <div id="cp-filtro-mes-bar" style="display:none;background:#f4f9f6;border-bottom:1px solid #d4e8df;padding:0 24px;gap:6px;height:40px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;align-items:center"></div>
+
+  <!-- Cuerpo archivos -->
+  <div style="flex:1;padding:20px 24px;max-width:908px;width:100%;margin:0 auto;box-sizing:border-box">
+    <div id="cp-body"></div>
+  </div>
+
+  <!-- Footer -->
+  <div style="background:#fff;border-top:1px solid #d4e8df;padding:14px 24px;text-align:center;font-size:11px;color:#9e9e9c">
+    Gestor Ambiental HH · Portal exclusivo para Purina Care · Todos los documentos son confidenciales
+  </div>
+
+</div>
+
+<!-- INPUT oculto para subir archivos cliente (admin) -->
+<input type="file" id="archivo-cliente-input" accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx" style="display:none" onchange="subirArchivoCliente(this)">
 
 <!-- APP -->
 <div id="app" style="display:none">
@@ -609,6 +690,9 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
         </button>
         <button onclick="openPapelera()" title="Papelera" style="display:flex;align-items:center;gap:4px;height:28px;padding:0 10px;background:none;border:1px solid #ebebeb;border-radius:6px;font-size:11px;color:#787774;cursor:pointer;font-family:inherit;white-space:nowrap">
           🗑️ <span id="papelera-cnt" style="font-size:10px;color:#9e9e9c"></span>
+        </button>
+        <button id="btn-archivos-cliente" onclick="abrirAdminArchivos()" style="display:flex;align-items:center;gap:5px;height:28px;padding:0 10px;background:none;border:1px solid #ebebeb;border-radius:6px;font-size:11px;color:#787774;cursor:pointer;font-family:inherit;white-space:nowrap">
+          📁 Archivos cliente
         </button>
         <div class="sem-leg">
           <span class="leg"><span class="leg-dot" style="background:#E24B4A"></span>Vencida</span>
@@ -813,6 +897,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
       </div>
     </div>
     <!-- List of meetings -->
+    <div id="meetings-filter-bar" style="background:#fff;border-bottom:1px solid var(--border);padding:0 16px;display:flex;align-items:center;gap:6px;height:42px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-shrink:0"></div>
     <div id="meetings-view" style="flex:1;overflow-y:auto;padding:16px;background:#eef2f7;-webkit-overflow-scrolling:touch"></div>
   </div>
 
@@ -1456,27 +1541,32 @@ function initDragDrop(){
 
 // ── VIEWER MODE ───────────────────────────────────────────────
 const VIEWER_PW = 'ver2026';
+const CLIENT_PW = 'Purina2026';
 let isViewer = false;
+let isClient = false;
 
 function checkPw(){
   const val = document.getElementById('pw-input').value;
   if(val === PW){
-    isViewer = false;
+    isViewer = false; isClient = false;
     document.getElementById('lock-screen').style.display='none';
     document.getElementById('app').style.display='block';
     loadTasks();
   } else if(val === VIEWER_PW){
-    isViewer = true;
+    isViewer = true; isClient = false;
     document.getElementById('lock-screen').style.display='none';
     document.getElementById('app').style.display='block';
-    // Show viewer banner
     const banner = document.createElement('div');
     banner.className = 'viewer-banner';
     banner.innerHTML = '👁 Modo vista — solo lectura. Puedes ver el seguimiento pero no editar tareas.';
     document.querySelector('.topnav').after(banner);
-    // Hide edit buttons
     document.getElementById('btn-add').style.display='none';
     loadTasks();
+  } else if(val === CLIENT_PW){
+    isViewer = false; isClient = true;
+    document.getElementById('lock-screen').style.display='none';
+    document.getElementById('client-portal').style.display='flex';
+    iniciarPortalCliente();
   } else {
     document.getElementById('pw-err').style.display='block';
     document.getElementById('pw-input').value='';
@@ -1489,6 +1579,7 @@ function checkPw(){
 // ── MEETING NOTES ─────────────────────────────────────────────
 let meetings = [];
 let meetingFormOpen = false;
+let _meetingMesFiltro = null;
 
 function loadMeetings(){
   const s = localStorage.getItem('hh-meetings-v1');
@@ -1640,19 +1731,44 @@ function delMeeting(id){
 function renderMeetings(){
   const BIZ_NAMES = ['Gestor HH','Logístico','Montevra'];
   const BIZ_C = ['#639922','#378ADD','#D85A30'];
-  let html = '';
+  const MONTHS_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
-  if(!meetings.length){
-    html += '<div class="meeting-empty">No hay notas de reunión aún.<br>Crea la primera con el botón "+ Nueva reunión"</div>';
+  // Construir barra de filtros por mes
+  const filterBar = document.getElementById('meetings-filter-bar');
+  if(filterBar){
+    const meses = [...new Set(meetings.map(m=>m.dateISO?m.dateISO.substring(0,7):null).filter(Boolean))].sort().reverse();
+    if(meses.length){
+      // Si el filtro activo no existe en los meses disponibles, resetear
+      if(_meetingMesFiltro && !meses.includes(_meetingMesFiltro)) _meetingMesFiltro = null;
+      const pill = (key, label, act) =>
+        `<button onclick="_meetingMesFiltro=${key?`'${key}'`:'null'};renderMeetings()" style="padding:4px 14px;border-radius:999px;font-size:12px;border:1px solid ${act?'#2d4a7a':'var(--border)'};background:${act?'#2d4a7a':'var(--bg)'};color:${act?'#fff':'var(--text2)'};cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;font-weight:${act?'600':'400'}">${label}</button>`;
+      filterBar.innerHTML =
+        pill(null,'Todos',!_meetingMesFiltro) +
+        meses.map(k=>{
+          const [y,mo]=k.split('-');
+          return pill(k, MONTHS_ES[parseInt(mo)-1]+' '+y, _meetingMesFiltro===k);
+        }).join('');
+      filterBar.style.display='flex';
+    } else {
+      filterBar.style.display='none';
+    }
+  }
+
+  // Filtrar reuniones por mes activo
+  const lista = _meetingMesFiltro
+    ? meetings.filter(m=>m.dateISO && m.dateISO.startsWith(_meetingMesFiltro))
+    : meetings;
+
+  let html = '';
+  if(!lista.length){
+    html = `<div class="meeting-empty">${_meetingMesFiltro?'Sin reuniones en este mes.':'No hay notas de reunión aún.<br>Crea la primera con el botón "+ Nueva reunión"'}</div>`;
   } else {
-    // Group by month
     const grouped = {};
-    meetings.forEach(m=>{
+    lista.forEach(m=>{
       const key = m.dateISO ? m.dateISO.substring(0,7) : 'otros';
       if(!grouped[key]) grouped[key]=[];
       grouped[key].push(m);
     });
-    const MONTHS_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
     Object.keys(grouped).sort().reverse().forEach(key=>{
       const [y,mo] = key.split('-');
       const monthLabel = mo ? MONTHS_ES[parseInt(mo)-1]+' '+y : 'Sin fecha';
@@ -1683,7 +1799,6 @@ function renderMeetings(){
       });
     });
   }
-
   document.getElementById('meetings-view').innerHTML = html;
 }
 
@@ -3899,6 +4014,280 @@ function renderNotas(){
   body.innerHTML = html;
 }
 </script>
+<!-- MODAL ADMIN — ARCHIVOS CLIENTE -->
+<div id="admin-archivos-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:12px;width:100%;max-width:520px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.18);overflow:hidden">
+    <div style="padding:14px 20px;border-bottom:1px solid #f0f0ee;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <div>
+        <div style="font-size:14px;font-weight:600;color:#1a1a1a">📁 Archivos del cliente</div>
+        <div style="font-size:11px;color:#9e9e9c;margin-top:2px">Sube archivos que el cliente podrá ver y descargar</div>
+      </div>
+      <button onclick="cerrarAdminArchivos()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#b3b3b0">&times;</button>
+    </div>
+    <!-- Subir nuevo -->
+    <div style="padding:14px 20px;border-bottom:1px solid #f0f0ee;flex-shrink:0">
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input id="aa-nombre" type="text" placeholder="Nombre del archivo (ej: Acta marzo 2025)" style="flex:1;height:34px;font-size:13px;border:1px solid #e2e8f0;border-radius:8px;padding:0 10px;font-family:inherit;outline:none">
+        <select id="aa-tipo" style="height:34px;font-size:12px;border:1px solid #e2e8f0;border-radius:8px;padding:0 8px;font-family:inherit;outline:none;background:#fff;color:#1a1a1a">
+          <option value="pdf">📄 Acta/Informe</option>
+          <option value="foto">🖼 Foto</option>
+          <option value="video">🎬 Video</option>
+        </select>
+      </div>
+      <button onclick="document.getElementById('archivo-cliente-input').click()" style="width:100%;height:36px;background:var(--hh-green);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Seleccionar archivo y subir a Drive
+      </button>
+      <div id="aa-uploading" style="display:none;text-align:center;padding:8px;font-size:12px;color:#2d4a7a">⏳ Subiendo archivo...</div>
+    </div>
+    <!-- Lista archivos existentes -->
+    <div id="aa-lista" style="flex:1;overflow-y:auto;padding:6px 0"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     SCRIPTS PORTAL CLIENTE + ADMIN ARCHIVOS
+════════════════════════════════════════════════════ -->
+<script>
+let archivosCliente = JSON.parse(localStorage.getItem('hh-archivos-cliente-v1')||'[]');
+let _cpFiltro = 'todos';
+let _aaSubiendoNombre = '';
+let _aaSubiendoTipo = '';
+
+// ── PORTAL CLIENTE — CARGA DESDE DRIVE ────────────────────────
+const APPS_SCRIPT_PORTAL = 'https://script.google.com/macros/s/AKfycbwSCVADRhqQJ2Mm_6owSm7N1UptNnXVsWkkpKKSe97-_waK1u5WHJUtkNrvlpUERVik/exec';
+const PURINA_FOLDER_ID   = '1A129deaaYfQVtylMvqF24qDZUNBJBmPy';
+const MESES_ORDEN = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+let _cpMesFiltro = null;
+
+function mesIndex(n){ const i=MESES_ORDEN.findIndex(m=>m.toLowerCase()===(n||'').toLowerCase()); return i>=0?i:99; }
+
+function iniciarPortalCliente(){
+  const body = document.getElementById('cp-body');
+  if(body) body.innerHTML=`<div style="text-align:center;padding:60px 20px;color:#7aaa92"><div style="font-size:32px;margin-bottom:12px">⏳</div><div style="font-size:14px;font-weight:500;color:#5a7a6a">Cargando documentos desde Drive...</div></div>`;
+  const stats = document.getElementById('cp-stats');
+  if(stats) stats.innerHTML='';
+  fetch(`${APPS_SCRIPT_PORTAL}?action=listarArchivos&folderId=${PURINA_FOLDER_ID}`)
+    .then(r=>r.json())
+    .then(data=>{
+      if(!data.ok) throw new Error(data.error||'Error');
+      archivosCliente = data.archivos||[];
+      window.archivosCliente = archivosCliente;
+      localStorage.setItem('hh-archivos-cliente-v1', JSON.stringify(archivosCliente));
+      renderStatsPortal();
+      renderMesFiltros();
+      renderPortalCliente();
+    })
+    .catch(()=>{
+      archivosCliente = JSON.parse(localStorage.getItem('hh-archivos-cliente-v1')||'[]');
+      if(archivosCliente.length){ renderStatsPortal(); renderMesFiltros(); renderPortalCliente(); }
+      else if(body) body.innerHTML=`<div style="text-align:center;padding:60px 20px;color:#b3b3b0"><div style="font-size:28px;margin-bottom:10px">⚠️</div><div style="font-size:13px">No se pudieron cargar los archivos.</div></div>`;
+    });
+}
+
+function renderStatsPortal(){
+  const stats = document.getElementById('cp-stats');
+  if(!stats) return;
+  const total=archivosCliente.length;
+  const pdfs=archivosCliente.filter(a=>a.tipo==='pdf').length;
+  const fotos=archivosCliente.filter(a=>a.tipo==='foto').length;
+  const videos=archivosCliente.filter(a=>a.tipo==='video').length;
+  const s='background:rgba(255,255,255,.15);border-radius:10px;padding:8px 16px;text-align:center;min-width:70px';
+  stats.innerHTML=[[total,'Total'],[pdfs,'Actas'],[fotos,'Fotos'],[videos,'Videos']].map(([n,l])=>`<div style="${s}"><div style="font-size:22px;font-weight:600">${n}</div><div style="font-size:10px;opacity:.8;text-transform:uppercase;letter-spacing:.05em">${l}</div></div>`).join('');
+}
+
+function renderMesFiltros(){
+  const bar = document.getElementById('cp-filtro-mes-bar');
+  if(!bar) return;
+  const anios=[...new Set(archivosCliente.map(a=>a.anio).filter(Boolean))].sort().reverse();
+  const meses=[...new Set(archivosCliente.map(a=>a.mes).filter(Boolean))];
+  if(!meses.length){bar.style.display='none';return;}
+  bar.style.display='flex';
+  const p=(key,label,act)=>`<button onclick="cpFiltrarMes(${key?`'${key}'`:'null'},this)" style="padding:4px 14px;border-radius:999px;font-size:12px;border:1px solid ${act?'#1e6b4a':'#d4e8df'};background:${act?'#1e6b4a':'#fff'};color:${act?'#fff':'#5a7a6a'};cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;transition:all .15s">${label}</button>`;
+  let html=p(null,'Todos',!_cpMesFiltro);
+  anios.forEach(anio=>{
+    const md=meses.filter(m=>archivosCliente.some(a=>a.mes===m&&a.anio===anio));
+    md.sort((a,b)=>mesIndex(b)-mesIndex(a));
+    md.forEach(mes=>{ const key=`${anio}::${mes}`; html+=p(key,`${mes} ${anio}`,_cpMesFiltro===key); });
+  });
+  bar.innerHTML=html;
+}
+
+function cpFiltrarMes(key,el){
+  _cpMesFiltro=key;
+  document.querySelectorAll('#cp-filtro-mes-bar button').forEach(b=>{b.style.background='#fff';b.style.color='#5a7a6a';b.style.borderColor='#d4e8df';});
+  if(el){el.style.background='#1e6b4a';el.style.color='#fff';el.style.borderColor='#1e6b4a';}
+  renderPortalCliente();
+}
+
+function cerrarPortalCliente(){
+  document.getElementById('client-portal').style.display='none';
+  document.getElementById('lock-screen').style.display='flex';
+  document.getElementById('pw-input').value='';
+  isClient=false; _cpMesFiltro=null;
+}
+
+function cpFiltrar(tipo,el){
+  _cpFiltro=tipo;
+  document.querySelectorAll('.cp-ftag').forEach(b=>b.classList.remove('act'));
+  if(el) el.classList.add('act');
+  renderPortalCliente();
+}
+
+function renderPortalCliente(){
+  const body=document.getElementById('cp-body');
+  if(!body) return;
+  let lista = _cpFiltro==='todos' ? archivosCliente
+    : _cpFiltro==='media' ? archivosCliente.filter(a=>a.tipo==='foto'||a.tipo==='video')
+    : archivosCliente.filter(a=>a.tipo===_cpFiltro);
+  if(_cpMesFiltro){
+    const [anio,mes]=_cpMesFiltro.split('::');
+    lista=lista.filter(a=>a.anio===anio&&a.mes===mes);
+  }
+  if(!lista.length){
+    body.innerHTML=`<div style="text-align:center;padding:60px 20px;color:#7aaa92">
+      <div style="width:56px;height:56px;border-radius:50%;background:#e8f5ee;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:26px">📂</div>
+      <div style="font-size:14px;font-weight:500;color:#5a7a6a;margin-bottom:4px">Sin documentos en esta categoría</div>
+      <div style="font-size:12px;color:#9e9e9c">Pronto Gestor Ambiental HH subirá nuevos archivos para usted</div>
+    </div>`;
+    return;
+  }
+  const tipos={
+    pdf:{label:'Acta/Informe',bg:'#e8f5ee',tc:'#1e6b4a',icon:'📄'},
+    foto:{label:'Fotografía',bg:'#e3f4f6',tc:'#0e7f8a',icon:'🖼'},
+    video:{label:'Video',bg:'#eef5e8',tc:'#3a7a2a',icon:'🎬'}
+  };
+
+  // Agrupar por Mes + Año (viene de la estructura de carpetas en Drive)
+  const grouped={};
+  lista.forEach(a=>{
+    const key = (a.anio&&a.mes) ? `${a.anio}::${a.mes}` : (a.fecha||'').substring(0,7)||'sin-fecha';
+    if(!grouped[key])grouped[key]=[];
+    grouped[key].push(a);
+  });
+
+  // Ordenar grupos: año desc, mes desc
+  const keys = Object.keys(grouped).sort((a,b)=>{
+    const [aY,aM]=a.split('::'); const [bY,bM]=b.split('::');
+    if(bY!==aY) return (bY||'0').localeCompare(aY||'0');
+    return mesIndex(bM) - mesIndex(aM);
+  });
+
+  let html='';
+  keys.forEach(key=>{
+    const [anio,mes]=key.split('::');
+    const label = mes ? `${mes} ${anio}` : key;
+    html+=`<div class="cp-month">${label}</div><div class="cp-grid">`;
+    grouped[key].forEach(a=>{
+      const tp=tipos[a.tipo]||tipos.foto;
+      const nombre = (a.nombre||'').replace(/^Imagen de WhatsApp \d{4}-\d{2}-\d{2} a las /,'Foto ').replace(/_[a-f0-9]+\.(jpg|jpeg|png)$/i,'');
+      html+=`<div class="cp-card">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+          <div class="cp-icon" style="background:${tp.bg}">${tp.icon}</div>
+          <span class="cp-type-tag" style="background:${tp.bg};color:${tp.tc}">${tp.label}</span>
+        </div>
+        <div style="font-size:13px;font-weight:500;color:#1a1a1a;line-height:1.35">${nombre}</div>
+        <div style="font-size:11px;color:#9e9e9c">${a.fecha||''}</div>
+        <div style="margin-top:4px">
+          ${a.url?`<a href="${a.url}" target="_blank" class="cp-dl">↓ Ver / Descargar</a>`:`<span style="font-size:11px;color:#b3b3b0">Procesando...</span>`}
+        </div>
+      </div>`;
+    });
+    html+='</div>';
+  });
+  body.innerHTML=html;
+}
+
+// ── ADMIN — GESTIÓN ARCHIVOS ────────────────────────────────────
+function abrirAdminArchivos(){
+  document.getElementById('admin-archivos-overlay').style.display='flex';
+  renderAdminLista();
+}
+
+function cerrarAdminArchivos(){
+  document.getElementById('admin-archivos-overlay').style.display='none';
+}
+
+function renderAdminLista(){
+  const lista = document.getElementById('aa-lista');
+  if(!lista) return;
+  if(!archivosCliente.length){
+    lista.innerHTML=`<div style="text-align:center;padding:30px;color:#b3b3b0;font-size:12px">Aún no hay archivos subidos</div>`;
+    return;
+  }
+  const tipos={pdf:{icon:'📄'},foto:{icon:'🖼'},video:{icon:'🎬'}};
+  lista.innerHTML=archivosCliente.map(a=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 20px;border-bottom:1px solid #f0f0ee">
+      <span style="font-size:18px">${(tipos[a.tipo]||tipos.pdf).icon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.nombre}</div>
+        <div style="font-size:11px;color:#9e9e9c">${a.fecha||''} · ${a.tipo}</div>
+      </div>
+      ${a.url?`<a href="${a.url}" target="_blank" style="font-size:11px;color:#2d4a7a;text-decoration:none;flex-shrink:0">↗ Ver</a>`:''}
+      <button onclick="eliminarArchivoCliente('${a.id}')" style="background:none;border:none;color:#d1cdc7;cursor:pointer;font-size:16px;padding:0;flex-shrink:0">&times;</button>
+    </div>
+  `).join('');
+}
+
+function eliminarArchivoCliente(id){
+  if(!confirm('¿Quitar este archivo del portal del cliente?')) return;
+  archivosCliente = archivosCliente.filter(a=>a.id!==id);
+  localStorage.setItem('hh-archivos-cliente-v1', JSON.stringify(archivosCliente));
+  if(window.persistArchivosCliente) window.persistArchivosCliente([...archivosCliente]);
+  renderAdminLista();
+}
+
+function subirArchivoCliente(input){
+  const file = input.files[0];
+  if(!file) return;
+  const nombre = document.getElementById('aa-nombre').value.trim() || file.name;
+  const tipo = document.getElementById('aa-tipo').value;
+  _aaSubiendoNombre = nombre;
+  _aaSubiendoTipo = tipo;
+  document.getElementById('aa-uploading').style.display='block';
+
+  // Subir a Google Drive via Apps Script (mismo mecanismo que soportes de pago)
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwSCVADRhqQJ2Mm_6owSm7N1UptNnXVsWkkpKKSe97-_waK1u5WHJUtkNrvlpUERVik/exec';
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const base64 = e.target.result.split(',')[1];
+    fetch(APPS_SCRIPT_URL, {
+      method:'POST',
+      body: JSON.stringify({
+        fileName: file.name,
+        mimeType: file.type,
+        base64: base64,
+        folderId: '1xwPuXLwESn22XUbkGEhQwM8o1UhAS6ry'
+      })
+    })
+    .then(r=>r.json())
+    .then(data=>{
+      guardarArchivoClienteLocal(nombre, tipo, data.url || data.viewUrl || '');
+    })
+    .catch(()=>{
+      // Si falla Drive, guardar sin URL
+      guardarArchivoClienteLocal(nombre, tipo, '');
+    });
+  };
+  reader.readAsDataURL(file);
+  input.value='';
+}
+
+function guardarArchivoClienteLocal(nombre, tipo, url){
+  const nuevo = {
+    id: 'ac'+Date.now(),
+    nombre, tipo, url,
+    fecha: new Date().toISOString().split('T')[0]
+  };
+  archivosCliente.unshift(nuevo);
+  localStorage.setItem('hh-archivos-cliente-v1', JSON.stringify(archivosCliente));
+  if(window.persistArchivosCliente) window.persistArchivosCliente([...archivosCliente]);
+  document.getElementById('aa-uploading').style.display='none';
+  document.getElementById('aa-nombre').value='';
+  renderAdminLista();
+  alert('✅ Archivo agregado al portal del cliente.');
+}
+</script>
 <!-- PAPELERA MODAL -->
 <div id="papelera-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center;padding:20px">
   <div style="background:#fff;border-radius:12px;width:100%;max-width:480px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.18);overflow:hidden">
@@ -3930,6 +4319,7 @@ const db = getFirestore(app);
 const TASKS_REF = doc(db, 'hh-socios', 'tareas');
 const MEETINGS_REF = doc(db, 'hh-socios', 'reuniones');
 const DELETED_REF = doc(db, 'hh-socios', 'eliminadas');
+const ARCHIVOS_CLIENTE_REF = doc(db, 'hh-socios', 'archivos-cliente');
 
 // Debounce timers
 let tasksWriteTimer = null;
@@ -4037,6 +4427,23 @@ if (document.readyState === 'loading') {
 } else {
   startMeetingsListener();
 }
+
+// ── ARCHIVOS CLIENTE FIREBASE SYNC ───────────────────────────
+window.persistArchivosCliente = async function(lista) {
+  try {
+    await setDoc(ARCHIVOS_CLIENTE_REF, { archivos: lista, updatedAt: Date.now() });
+  } catch(e) { console.warn('Archivos cliente write error:', e); }
+};
+
+onSnapshot(ARCHIVOS_CLIENTE_REF, snap => {
+  if(!snap.exists()) return;
+  const data = snap.data();
+  if(!data.archivos || !Array.isArray(data.archivos)) return;
+  if(typeof archivosCliente !== 'undefined') archivosCliente = data.archivos;
+  localStorage.setItem('hh-archivos-cliente-v1', JSON.stringify(data.archivos));
+  if(typeof renderPortalCliente === 'function' && typeof isClient !== 'undefined' && isClient) renderPortalCliente();
+  if(typeof renderAdminLista === 'function') renderAdminLista();
+});
 
 // ── ELIMINADAS FIREBASE SYNC ──────────────────────────────────
 onSnapshot(DELETED_REF, snap => {
