@@ -1033,12 +1033,17 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
     <div style="background:var(--bg);border-radius:12px;width:100%;max-width:440px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.18)">
       <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
         <div>
-          <div style="font-size:14px;font-weight:600;color:var(--text)">Registrar pago parcial</div>
+          <div id="pp-modal-title" style="font-size:14px;font-weight:600;color:var(--text)">Registrar pago</div>
           <div id="pp-task-name" style="font-size:12px;color:var(--text2);margin-top:2px"></div>
         </div>
         <button onclick="closePagoParcial()" style="background:none;border:none;font-size:22px;color:var(--text2);cursor:pointer">×</button>
       </div>
       <div style="padding:16px 20px;display:flex;flex-direction:column;gap:10px">
+        <!-- Selector Parcial / Total -->
+        <div style="display:flex;gap:6px;background:#f7f7f5;border-radius:8px;padding:4px">
+          <button id="pp-tipo-parcial" onclick="setPpTipo('parcial')" style="flex:1;height:30px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:#2d4a7a;color:#fff;transition:all .15s">Parcial</button>
+          <button id="pp-tipo-total" onclick="setPpTipo('total')" style="flex:1;height:30px;border:none;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;background:transparent;color:#787774;transition:all .15s">Total</button>
+        </div>
         <!-- Barra progreso -->
         <div id="pp-progress-wrap" style="background:var(--bg2);border-radius:8px;padding:10px 12px">
           <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:6px">
@@ -1077,7 +1082,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
       </div>
       <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end">
         <button onclick="closePagoParcial()" style="height:32px;padding:0 14px;font-size:12px;border:1px solid var(--border);border-radius:8px;background:none;cursor:pointer;color:var(--text2);font-family:inherit">Cancelar</button>
-        <button onclick="savePagoParcial()" style="height:32px;padding:0 16px;font-size:12px;font-weight:500;background:#2d4a7a;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit">Registrar y subir soporte →</button>
+        <button id="pp-save-btn" onclick="savePagoParcial()" style="height:32px;padding:0 16px;font-size:12px;font-weight:500;background:#2d4a7a;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit">Registrar y subir soporte →</button>
       </div>
     </div>
   </div>
@@ -1488,10 +1493,6 @@ let meetingFormOpen = false;
 function loadMeetings(){
   const s = localStorage.getItem('hh-meetings-v1');
   meetings = s ? JSON.parse(s) : [];
-  // Sync to Firebase if we have local data not in cloud
-  if(meetings.length && window.persistMeetingsToFirebase) {
-    window.persistMeetingsToFirebase(meetings);
-  }
 }
 
 function persistMeetings(){
@@ -1637,7 +1638,6 @@ function delMeeting(id){
 }
 
 function renderMeetings(){
-  loadMeetings();
   const BIZ_NAMES = ['Gestor HH','Logístico','Montevra'];
   const BIZ_C = ['#639922','#378ADD','#D85A30'];
   let html = '';
@@ -3583,6 +3583,41 @@ function renderFlujoBody(){
 
 // ── PAGOS PARCIALES ───────────────────────────────────────────
 let _ppTaskId = null;
+let _ppTipo = 'parcial'; // 'parcial' | 'total'
+
+function setPpTipo(tipo){
+  _ppTipo = tipo;
+  const btnP = document.getElementById('pp-tipo-parcial');
+  const btnT = document.getElementById('pp-tipo-total');
+  const saveBtn = document.getElementById('pp-save-btn');
+  const titulo = document.getElementById('pp-modal-title');
+  if(tipo === 'total'){
+    btnT.style.background='#16a34a'; btnT.style.color='#fff'; btnT.style.fontWeight='600';
+    btnP.style.background='transparent'; btnP.style.color='#787774'; btnP.style.fontWeight='500';
+    titulo.textContent = 'Registrar pago total';
+    // Rellenar automáticamente con el saldo pendiente
+    const t = _ppTaskId ? tasks.find(x=>x.id===_ppTaskId) : null;
+    if(t){
+      const parciales = t.pagosParciales || [];
+      const totalPagado = parciales.reduce((s,p)=>s+(p.valor||0),0);
+      const saldo = Math.max(0,(t.flujoValue||0)-totalPagado);
+      document.getElementById('pp-valor').value = saldo || (t.flujoValue||0);
+      document.getElementById('pp-valor').readOnly = true;
+      document.getElementById('pp-desc').value = 'Pago total';
+      updatePPBar();
+    }
+    if(saveBtn) saveBtn.textContent = 'Registrar pago total →';
+  } else {
+    btnP.style.background='#2d4a7a'; btnP.style.color='#fff'; btnP.style.fontWeight='600';
+    btnT.style.background='transparent'; btnT.style.color='#787774'; btnT.style.fontWeight='500';
+    titulo.textContent = 'Registrar pago parcial';
+    document.getElementById('pp-valor').readOnly = false;
+    document.getElementById('pp-valor').value = '';
+    document.getElementById('pp-desc').value = '';
+    updatePPBar();
+    if(saveBtn) saveBtn.textContent = 'Registrar y subir soporte →';
+  }
+}
 
 function abrirPagoParcial(taskId){
   const t = tasks.find(x=>x.id===taskId);
@@ -3621,6 +3656,7 @@ function abrirPagoParcial(taskId){
   }
 
   document.getElementById('pago-parcial-overlay').style.display='flex';
+  setPpTipo('parcial'); // siempre empieza en parcial
   setTimeout(()=>document.getElementById('pp-valor').focus(),100);
 }
 
@@ -3664,8 +3700,9 @@ function savePagoParcial(){
     id: 'pp'+Date.now(),
     valor,
     fecha: document.getElementById('pp-fecha').value,
-    desc: document.getElementById('pp-desc').value.trim() || 'Pago parcial',
-    url: null
+    desc: document.getElementById('pp-desc').value.trim() || (_ppTipo==='total' ? 'Pago total' : 'Pago parcial'),
+    url: null,
+    esPagoTotal: _ppTipo === 'total'
   };
 
   closePagoParcial();
@@ -3717,13 +3754,24 @@ function guardarPagoParcialEnTask(t, pago){
   if(!t.pagosParciales) t.pagosParciales = [];
   t.pagosParciales.push(pago);
 
-  // Verificar si el saldo llegó a 0
+  // Si es pago total → marcar completada directamente
+  if(pago.esPagoTotal){
+    t.status = 'c';
+    t.supportDone = true;
+    alert('✅ Pago total registrado. La tarea se marcó como completada.');
+    window._ppPendiente = null;
+    persist();
+    renderFlujoBody();
+    return;
+  }
+
+  // Verificar si el saldo llegó a 0 (acumulado de parciales)
   const totalPagado = t.pagosParciales.reduce((s,p)=>s+(p.valor||0),0);
   const saldo = (t.flujoValue||0) - totalPagado;
   if(t.flujoValue && saldo <= 0){
     t.status = 'c';
     t.supportDone = true;
-    alert('✅ Pago completo. La tarea se marcó como completada.');
+    alert('✅ Saldo completo. La tarea se marcó como completada.');
   } else if(pago.url){
     alert('✅ Pago parcial registrado y soporte subido a Drive.');
   } else {
