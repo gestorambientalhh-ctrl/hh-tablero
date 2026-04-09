@@ -992,9 +992,22 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
             💰 Es tarea de pago
           </label>
         </div>
-        <div id="edit-payment-wrap" style="display:none" class="edit-field">
-          <label>Soporte requerido</label>
-          <input id="edit-support-desc" type="text" placeholder="Ej: Factura, comprobante...">
+        <div id="edit-payment-wrap" style="display:none;flex-direction:column;gap:8px">
+          <div class="edit-field" style="margin-bottom:0">
+            <label>Tipo</label>
+            <div style="display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;height:32px">
+              <button id="edit-fl-pago" onclick="setEditFlujoType('pago')" type="button" style="flex:1;font-size:12px;font-weight:600;background:#fef2f2;color:#dc2626;border:none;cursor:pointer;font-family:inherit">💸 Pago</button>
+              <button id="edit-fl-cobro" onclick="setEditFlujoType('cobro')" type="button" style="flex:1;font-size:12px;background:var(--bg2);color:var(--text2);border:none;border-left:1px solid var(--border);cursor:pointer;font-family:inherit">💰 Cobro</button>
+            </div>
+          </div>
+          <div class="edit-field" style="margin-bottom:0">
+            <label>Valor ($)</label>
+            <input id="edit-flujo-value" type="number" placeholder="0" min="0" style="font-size:13px">
+          </div>
+          <div class="edit-field" style="margin-bottom:0">
+            <label>Soporte requerido</label>
+            <input id="edit-support-desc" type="text" placeholder="Ej: Factura, comprobante...">
+          </div>
         </div>
         <div class="edit-field">
           <label>Nota de edición (opcional)</label>
@@ -1955,7 +1968,9 @@ function openEdit(id){
   document.getElementById('edit-biz').value = String(t.biz ?? 0);
   document.getElementById('edit-payment').checked = t.isPayment || false;
   document.getElementById('edit-support-desc').value = t.supportDesc || '';
+  document.getElementById('edit-flujo-value').value = t.flujoValue || '';
   document.getElementById('edit-payment-wrap').style.display = t.isPayment ? 'flex' : 'none';
+  setEditFlujoType(t.flujoType || 'pago');
   document.getElementById('edit-note').value = '';
   document.getElementById('edit-overlay').style.display = 'flex';
   setTimeout(()=>document.getElementById('edit-title').focus(), 100);
@@ -1964,6 +1979,15 @@ function openEdit(id){
 function closeEdit(){
   document.getElementById('edit-overlay').style.display = 'none';
   editingTaskId = null;
+}
+
+function setEditFlujoType(t){
+  const pb=document.getElementById('edit-fl-pago');
+  const cb=document.getElementById('edit-fl-cobro');
+  if(pb){pb.style.background=t==='pago'?'#fef2f2':'var(--bg2)';pb.style.color=t==='pago'?'#dc2626':'var(--text2)';pb.style.fontWeight=t==='pago'?'600':'400';}
+  if(cb){cb.style.background=t==='cobro'?'#f0fdf4':'var(--bg2)';cb.style.color=t==='cobro'?'#16a34a':'var(--text2)';cb.style.fontWeight=t==='cobro'?'600':'400';}
+  if(pb) pb.dataset.active = t==='pago'?'1':'0';
+  if(cb) cb.dataset.active = t==='cobro'?'1':'0';
 }
 
 function toggleEditPayment(){
@@ -1983,6 +2007,12 @@ function saveEdit(){
   t.biz = parseInt(document.getElementById('edit-biz').value);
   t.isPayment = document.getElementById('edit-payment').checked;
   t.supportDesc = t.isPayment ? document.getElementById('edit-support-desc').value.trim() : '';
+  if(t.isPayment){
+    const rawVal = parseFloat(document.getElementById('edit-flujo-value').value);
+    if(!isNaN(rawVal) && rawVal >= 0) t.flujoValue = rawVal;
+    const pagoBtn = document.getElementById('edit-fl-pago');
+    t.flujoType = (pagoBtn && pagoBtn.dataset.active==='1') ? 'pago' : 'cobro';
+  }
   // Mark as edited
   t.edited = true;
   t.editedAt = new Date().toLocaleDateString('es-CO');
@@ -3642,14 +3672,28 @@ function renderFlujoBody(){
   });
   const pagos=fl.filter(t=>t.flujoType!=='cobro');
   const cobros=fl.filter(t=>t.flujoType==='cobro');
-  const sumPagos=pagos.filter(t=>t.status!=='c').reduce((s,t)=>{
+  // Helper: tarea vencida = fecha pasada Y no completada
+  const isVencida = t => t.date && new Date(t.date+'T00:00:00') < now && t.status !== 'c';
+  // Sumas SOLO de tareas activas (excluye vencidas y completadas)
+  const sumPagos=pagos.filter(t=>t.status!=='c'&&!isVencida(t)).reduce((s,t)=>{
     const parciales=(t.pagosParciales||[]).reduce((a,p)=>a+(p.valor||0),0);
     return s+Math.max(0,(t.flujoValue||0)-parciales);
   },0);
-  const sumCobros=cobros.filter(t=>t.status!=='c').reduce((s,t)=>{
+  const sumCobros=cobros.filter(t=>t.status!=='c'&&!isVencida(t)).reduce((s,t)=>{
     const parciales=(t.pagosParciales||[]).reduce((a,p)=>a+(p.valor||0),0);
     return s+Math.max(0,(t.flujoValue||0)-parciales);
   },0);
+  // Sumas de vencidas (para mostrar alerta separada)
+  const sumVencidosPagos=pagos.filter(isVencida).reduce((s,t)=>{
+    const parciales=(t.pagosParciales||[]).reduce((a,p)=>a+(p.valor||0),0);
+    return s+Math.max(0,(t.flujoValue||0)-parciales);
+  },0);
+  const sumVencidosCobros=cobros.filter(isVencida).reduce((s,t)=>{
+    const parciales=(t.pagosParciales||[]).reduce((a,p)=>a+(p.valor||0),0);
+    return s+Math.max(0,(t.flujoValue||0)-parciales);
+  },0);
+  const cntVencidosPagos=pagos.filter(isVencida).length;
+  const cntVencidosCobros=cobros.filter(isVencida).length;
   const wNeto=fl.filter(t=>t.flujoType==='cobro'&&t.date&&t.date>=wS&&t.date<=wE).reduce((s,t)=>s+(t.flujoValue||0),0)
              -fl.filter(t=>t.flujoType!=='cobro'&&t.date&&t.date>=wS&&t.date<=wE).reduce((s,t)=>s+(t.flujoValue||0),0);
   const mNeto=fl.filter(t=>t.flujoType==='cobro'&&t.date&&t.date.startsWith(mKey)).reduce((s,t)=>s+(t.flujoValue||0),0)
@@ -3734,8 +3778,8 @@ function renderFlujoBody(){
     <button onclick="flujoMesFilter='';document.getElementById('flujo-mes-sel').value='';renderFlujoBody()" style="height:28px;padding:0 8px;font-size:11px;border:1px solid var(--border);border-radius:5px;background:var(--bg);cursor:pointer;color:var(--text3)">&times;</button>
   </div>
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-    <div class="fl-kpi"><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">A pagar</div><div style="font-size:20px;font-weight:600;color:#dc2626">${fmtMoney(sumPagos)}</div><div style="font-size:10px;color:var(--text3)">${pagos.filter(t=>t.status!=='c').length} tareas</div></div>
-    <div class="fl-kpi"><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">A cobrar</div><div style="font-size:20px;font-weight:600;color:#16a34a">${fmtMoney(sumCobros)}</div><div style="font-size:10px;color:var(--text3)">${cobros.filter(t=>t.status!=='c').length} tareas</div></div>
+    <div class="fl-kpi"><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">A pagar</div><div style="font-size:20px;font-weight:600;color:#dc2626">${fmtMoney(sumPagos)}</div><div style="font-size:10px;color:var(--text3)">${pagos.filter(t=>t.status!=='c'&&!isVencida(t)).length} tareas activas</div>${cntVencidosPagos>0?`<div style="font-size:10px;color:#92400e;margin-top:3px;background:#fef3c7;border-radius:4px;padding:2px 6px">⚠ ${cntVencidosPagos} vencida${cntVencidosPagos>1?'s':''}: ${fmtMoney(sumVencidosPagos)}</div>`:''}</div>
+    <div class="fl-kpi"><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">A cobrar</div><div style="font-size:20px;font-weight:600;color:#16a34a">${fmtMoney(sumCobros)}</div><div style="font-size:10px;color:var(--text3)">${cobros.filter(t=>t.status!=='c'&&!isVencida(t)).length} tareas activas</div>${cntVencidosCobros>0?`<div style="font-size:10px;color:#92400e;margin-top:3px;background:#fef3c7;border-radius:4px;padding:2px 6px">⚠ ${cntVencidosCobros} vencida${cntVencidosCobros>1?'s':''}: ${fmtMoney(sumVencidosCobros)}</div>`:''}</div>
     <div class="fl-kpi"><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">Flujo semana</div><div style="font-size:20px;font-weight:600;color:${nc(wNeto)}">${ns(wNeto)}${fmtMoney(Math.abs(wNeto))}</div><div style="font-size:10px;color:var(--text3)">${wLabel}</div></div>
     <div class="fl-kpi"><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">Flujo mes</div><div style="font-size:20px;font-weight:600;color:${nc(mNeto)}">${ns(mNeto)}${fmtMoney(Math.abs(mNeto))}</div><div style="font-size:10px;color:var(--text3)">${MES2[now.getMonth()]} ${now.getFullYear()}</div></div>
   </div>
