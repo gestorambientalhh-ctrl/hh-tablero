@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://firebasestorage.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://script.google.com https://drive.google.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://script.google.com;">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Gestor HH · Tasks</title>
 <style>
@@ -637,6 +638,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
       <input class="search-top" type="text" placeholder="Buscar..." id="sq" oninput="renderCurrent()">
       <div id="fwho-btns" style="display:flex;gap:4px"></div><input type="hidden" id="fwho" value="">
 <button onclick="openUserModal()" title="Configurar usuarios" style="width:32px;height:32px;border-radius:50%;background:var(--bg2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px">👥</button>
+      <button onclick="openBackupModal()" title="Respaldos de seguridad" style="width:32px;height:32px;border-radius:50%;background:var(--bg2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px">🛡️</button>
       <button class="avatar-btn" onclick="logout()" title="Salir">HH</button>
     </div>
   </nav>
@@ -1076,30 +1078,55 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 
   <!-- NOTAS PANEL LATERAL (estilo Google Tasks) -->
   <div id="notas-panel" style="position:fixed;top:52px;right:0;bottom:0;width:320px;background:#fff;border-left:1px solid #ebebeb;z-index:200;display:none;flex-direction:column;transform:translateX(100%);transition:transform .25s ease">
-    <!-- Header panel -->
-    <div style="padding:14px 16px;border-bottom:1px solid #ebebeb;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
-      <span style="font-size:14px;font-weight:600;color:var(--text)">Notas</span>
-      <button onclick="toggleNotasPanel()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2);line-height:1;padding:0 4px">&times;</button>
+    <!-- Tabs: Notas / To-Do -->
+    <div style="display:flex;align-items:center;border-bottom:1px solid #ebebeb;flex-shrink:0;padding:0 14px;height:44px;gap:0">
+      <button id="tab-notas" onclick="switchNotasTab('notas')" style="flex:1;height:44px;background:none;border:none;border-bottom:2px solid #2d4a7a;font-size:13px;font-weight:600;color:#1a1a1a;cursor:pointer;font-family:inherit">Notas</button>
+      <button id="tab-todo" onclick="switchNotasTab('todo')" style="flex:1;height:44px;background:none;border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:400;color:#787774;cursor:pointer;font-family:inherit">To-Do</button>
+      <button onclick="toggleNotasPanel()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#b3b3b0;line-height:1;padding:0 2px;margin-left:8px">&times;</button>
     </div>
-    <!-- Input rápido -->
-    <div style="padding:10px 14px;border-bottom:1px solid #f0f0ee;flex-shrink:0">
-      <input id="nota-input-titulo" type="text" placeholder="Agregar una nota..." onkeydown="if(event.key==='Enter')quickSaveNota()" style="width:100%;height:36px;font-size:13px;border:none;border-bottom:2px solid #2d4a7a;outline:none;background:transparent;font-family:inherit;color:var(--text);padding:0 2px">
-      <div id="nota-input-extra" style="display:none;margin-top:8px">
-        <textarea id="nota-input-contenido" placeholder="Detalles..." style="width:100%;height:70px;font-size:12px;border:0.5px solid #e2e8f0;border-radius:8px;padding:8px;font-family:inherit;outline:none;resize:none;color:var(--text);background:var(--bg2)"></textarea>
-        <div style="display:flex;gap:6px;margin-top:6px;align-items:center">
-          <input id="nota-input-fecha" type="date" style="font-size:11px;border:0.5px solid #e2e8f0;border-radius:6px;padding:3px 6px;font-family:inherit;color:var(--text2);background:var(--bg2)">
-          <select id="nota-input-biz" style="font-size:11px;border:0.5px solid #e2e8f0;border-radius:6px;padding:3px 6px;font-family:inherit;color:var(--text2);background:var(--bg2);flex:1">
-            <option value="">General</option>
-            <option value="0">Gestor HH</option>
-            <option value="1">Logístico</option>
-            <option value="2">Montevra</option>
-          </select>
-          <button onclick="quickSaveNota()" style="height:28px;padding:0 10px;font-size:11px;font-weight:500;background:#2d4a7a;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;white-space:nowrap">Guardar</button>
+
+    <!-- SECCIÓN NOTAS -->
+    <div id="notas-tab-content" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+      <div style="padding:10px 14px;border-bottom:1px solid #f0f0ee;flex-shrink:0">
+        <input id="nota-input-titulo" type="text" placeholder="Agregar una nota..." onkeydown="if(event.key==='Enter')quickSaveNota()" style="width:100%;height:36px;font-size:13px;border:none;border-bottom:2px solid #2d4a7a;outline:none;background:transparent;font-family:inherit;color:var(--text);padding:0 2px">
+        <div id="nota-input-extra" style="display:none;margin-top:8px">
+          <textarea id="nota-input-contenido" placeholder="Detalles..." style="width:100%;height:70px;font-size:12px;border:0.5px solid #e2e8f0;border-radius:8px;padding:8px;font-family:inherit;outline:none;resize:none;color:var(--text);background:var(--bg2)"></textarea>
+          <div style="display:flex;gap:6px;margin-top:6px;align-items:center">
+            <input id="nota-input-fecha" type="date" style="font-size:11px;border:0.5px solid #e2e8f0;border-radius:6px;padding:3px 6px;font-family:inherit;color:var(--text2);background:var(--bg2)">
+            <select id="nota-input-biz" style="font-size:11px;border:0.5px solid #e2e8f0;border-radius:6px;padding:3px 6px;font-family:inherit;color:var(--text2);background:var(--bg2);flex:1">
+              <option value="">General</option>
+              <option value="0">Gestor HH</option>
+              <option value="1">Logístico</option>
+              <option value="2">Montevra</option>
+            </select>
+            <button onclick="quickSaveNota()" style="height:28px;padding:0 10px;font-size:11px;font-weight:500;background:#2d4a7a;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;white-space:nowrap">Guardar</button>
+          </div>
+        </div>
+      </div>
+      <div id="notas-body" style="flex:1;overflow-y:auto;padding:6px 0;-webkit-overflow-scrolling:touch"></div>
+    </div>
+
+    <!-- SECCIÓN TO-DO (oculta por defecto) -->
+    <div id="todo-tab-content" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+      <!-- Input nuevo to-do -->
+      <div style="padding:12px 14px;border-bottom:1px solid #f0f0ee;flex-shrink:0;display:flex;align-items:center;gap:8px">
+        <div style="width:18px;height:18px;border-radius:50%;border:2px solid #d1cdc7;flex-shrink:0"></div>
+        <input id="todo-input" type="text" placeholder="Agregar una tarea..." onkeydown="if(event.key==='Enter')addTodoItem()" style="flex:1;height:32px;font-size:13px;border:none;outline:none;background:transparent;font-family:inherit;color:var(--text)">
+        <button onclick="addTodoItem()" style="height:28px;width:28px;background:#2d4a7a;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0">+</button>
+      </div>
+      <!-- Lista to-do pendientes -->
+      <div id="todo-list" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch">
+        <div id="todo-pending" style="padding:4px 0"></div>
+        <!-- Completadas -->
+        <div id="todo-done-section" style="display:none;border-top:1px solid #f0f0ee;margin-top:4px">
+          <div onclick="toggleDoneSection()" style="display:flex;align-items:center;gap:6px;padding:10px 14px;cursor:pointer;font-size:12px;color:#787774;font-weight:500">
+            <span id="todo-done-arrow" style="font-size:10px;transition:transform .2s">▶</span>
+            Completadas <span id="todo-done-cnt" style="background:#f0f0ee;border-radius:999px;padding:1px 7px;font-size:11px"></span>
+          </div>
+          <div id="todo-done" style="display:none;padding:0 0 8px"></div>
         </div>
       </div>
     </div>
-    <!-- Lista notas -->
-    <div id="notas-body" style="flex:1;overflow-y:auto;padding:6px 0;-webkit-overflow-scrolling:touch"></div>
   </div>
   <!-- Overlay oscuro cuando panel abierto en móvil -->
   <div id="notas-overlay-bg" onclick="toggleNotasPanel()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:199"></div>
@@ -1264,7 +1291,6 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 </div>
 
 <script>
-const PW='hh2026';
 const BIZS=[{name:'Gestor Ambiental HH'},{name:'Operador Logístico'},{name:'Montevra'},{name:'Vista general'}];
 const BIZ_C=['#639922','#378ADD','#D85A30'];
 const BIZ_NAMES=['Gestor HH','Logístico','Montevra'];
@@ -1305,6 +1331,28 @@ const MONTHS=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov',
 window.tasks=[];let biz=0,tasks=window.tasks,curSection='tablero';
 let deletedTasks = JSON.parse(localStorage.getItem('hh-deleted-v1')||'[]');
 window.deletedTasks = deletedTasks;
+
+// ── SEGURIDAD: Sanitización XSS ──────────────────────────────
+function escapeHtml(s){
+  if(typeof s !== 'string') return String(s||'');
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ── SEGURIDAD: Auto-logout por inactividad (30 minutos) ───────
+let _inactivityTimer = null;
+function _resetInactivity(){
+  clearTimeout(_inactivityTimer);
+  _inactivityTimer = setTimeout(()=>{
+    if(document.getElementById('app')?.style.display!=='none'){
+      alert('Sesión cerrada por inactividad (30 min).');
+      if(typeof logout==='function') logout();
+    }
+  }, 30 * 60 * 1000);
+}
+['click','keydown','scroll','touchstart'].forEach(ev=>
+  document.addEventListener(ev, _resetInactivity, {passive:true})
+);
+_resetInactivity();
 
 // checkPw moved to viewer mode section
 function logout(){
@@ -1531,19 +1579,22 @@ function initDragDrop(){
 
 
 // ── VIEWER MODE ───────────────────────────────────────────────
-const VIEWER_PW = 'ver2026';
-const CLIENT_PW = 'Purina2026';
+// contraseñas gestionadas como hash SHA-256 en checkPw
 let isViewer = false;
 let isClient = false;
 
-function checkPw(){
+async function checkPw(){
   const val = document.getElementById('pw-input').value;
-  if(val === PW){
+  if(!val) return;
+  // Comparar con hash SHA-256 — nunca texto plano en el código
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(val));
+  const hex = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  if(hex === '083ec3b9e16da395ec7f503c2a6b0b709ebc8a60a4e15e9603cedc407fd96ded'){
     isViewer = false; isClient = false;
     document.getElementById('lock-screen').style.display='none';
     document.getElementById('app').style.display='block';
     loadTasks();
-  } else if(val === VIEWER_PW){
+  } else if(hex === 'a71d06b7a3402ca795d82da5531ea071d000436a9fa7e9b3ff00970042d9ef8a'){
     isViewer = true; isClient = false;
     document.getElementById('lock-screen').style.display='none';
     document.getElementById('app').style.display='block';
@@ -1553,7 +1604,7 @@ function checkPw(){
     document.querySelector('.topnav').after(banner);
     document.getElementById('btn-add').style.display='none';
     loadTasks();
-  } else if(val === CLIENT_PW){
+  } else if(hex === '48221bb4a601526de753de0d00f7adbac24df55bd9f05261f6491c317c233ec8'){
     isViewer = false; isClient = true;
     document.getElementById('lock-screen').style.display='none';
     document.getElementById('client-portal').style.display='flex';
@@ -3927,24 +3978,127 @@ function persistNotas(){
   if(window.persistNotasToFirebase) window.persistNotasToFirebase(notas);
 }
 
+let _notasTabActiva = 'notas';
+
+function switchNotasTab(tab){
+  _notasTabActiva = tab;
+  const tNotas = document.getElementById('tab-notas');
+  const tTodo  = document.getElementById('tab-todo');
+  const cNotas = document.getElementById('notas-tab-content');
+  const cTodo  = document.getElementById('todo-tab-content');
+  if(tab === 'notas'){
+    tNotas.style.borderBottomColor='#2d4a7a'; tNotas.style.fontWeight='600'; tNotas.style.color='#1a1a1a';
+    tTodo.style.borderBottomColor='transparent'; tTodo.style.fontWeight='400'; tTodo.style.color='#787774';
+    cNotas.style.display='flex'; cTodo.style.display='none';
+  } else {
+    tTodo.style.borderBottomColor='#2d4a7a'; tTodo.style.fontWeight='600'; tTodo.style.color='#1a1a1a';
+    tNotas.style.borderBottomColor='transparent'; tNotas.style.fontWeight='400'; tNotas.style.color='#787774';
+    cNotas.style.display='none'; cTodo.style.display='flex';
+    renderTodo();
+    setTimeout(()=>document.getElementById('todo-input')?.focus(), 200);
+  }
+}
+
 function toggleNotasPanel(){
   const panel = document.getElementById('notas-panel');
   const overlay = document.getElementById('notas-overlay-bg');
   const btn = document.getElementById('notas-btn');
+  const appLayout = document.getElementById('section-tablero');
   notasPanelOpen = !notasPanelOpen;
   if(notasPanelOpen){
     panel.style.display = 'flex';
     setTimeout(()=>panel.style.transform='translateX(0)', 10);
-    if(window.innerWidth < 700 && overlay) overlay.style.display='block';
+    // Comprimir el tablero en desktop
+    if(window.innerWidth >= 700 && appLayout){
+      appLayout.style.marginRight = '320px';
+      appLayout.style.transition  = 'margin-right .25s ease';
+    } else if(overlay){
+      overlay.style.display='block';
+    }
     if(btn) btn.style.background='#eef2f9';
     const inp = document.getElementById('nota-input-titulo');
-    if(inp) { inp.value=''; setTimeout(()=>inp.focus(),300); }
-    renderNotas();
+    if(inp && _notasTabActiva==='notas') { inp.value=''; setTimeout(()=>inp.focus(),300); }
+    if(_notasTabActiva==='notas') renderNotas();
+    else renderTodo();
   } else {
     panel.style.transform = 'translateX(100%)';
     setTimeout(()=>panel.style.display='none', 250);
+    if(appLayout){ appLayout.style.marginRight='0'; }
     if(overlay) overlay.style.display='none';
     if(btn) btn.style.background='none';
+  }
+}
+
+// ── TO-DO (estilo Google Tasks) ────────────────────────────────
+let todoItems = JSON.parse(localStorage.getItem('hh-todo-v1')||'[]');
+let _todoDoneOpen = false;
+
+function persistTodo(){
+  localStorage.setItem('hh-todo-v1', JSON.stringify(todoItems));
+  if(window.persistTodoToFirebase) window.persistTodoToFirebase([...todoItems]);
+}
+
+function addTodoItem(){
+  const inp = document.getElementById('todo-input');
+  const txt = inp?.value.trim();
+  if(!txt) return;
+  todoItems.unshift({ id:'td'+Date.now(), text:txt, done:false, createdAt:Date.now() });
+  persistTodo();
+  inp.value = '';
+  renderTodo();
+}
+
+function toggleTodoItem(id){
+  const item = todoItems.find(t=>t.id===id);
+  if(!item) return;
+  item.done = !item.done;
+  item.doneAt = item.done ? Date.now() : null;
+  persistTodo();
+  renderTodo();
+}
+
+function delTodoItem(id){
+  todoItems = todoItems.filter(t=>t.id!==id);
+  persistTodo();
+  renderTodo();
+}
+
+function toggleDoneSection(){
+  _todoDoneOpen = !_todoDoneOpen;
+  const done = document.getElementById('todo-done');
+  const arrow = document.getElementById('todo-done-arrow');
+  if(done) done.style.display = _todoDoneOpen ? 'block' : 'none';
+  if(arrow) arrow.style.transform = _todoDoneOpen ? 'rotate(90deg)' : '';
+}
+
+function renderTodo(){
+  const pending = todoItems.filter(t=>!t.done);
+  const done    = todoItems.filter(t=>t.done);
+  const pEl = document.getElementById('todo-pending');
+  const dEl = document.getElementById('todo-done');
+  const dSec = document.getElementById('todo-done-section');
+  const dCnt = document.getElementById('todo-done-cnt');
+  if(!pEl) return;
+
+  const itemHTML = (t) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #f9f9f8;group" onmouseenter="this.querySelector('.td-del').style.opacity='1'" onmouseleave="this.querySelector('.td-del').style.opacity='0'">
+      <div onclick="toggleTodoItem('${t.id}')" style="width:18px;height:18px;border-radius:50%;border:2px solid ${t.done?'#2d9e6b':'#d1cdc7'};flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;background:${t.done?'#2d9e6b':'transparent'};transition:all .15s">
+        ${t.done?`<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>`:''}
+      </div>
+      <span onclick="toggleTodoItem('${t.id}')" style="flex:1;font-size:13px;color:${t.done?'#b3b3b0':'#1a1a1a'};text-decoration:${t.done?'line-through':'none'};cursor:pointer;line-height:1.4">${t.text}</span>
+      <button class="td-del" onclick="delTodoItem('${t.id}')" style="background:none;border:none;color:#d1cdc7;cursor:pointer;font-size:15px;padding:0;line-height:1;opacity:0;transition:opacity .15s;flex-shrink:0">&times;</button>
+    </div>`;
+
+  pEl.innerHTML = pending.length
+    ? pending.map(itemHTML).join('')
+    : `<div style="text-align:center;padding:32px 16px;color:#b3b3b0;font-size:12px">Sin tareas pendientes</div>`;
+
+  if(done.length){
+    if(dSec) dSec.style.display='block';
+    if(dCnt) dCnt.textContent = done.length;
+    if(dEl) dEl.innerHTML = done.map(itemHTML).join('');
+  } else {
+    if(dSec) dSec.style.display='none';
   }
 }
 
@@ -4322,7 +4476,7 @@ function guardarArchivoClienteLocal(nombre, tipo, url){
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 
-import { getFirestore, doc, onSnapshot, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, doc, onSnapshot, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const app = initializeApp({
   apiKey: "AIzaSyCxhnHG97zE_VY2yBcnlDv7wwjtdmVhQS0",
@@ -4334,18 +4488,29 @@ const app = initializeApp({
 });
 
 const db = getFirestore(app);
-const TASKS_REF = doc(db, 'hh-socios', 'tareas');
+const TASKS_REF   = doc(db, 'hh-socios', 'tareas');
 const MEETINGS_REF = doc(db, 'hh-socios', 'reuniones');
-const DELETED_REF = doc(db, 'hh-socios', 'eliminadas');
+const DELETED_REF  = doc(db, 'hh-socios', 'eliminadas');
 const ARCHIVOS_CLIENTE_REF = doc(db, 'hh-socios', 'archivos-cliente');
+const BACKUP_REF   = doc(db, 'hh-socios', 'backup-diario');
+const BACKUP2_REF  = doc(db, 'hh-socios', 'backup-semanal');
+
+// Cargar info de backups para el modal
+window._loadBackupInfo = async function(){
+  try {
+    const [d, s] = await Promise.all([getDoc(BACKUP_REF), getDoc(BACKUP2_REF)]);
+    const dEl = document.getElementById('backup-diario-meta');
+    const sEl = document.getElementById('backup-semanal-meta');
+    if(dEl) dEl.textContent = d.exists() ? `${d.data().total} tareas · ${d.data().fecha}` : 'Sin backup diario aún';
+    if(sEl) sEl.textContent = s.exists() ? `${s.data().total} tareas · ${s.data().fecha}` : 'Sin backup semanal aún';
+  } catch(e) { console.warn('Error cargando info backups:', e); }
+};
 
 // Debounce timers
 let tasksWriteTimer = null;
 let meetingsWriteTimer = null;
 
 // ── PROTECCIÓN ANTI-SOBREESCRITURA ────────────────────────────
-// Guarda el timestamp del último write LOCAL en localStorage
-// para que sobreviva recargas de página
 function _setLocalWriteTime() {
   const t = Date.now();
   localStorage.setItem('hh-last-local-write', String(t));
@@ -4355,17 +4520,56 @@ function _getLocalWriteTime() {
   return parseInt(localStorage.getItem('hh-last-local-write') || '0');
 }
 
-// ── ESCRITURA INMEDIATA (para deletes y cambios críticos) ──────
+// ── SISTEMA DE RESPALDO AUTOMÁTICO ────────────────────────────
+
+// Guarda snapshot de seguridad — solo si hay datos reales
+async function _hacerBackup(taskList) {
+  if(!taskList || taskList.length === 0) return; // nunca hacer backup de lista vacía
+  try {
+    const hoy = new Date().toISOString().split('T')[0];
+    const semana = `${new Date().getFullYear()}-S${Math.ceil(new Date().getDate()/7)}`;
+    const payload = { tasks: taskList, fecha: hoy, total: taskList.length, savedAt: Date.now() };
+    // Backup diario — se sobreescribe cada día
+    await setDoc(BACKUP_REF, payload);
+    // Backup semanal — se sobreescribe cada semana
+    const bkSnap = await getDoc(BACKUP2_REF).catch(()=>null);
+    const bkData = bkSnap?.exists() ? bkSnap.data() : null;
+    // Solo actualizar backup semanal si tenemos más tareas que el anterior
+    if(!bkData || taskList.length >= (bkData.total||0)) {
+      await setDoc(BACKUP2_REF, {...payload, semana});
+    }
+  } catch(e) { console.warn('Backup error (no crítico):', e); }
+}
+
+// ── GUARD DE SEGURIDAD — nunca escribir menos del 50% de lo conocido ──
+function _safeToWrite(taskList) {
+  const knownCount = parseInt(localStorage.getItem('hh-max-tasks-known') || '0');
+  const newCount = taskList ? taskList.length : 0;
+  // Actualizar el máximo conocido
+  if(newCount > knownCount) localStorage.setItem('hh-max-tasks-known', String(newCount));
+  // Bloquear si la lista nueva tiene menos del 50% del máximo histórico
+  if(knownCount > 5 && newCount < knownCount * 0.5) {
+    console.error(`🛑 WRITE BLOQUEADO: intentando guardar ${newCount} tareas pero el máximo histórico es ${knownCount}. Posible pérdida de datos.`);
+    const ind = document.getElementById('sync-indicator');
+    if(ind){ ind.textContent='⚠️ Write bloqueado'; ind.style.background='#fef3c7'; ind.style.color='#92400e'; ind.style.opacity='1'; setTimeout(()=>{ind.style.opacity='0';ind.textContent='⟳ Sincronizado';ind.style.background='#dcfce7';ind.style.color='#16a34a';},5000); }
+    return false;
+  }
+  return true;
+}
+
+// ── ESCRITURA INMEDIATA con guard de seguridad ─────────────────
 window.persistTasksImmediate = async function(taskList) {
+  if(!_safeToWrite(taskList)) return; // BLOQUEAR si parece pérdida de datos
   const writeTime = _setLocalWriteTime();
   clearTimeout(tasksWriteTimer);
   try {
     await setDoc(TASKS_REF, { tasks: taskList, updatedAt: writeTime });
     const ind = document.getElementById('sync-indicator');
     if(ind){ ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0',2000); }
-    console.log('✅ Delete guardado en Firebase:', writeTime);
+    // Hacer backup cada vez que escribimos exitosamente
+    _hacerBackup(taskList);
   } catch(e) {
-    console.error('❌ Error guardando delete en Firebase:', e);
+    console.error('❌ Error guardando en Firebase:', e);
   }
 };
 
@@ -4375,8 +4579,9 @@ window.persistDeletedImmediate = async function(deletedList) {
   } catch(e) { console.warn('Deleted write error:', e); }
 };
 
-// ── ESCRITURA NORMAL (debounced 800ms, para ediciones) ─────────
+// ── ESCRITURA NORMAL con guard de seguridad ────────────────────
 window.persistToFirebase = function(taskList) {
+  if(!_safeToWrite(taskList)) return; // BLOQUEAR si parece pérdida de datos
   clearTimeout(tasksWriteTimer);
   tasksWriteTimer = setTimeout(async () => {
     const writeTime = _setLocalWriteTime();
@@ -4384,8 +4589,31 @@ window.persistToFirebase = function(taskList) {
       await setDoc(TASKS_REF, { tasks: taskList, updatedAt: writeTime });
       const ind = document.getElementById('sync-indicator');
       if(ind){ ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0',2000); }
+      _hacerBackup(taskList);
     } catch(e) { console.warn('Tasks write error:', e); }
   }, 800);
+};
+
+// ── RESTAURAR DESDE BACKUP ─────────────────────────────────────
+window.restaurarDesdeBackup = async function(tipo) {
+  const ref = tipo === 'semanal' ? BACKUP2_REF : BACKUP_REF;
+  try {
+    const snap = await getDoc(ref);
+    if(!snap.exists()) { alert('No hay backup disponible.'); return; }
+    const data = snap.data();
+    if(!data.tasks || !data.tasks.length) { alert('El backup está vacío.'); return; }
+    const ok = confirm(`¿Restaurar ${data.tasks.length} tareas del backup del ${data.fecha}? Esto reemplazará los datos actuales.`);
+    if(!ok) return;
+    // Guardar directamente sin el guard (es una restauración intencional)
+    const restoreTime = _setLocalWriteTime(); // marcar timestamp ANTES de escribir
+    localStorage.setItem('hh-max-tasks-known', String(data.tasks.length));
+    await setDoc(TASKS_REF, { tasks: data.tasks, updatedAt: restoreTime });
+    window.tasks = data.tasks;
+    tasks = data.tasks;
+    localStorage.setItem('hh-socios-v3', JSON.stringify(data.tasks));
+    if(typeof renderCurrent === 'function') renderCurrent();
+    alert(`✅ Restauradas ${data.tasks.length} tareas desde el backup del ${data.fecha}`);
+  } catch(e) { alert('Error al restaurar: ' + e.message); }
 };
 
 // Write meetings to Firebase (debounced 800ms)
@@ -4410,7 +4638,7 @@ window.addEventListener('app-ready', () => {
     const fbTime = data.updatedAt || 0;
     const localTime = _getLocalWriteTime();
     if (fbTime < localTime) {
-      console.log('⏭️ onSnapshot ignorado — Firebase más viejo que write local', fbTime, '<', localTime);
+      // log omitido en producción
       return;
     }
     // ── FILTRAR tareas que ya están en la papelera ──────────────
@@ -4418,7 +4646,7 @@ window.addEventListener('app-ready', () => {
     const filtradas = data.tasks.filter(t => !deletedIds.has(t.id));
     // Si hay diferencia, re-escribir Firebase limpio
     if(filtradas.length < data.tasks.length && window.persistTasksImmediate){
-      console.log('🧹 Limpiando tareas eliminadas de Firebase:', data.tasks.length - filtradas.length);
+      // log omitido en producción
       window.persistTasksImmediate(filtradas);
     }
     window.tasks = filtradas;
@@ -4452,6 +4680,25 @@ if (document.readyState === 'loading') {
 } else {
   startMeetingsListener();
 }
+
+// ── TODO FIREBASE SYNC ───────────────────────────────────────
+const TODO_REF = doc(db, 'hh-socios', 'todo');
+let todoWriteTimer = null;
+window.persistTodoToFirebase = function(list) {
+  clearTimeout(todoWriteTimer);
+  todoWriteTimer = setTimeout(async ()=>{
+    try{ await setDoc(TODO_REF, { items: list, updatedAt: Date.now() }); }
+    catch(e){ console.warn('Todo write error:',e); }
+  }, 800);
+};
+onSnapshot(TODO_REF, snap => {
+  if(!snap.exists()) return;
+  const data = snap.data();
+  if(!data.items || !Array.isArray(data.items)) return;
+  if(typeof todoItems !== 'undefined') todoItems = data.items;
+  localStorage.setItem('hh-todo-v1', JSON.stringify(data.items));
+  if(typeof renderTodo === 'function' && typeof notasPanelOpen !== 'undefined' && notasPanelOpen && typeof _notasTabActiva !== 'undefined' && _notasTabActiva==='todo') renderTodo();
+});
 
 // ── ARCHIVOS CLIENTE FIREBASE SYNC ───────────────────────────
 window.persistArchivosCliente = async function(lista) {
@@ -4511,6 +4758,43 @@ onSnapshot(NOTAS_REF, snap => {
     if(typeof renderNotas === 'function') renderNotas();
   }
 });
+</script>
+
+<!-- MODAL RESPALDOS -->
+<div id="backup-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:12px;width:100%;max-width:420px;box-shadow:0 8px 32px rgba(0,0,0,.18);overflow:hidden">
+    <div style="padding:14px 20px;border-bottom:1px solid #f0f0ee;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:14px;font-weight:600;color:#1a1a1a">🛡️ Respaldos de seguridad</div>
+        <div style="font-size:11px;color:#9e9e9c;margin-top:2px">Restaura tus datos si algo sale mal</div>
+      </div>
+      <button onclick="closeBackupModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#b3b3b0">&times;</button>
+    </div>
+    <div style="padding:16px 20px;display:flex;flex-direction:column;gap:10px">
+      <div style="background:#f7f7f5;border-radius:8px;padding:12px 14px">
+        <div style="font-size:12px;font-weight:500;color:#1a1a1a;margin-bottom:4px">📅 Backup diario</div>
+        <div id="backup-diario-meta" style="font-size:11px;color:#9e9e9c;margin-bottom:8px">Cargando...</div>
+        <button onclick="window.restaurarDesdeBackup('diario')" style="height:30px;padding:0 14px;font-size:12px;font-weight:500;background:#2d4a7a;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit">Restaurar backup diario</button>
+      </div>
+      <div style="background:#f7f7f5;border-radius:8px;padding:12px 14px">
+        <div style="font-size:12px;font-weight:500;color:#1a1a1a;margin-bottom:4px">📆 Backup semanal</div>
+        <div id="backup-semanal-meta" style="font-size:11px;color:#9e9e9c;margin-bottom:8px">Cargando...</div>
+        <button onclick="window.restaurarDesdeBackup('semanal')" style="height:30px;padding:0 14px;font-size:12px;font-weight:500;background:#1e6b4a;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit">Restaurar backup semanal</button>
+      </div>
+      <div style="background:#fef3c7;border-radius:8px;padding:10px 12px;font-size:11px;color:#92400e">
+        ⚠️ Restaurar reemplaza las tareas actuales con las del backup. Solo úsalo si perdiste datos.
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+function openBackupModal(){
+  document.getElementById('backup-modal').style.display='flex';
+  if(window._loadBackupInfo) window._loadBackupInfo();
+}
+function closeBackupModal(){
+  document.getElementById('backup-modal').style.display='none';
+}
 </script>
 </body>
 </html>
