@@ -1493,6 +1493,9 @@ function toggleForm(){
     document.getElementById('fa-preview').style.display='none';
     document.getElementById('fa-title').focus();
     document.getElementById('fa-date').onchange=updateRecPreview;
+  } else {
+    // Al cerrar, limpiar estado de subtarea
+    cancelarSubtarea();
   }
 }
 
@@ -2315,6 +2318,21 @@ function loadTasks(){
   setTimeout(checkRecurringOnLoad, 1500);
   window.dispatchEvent(new Event('app-ready'));
   // Firebase listener handles real-time sync automatically
+
+  // ── VERIFICACIÓN AUTOMÁTICA PERIÓDICA ─────────────────────
+  // Cada 60 segundos revisa si hay tareas que deben avanzar
+  // (próximas a vencer → En Progreso, fecha pasada → columna Vencidas)
+  // sin necesidad de salir ni recargar la interfaz
+  if(window._autoCheckInterval) clearInterval(window._autoCheckInterval);
+  window._autoCheckInterval = setInterval(()=>{
+    if(!window.tasks || window.tasks.length === 0) return; // guard: Firebase no ha cargado
+    const prev = JSON.stringify(window.tasks.map(t=>({id:t.id,status:t.status})));
+    autoAdvanceTasks(); // mueve 'p' → 'e' si quedan ≤5 días
+    // Re-render del tablero para mostrar columna Vencidas actualizada
+    if(typeof window.renderCurrent === 'function') window.renderCurrent();
+    const after = JSON.stringify(window.tasks.map(t=>({id:t.id,status:t.status})));
+    if(prev !== after) console.log('⏰ Auto-check: tareas actualizadas');
+  }, 60000); // cada 60 segundos
 }
 
 // ── RECURRING TASKS ──────────────────────────────────────────
@@ -2471,11 +2489,28 @@ function saveTask(){
   } else {
     const isPayment = document.getElementById('fa-payment').checked;
   const supportDesc = isPayment ? document.getElementById('fa-support-desc').value.trim() : '';
-  tasks.push({id:Date.now()+'',title,who:whoVal,pri:priVal,date:dateVal,status:'p',biz:bizVal,
+  const newTask = {id:Date.now()+'',title,who:whoVal,pri:priVal,date:dateVal,status:'p',biz:bizVal,
     isPayment: isPayment || false,
     supportDesc: supportDesc,
     supportDone: false
-  });
+  };
+  // Si viene de una tarea origen (subtarea)
+  if(_subtaskOriginId){
+    const parent = tasks.find(x=>x.id===_subtaskOriginId);
+    if(parent){
+      newTask.originId = parent.id;
+      newTask.originTitle = parent.title;
+      // Registrar nota en la tarea padre
+      if(!parent.notes) parent.notes = [];
+      parent.notes.push({
+        text: '🔗 Generó subtarea: "' + title + '"' + (dateVal ? ' — ' + fmtDate(dateVal) : ''),
+        date: new Date().toLocaleDateString('es-CO'),
+        from: 'Sistema'
+      });
+    }
+    cancelarSubtarea();
+  }
+  tasks.push(newTask);
   }
   persist();
   document.getElementById('fa-title').value='';
@@ -2489,6 +2524,44 @@ function saveTask(){
 }
 
 let pendingMove={id:null,dir:null};
+
+// ── SUBTAREAS / TAREA ORIGINADA ────────────────────────────────
+let _subtaskOriginId = null; // ID de la tarea padre al crear subtarea
+
+function abrirSubtarea(parentId){
+  const parent = tasks.find(x=>x.id===parentId);
+  if(!parent) return;
+  _subtaskOriginId = parentId;
+  // Abrir formulario normal
+  const f = document.getElementById('form-area');
+  f.style.display = 'block';
+  // Pre-seleccionar mismo proyecto y responsable
+  document.getElementById('fa-biz').value = String(parent.biz ?? 0);
+  document.getElementById('fa-who').value = parent.who || '';
+  document.getElementById('fa-pri').value = 'normal';
+  document.getElementById('fa-date').value = '';
+  document.getElementById('fa-title').value = '';
+  document.getElementById('fa-freq').value = 'none';
+  document.getElementById('fa-times-wrap').style.display = 'none';
+  document.getElementById('fa-preview').style.display = 'none';
+  // Mostrar banner de origen
+  const existing = document.getElementById('subtask-origin-banner');
+  if(existing) existing.remove();
+  const banner = document.createElement('div');
+  banner.id = 'subtask-origin-banner';
+  banner.style.cssText = 'background:#eef4ff;border:1.5px solid #c5d3e8;border-radius:8px;padding:8px 12px;font-size:12px;color:#2d4a7a;margin-bottom:10px;display:flex;align-items:center;gap:8px';
+  banner.innerHTML = `<span style="font-size:15px">🔗</span><span>Subtarea de: <strong>${escapeHtml(parent.title)}</strong></span><button onclick="cancelarSubtarea()" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:15px;color:#888;line-height:1" title="Quitar origen">×</button>`;
+  f.insertBefore(banner, f.firstChild);
+  // Scroll al formulario y focus
+  f.scrollIntoView({behavior:'smooth', block:'start'});
+  setTimeout(()=>document.getElementById('fa-title').focus(), 300);
+}
+
+function cancelarSubtarea(){
+  _subtaskOriginId = null;
+  const banner = document.getElementById('subtask-origin-banner');
+  if(banner) banner.remove();
+}
 
 let isVencidaCompletion = false;
 
@@ -2884,6 +2957,7 @@ function cardHtml(t,showBiz){
   const ord=['p','e','c'];const idx=ord.indexOf(t.status);
   return `<div class="card${sem.vencida?' card-vencida':''}" draggable="true" data-task-id="${t.id}">
     ${sem.vencida?'<div class="vencida-badge">⚠ VENCIDA</div>':''}
+    ${t.originTitle?`<div style="font-size:10px;color:#2d4a7a;background:#eef4ff;border-radius:4px;padding:2px 7px;margin-bottom:4px;display:inline-flex;align-items:center;gap:4px;max-width:100%;overflow:hidden"><span>🔗</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Originada de: <strong>${escapeHtml(t.originTitle)}</strong></span></div>`:''}
     ${t.isPayment&&!t.supportDone?'<div class="support-required"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.73 18l-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Requiere soporte: <strong>'+(t.supportDesc||'comprobante')+'</strong> — no se puede cerrar sin el soporte</div>':''}
     ${t.isPayment&&t.supportDone?'<span class="support-done-badge">✓ Soporte registrado</span>':''}
     ${t.edited?'<span class="edit-badge">✏️ Editada '+t.editedAt+'</span>':''}
@@ -2925,6 +2999,7 @@ function cardHtml(t,showBiz){
         : `${idx>0?`<button class="ca-btn" onclick="moveTask('${t.id}',-1)">← Atrás</button>`:''} ${idx<2?`<button class="ca-btn" onclick="moveTask('${t.id}',1)">Avanzar →</button>`:`<span style="font-size:11px;color:var(--text3)">Completada ✓</span>`}`
       }
       ${t.isPayment&&!done?`<button class="ca-btn" onclick="abrirPagoParcial('${t.id}')" style="background:#2d4a7a;color:#fff;border-color:#2d4a7a">+ Pago</button>`:''}
+      ${!isViewer?`<button class="ca-btn" onclick="abrirSubtarea('${t.id}')" title="Crear subtarea originada de esta tarea" style="background:#eef4ff;color:#2d4a7a;border-color:#c5d3e8">🔗 Subtarea</button>`:''}
       ${!done?`<button class="ca-btn" onclick="openEdit('${t.id}')" title="Editar" style="margin-left:auto">✏️</button>`:'<span style="margin-left:auto"></span>'}
       <button class="ca-del" onclick="delTask('${t.id}')" title="Eliminar">×</button>
     </div>
