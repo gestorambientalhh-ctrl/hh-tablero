@@ -1144,6 +1144,45 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
   <!-- Overlay oscuro cuando panel abierto en móvil -->
   <div id="notas-overlay-bg" onclick="toggleNotasPanel()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:199"></div>
 
+  <!-- MODAL EDITAR REUNIÓN -->
+  <div id="meeting-edit-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:600;align-items:center;justify-content:center;padding:20px">
+    <div style="background:var(--bg);border-radius:12px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.18)">
+      <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg);z-index:1">
+        <div style="font-size:14px;font-weight:600;color:var(--text)">✏️ Editar reunión</div>
+        <button onclick="closeMeetingEdit()" style="background:none;border:none;font-size:22px;color:var(--text2);cursor:pointer">×</button>
+      </div>
+      <div style="padding:16px 20px;display:flex;flex-direction:column;gap:12px">
+        <div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Título</div>
+          <input id="me-title" type="text" style="width:100%;height:34px;font-size:13px;border:1px solid var(--border);border-radius:6px;padding:0 10px;font-family:inherit;outline:none;color:var(--text);background:var(--bg2);box-sizing:border-box">
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <div style="flex:1;min-width:140px">
+            <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Fecha</div>
+            <input id="me-date" type="date" style="width:100%;height:34px;font-size:13px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text);background:var(--bg2);box-sizing:border-box">
+          </div>
+          <div style="flex:1;min-width:140px">
+            <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Proyecto</div>
+            <select id="me-biz" style="width:100%;height:34px;font-size:13px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text);background:var(--bg2);box-sizing:border-box">
+              <option value="">General</option>
+              <option value="0">Gestor HH</option>
+              <option value="1">Logístico</option>
+              <option value="2">Montevra</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Contenido</div>
+          <div id="me-body-editor" contenteditable="true" style="min-height:120px;font-size:13px;border:1px solid var(--border);border-radius:8px;padding:10px;font-family:inherit;outline:none;color:var(--text);background:var(--bg2);line-height:1.6;white-space:pre-wrap"></div>
+        </div>
+      </div>
+      <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end">
+        <button onclick="closeMeetingEdit()" style="height:34px;padding:0 16px;font-size:13px;border:1px solid var(--border);border-radius:6px;background:var(--bg);cursor:pointer;font-family:inherit;color:var(--text2)">Cancelar</button>
+        <button onclick="saveMeetingEdit()" style="height:34px;padding:0 16px;font-size:13px;background:#2d4a7a;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:600">💾 Guardar cambios</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL PAGO PARCIAL -->
   <div id="pago-parcial-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:600;align-items:center;justify-content:center;padding:20px">
     <div style="background:var(--bg);border-radius:12px;width:100%;max-width:440px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.18)">
@@ -1786,6 +1825,42 @@ function delMeeting(id){
   renderMeetings();
 }
 
+let _editingMeetingId = null;
+
+function openMeetingEdit(id){
+  const m = meetings.find(x=>x.id===id);
+  if(!m) return;
+  _editingMeetingId = id;
+  document.getElementById('me-title').value = m.title || '';
+  document.getElementById('me-date').value = m.dateISO || '';
+  document.getElementById('me-biz').value = (m.biz !== null && m.biz !== undefined) ? String(m.biz) : '';
+  document.getElementById('me-body-editor').innerHTML = m.body || '';
+  document.getElementById('meeting-edit-overlay').style.display = 'flex';
+}
+
+function closeMeetingEdit(){
+  document.getElementById('meeting-edit-overlay').style.display = 'none';
+  _editingMeetingId = null;
+}
+
+function saveMeetingEdit(){
+  const m = meetings.find(x=>x.id===_editingMeetingId);
+  if(!m) return;
+  const title = document.getElementById('me-title').value.trim();
+  if(!title){ alert('El título no puede estar vacío.'); return; }
+  const dateVal = document.getElementById('me-date').value;
+  const bizVal = document.getElementById('me-biz').value;
+  m.title = title;
+  m.dateISO = dateVal;
+  m.biz = bizVal !== '' ? parseInt(bizVal) : null;
+  m.body = document.getElementById('me-body-editor').innerHTML;
+  persistMeetings();
+  renderMeetings();
+  // Re-abrir la tarjeta editada para mostrar cambios
+  setTimeout(()=>{ const el=document.getElementById('mc-body-'+m.id); if(el&&el.style.display==='none') toggleMeetingCard(m.id); }, 100);
+  closeMeetingEdit();
+}
+
 function renderMeetings(){
   const BIZ_NAMES = ['Gestor HH','Logístico','Montevra'];
   const BIZ_C = ['#639922','#378ADD','#D85A30'];
@@ -1841,6 +1916,7 @@ function renderMeetings(){
             <span class="meeting-title">${m.title}</span>
             ${bizTag}
             <span id="mc-arrow-${m.id}" style="color:var(--text3);font-size:14px;margin-left:4px;transition:transform .2s">▼</span>
+            <button onclick="event.stopPropagation();openMeetingEdit('${m.id}')" style="background:none;border:1px solid var(--border);border-radius:5px;padding:2px 7px;font-size:12px;cursor:pointer;color:var(--text2)" title="Editar">✏️</button>
             <button class="meeting-del" onclick="event.stopPropagation();delMeeting('${m.id}')" title="Eliminar">×</button>
           </div>
           <div id="mc-body-${m.id}" style="display:none">
