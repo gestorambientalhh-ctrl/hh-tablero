@@ -3038,12 +3038,13 @@ document.addEventListener('DOMContentLoaded', ()=>{
 });
 
 // ── ZOOM / TAMAÑO INTERFAZ ────────────────────────────────────
-const _ZOOM_LEVELS = [0.9, 1.0, 1.1, 1.2];
-const _ZOOM_LABELS = ['A-', 'A', 'A+', 'A++'];
-let _zoomIdx = parseInt(localStorage.getItem('hh-zoom-idx') || '1');
+const _ZOOM_LEVELS = [1.0, 1.1, 1.2, 1.35];
+const _ZOOM_LABELS = ['A', 'A+', 'A++', 'A+++'];
+let _zoomIdx = parseInt(localStorage.getItem('hh-zoom-idx') || '0');
 
 function applyZoom(){
-  document.documentElement.style.fontSize = (_ZOOM_LEVELS[_zoomIdx] * 100) + '%';
+  // Usar zoom del body — funciona con px, rem, todo
+  document.body.style.zoom = _ZOOM_LEVELS[_zoomIdx];
   const btn = document.getElementById('zoom-btn');
   if(btn) btn.textContent = _ZOOM_LABELS[_zoomIdx];
 }
@@ -5472,6 +5473,16 @@ function closeBackupModal(){
 </script>
 
   <script>
+    // Version check — fuerza recarga si hay versión nueva disponible
+    const _APP_VERSION = '20260410-v3';
+    if(localStorage.getItem('hh-app-version') !== _APP_VERSION){
+      localStorage.setItem('hh-app-version', _APP_VERSION);
+      if(localStorage.getItem('hh-app-version-prev')){
+        caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+        window.location.reload(true);
+      }
+      localStorage.setItem('hh-app-version-prev', '1');
+    }
     if('serviceWorker' in navigator && location.hostname !== 'www.claudeusercontent.com'){
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js').then(reg => {

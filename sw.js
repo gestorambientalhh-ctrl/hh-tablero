@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hh-tablero-v1';
+const CACHE_NAME = 'hh-tablero-v3';
 const ASSETS = [
   '/',
   '/index.html',
@@ -14,11 +14,6 @@ self.addEventListener('install', e => {
   self.skipWaiting();
 });
 
-// Responder al mensaje de auto-update desde el cliente
-self.addEventListener('message', e => {
-  if(e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
-});
-
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
@@ -29,7 +24,6 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Para Firebase y APIs externas: siempre red
   if (e.request.url.includes('firestore') || 
       e.request.url.includes('firebase') ||
       e.request.url.includes('googleapis') ||
@@ -37,8 +31,11 @@ self.addEventListener('fetch', e => {
       e.request.url.includes('script.google')) {
     return;
   }
-  // Para el resto: cache primero, luego red
   e.respondWith(
     caches.match(e.request).then(cached => cached || fetch(e.request))
   );
+});
+
+self.addEventListener('message', e => {
+  if(e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
