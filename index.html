@@ -2763,25 +2763,38 @@ function toggleDone(id){
 }
 async function delTask(id){
   if(!confirm('¿Eliminar esta tarea?'))return;
-  const t = tasks.find(x=>x.id===id);
+
+  // PASO 1: Añadir a blacklist permanente en Firebase — esto es lo más importante
+  // Una vez en blacklist, esta tarea NUNCA vuelve a aparecer sin importar qué
+  if(window._addToBlacklist){
+    await window._addToBlacklist(id);
+  } else {
+    // Fallback: guardar en localStorage blacklist si Firebase module no cargó aún
+    const ids = JSON.parse(localStorage.getItem('hh-blacklist-ids') || '[]');
+    if(!ids.includes(id)) { ids.push(id); localStorage.setItem('hh-blacklist-ids', JSON.stringify(ids)); }
+    if(!window.permanentDeletedIds) window.permanentDeletedIds = new Set();
+    window.permanentDeletedIds.add(id);
+  }
+
+  // PASO 2: Mover a papelera local
+  const t = (window.tasks || tasks).find(x=>x.id===id);
   if(t){
     deletedTasks.unshift({...t, deletedAt: Date.now()});
     window.deletedTasks = deletedTasks;
     localStorage.setItem('hh-deleted-v1', JSON.stringify(deletedTasks));
-    // Escribir eliminadas a Firebase
     if(window.persistDeletedImmediate) window.persistDeletedImmediate([...deletedTasks]);
   }
-  tasks=tasks.filter(x=>x.id!==id);
-  window.tasks=tasks;
+
+  // PASO 3: Eliminar de arrays locales
+  tasks = (window.tasks || tasks).filter(x=>x.id!==id);
+  window.tasks = tasks;
   localStorage.setItem('hh-socios-v3', JSON.stringify(tasks));
-  // Escritura directa a Firebase sin pasar por _safeToWrite
-  // El usuario eligió eliminar explícitamente — siempre se debe guardar
-  if(window._deleteWriteToFirebase) {
-    window._deleteWriteToFirebase([...tasks]);
-  } else if(window.persistTasksImmediate) {
-    window.persistTasksImmediate([...tasks]);
-  }
   renderCurrent();
+
+  // PASO 4: Limpiar también de Firebase tasks array
+  if(window._atomicDeleteFromFirebase){
+    await window._atomicDeleteFromFirebase(id);
+  }
 }
 function restoreTask(id){
   const t = deletedTasks.find(x=>x.id===id);
@@ -4706,6 +4719,7 @@ const ARCHIVOS_CLIENTE_REF = doc(db, 'hh-socios', 'archivos-cliente');
 const BACKUP_REF   = doc(db, 'hh-socios', 'backup-diario');
 const BACKUP2_REF  = doc(db, 'hh-socios', 'backup-semanal');
 const RECURRING_REF = doc(db, 'hh-socios', 'recurrentes');
+const BLACKLIST_REF = doc(db, 'hh-socios', 'blacklist-ids'); // IDs eliminados permanentemente
 
 // Cargar info de backups para el modal
 window._loadBackupInfo = async function(){
@@ -4768,6 +4782,70 @@ function _safeToWrite(taskList) {
   }
   return true;
 }
+
+// ── BLACKLIST DE IDs ELIMINADOS — fuente de verdad para eliminaciones ───────────
+window.permanentDeletedIds = new Set(
+  JSON.parse(localStorage.getItem('hh-blacklist-ids') || '[]')
+);
+
+window._addToBlacklist = async function(taskId) {
+  window.permanentDeletedIds.add(taskId);
+  const ids = Array.from(window.permanentDeletedIds);
+  localStorage.setItem('hh-blacklist-ids', JSON.stringify(ids));
+  try {
+    await setDoc(BLACKLIST_REF, { ids, updatedAt: Date.now() });
+    console.log('✅ ID añadido a blacklist Firebase:', taskId);
+  } catch(e) {
+    console.error('❌ Error guardando blacklist:', e);
+  }
+};
+
+// Listener de blacklist: siempre actualizado en tiempo real
+onSnapshot(BLACKLIST_REF, snap => {
+  if(!snap.exists()) return;
+  const data = snap.data();
+  if(!data.ids || !Array.isArray(data.ids)) return;
+  window.permanentDeletedIds = new Set(data.ids);
+  localStorage.setItem('hh-blacklist-ids', JSON.stringify(data.ids));
+  // Re-filtrar las tareas actuales contra la blacklist actualizada
+  if(window.tasks && window.tasks.length > 0){
+    const before = window.tasks.length;
+    window.tasks = window.tasks.filter(t => !window.permanentDeletedIds.has(t.id));
+    if(typeof tasks !== 'undefined') tasks = window.tasks;
+    if(window.tasks.length < before){
+      localStorage.setItem('hh-socios-v3', JSON.stringify(window.tasks));
+      if(typeof window.renderCurrent === 'function') window.renderCurrent();
+    }
+  }
+});
+
+// ── ELIMINACIÓN ATÓMICA — lee Firebase, filtra, escribe de vuelta ──────────────
+// Este método es el más confiable: trabaja con los datos REALES de Firebase,
+// no depende de que el array local esté sincronizado.
+window._atomicDeleteFromFirebase = async function(taskId) {
+  try {
+    // Leer el estado actual de Firebase
+    const snap = await getDoc(TASKS_REF);
+    let fbTasks = snap.exists() ? (snap.data().tasks || []) : [];
+    // Filtrar la tarea eliminada de los datos reales de Firebase
+    fbTasks = fbTasks.filter(t => t.id !== taskId);
+    // Actualizar el contador máximo conocido
+    localStorage.setItem('hh-max-tasks-known', String(fbTasks.length));
+    // Escribir de vuelta a Firebase
+    const writeTime = _setLocalWriteTime();
+    await setDoc(TASKS_REF, { tasks: fbTasks, updatedAt: writeTime });
+    // Actualizar local también por si acaso
+    window.tasks = fbTasks;
+    if(typeof tasks !== 'undefined') tasks = fbTasks;
+    localStorage.setItem('hh-socios-v3', JSON.stringify(fbTasks));
+    const ind = document.getElementById('sync-indicator');
+    if(ind){ ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0',2000); }
+    _hacerBackup(fbTasks);
+  } catch(e) {
+    console.error('❌ Error en eliminación atómica:', e);
+    alert('Error al eliminar: ' + e.message);
+  }
+};
 
 // ── ESCRITURA DE ELIMINACIÓN — sin guard (el usuario eligió eliminar explícitamente) ──
 window._deleteWriteToFirebase = async function(taskList) {
@@ -4863,9 +4941,10 @@ window.addEventListener('app-ready', async () => {
   // Evita condicion de carrera donde TASKS snapshot procesa datos antes de que
   // DELETED snapshot haya actualizado window.deletedTasks.
   try {
-    const [delSnap, recSnap] = await Promise.all([
+    const [delSnap, recSnap, blSnap] = await Promise.all([
       getDoc(DELETED_REF),
-      getDoc(RECURRING_REF)
+      getDoc(RECURRING_REF),
+      getDoc(BLACKLIST_REF)
     ]);
     if (delSnap.exists()) {
       const delData = delSnap.data();
@@ -4882,6 +4961,13 @@ window.addEventListener('app-ready', async () => {
         localStorage.setItem('hh-recurring-v1', JSON.stringify(recData.recurring));
       }
     }
+    if (blSnap.exists()) {
+      const blData = blSnap.data();
+      if (blData.ids && Array.isArray(blData.ids)) {
+        window.permanentDeletedIds = new Set(blData.ids);
+        localStorage.setItem('hh-blacklist-ids', JSON.stringify(blData.ids));
+      }
+    }
   } catch(e) { /* no critico - usamos localStorage como fallback */ }
   onSnapshot(TASKS_REF, snap => {
     if (!snap.exists()) return;
@@ -4892,12 +4978,12 @@ window.addEventListener('app-ready', async () => {
     if (fbTime < localTime) {
       return;
     }
-    // ── FILTRAR tareas que ya están en la papelera ──────────────
+    // ── FILTRAR: blacklist permanente + papelera ──────────────
     const deletedIds = new Set((window.deletedTasks||[]).map(d=>d.id));
-    const filtradas = data.tasks.filter(t => !deletedIds.has(t.id));
+    const blacklist = window.permanentDeletedIds || new Set(JSON.parse(localStorage.getItem('hh-blacklist-ids')||'[]'));
+    const filtradas = data.tasks.filter(t => !deletedIds.has(t.id) && !blacklist.has(t.id));
     // Si hay diferencia, re-escribir Firebase limpio
     if(filtradas.length < data.tasks.length && window.persistTasksImmediate){
-      // log omitido en producción
       window.persistTasksImmediate(filtradas);
     }
     window.tasks = filtradas;
