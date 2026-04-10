@@ -519,6 +519,29 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 .kpi-bar.visible{display:flex}
 @media(max-width:700px){.kpi-bar{bottom:56px}}
 
+/* HITOS BAR */
+.hitos-bar{position:fixed;bottom:0;left:0;right:0;height:44px;background:#1a2744;border-top:2px solid #2a9a4a;display:flex;align-items:center;padding:0 16px;gap:8px;z-index:89;box-shadow:0 -2px 8px rgba(0,0,0,.15)}
+@media(max-width:700px){.hitos-bar{bottom:56px;height:auto;min-height:44px;flex-wrap:wrap;padding:6px 12px}}
+.hitos-label{font-size:9px;font-weight:700;color:#2a9a4a;text-transform:uppercase;letter-spacing:1.2px;white-space:nowrap;flex-shrink:0}
+.hitos-sep{width:1px;height:24px;background:rgba(255,255,255,0.15);flex-shrink:0}
+.hito-item{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.07);border-radius:7px;padding:4px 10px;white-space:nowrap;border:1px solid rgba(255,255,255,0.1);flex-shrink:0;cursor:default}
+.hito-item.urgente{border-color:rgba(226,75,74,0.7);background:rgba(226,75,74,0.12)}
+.hito-item.alerta{border-color:rgba(239,159,39,0.7);background:rgba(239,159,39,0.1)}
+.hito-item.ok{border-color:rgba(42,154,74,0.5);background:rgba(42,154,74,0.08)}
+.hito-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.hito-dot.urgente{background:#e24b4a}
+.hito-dot.alerta{background:#ef9f27}
+.hito-dot.ok{background:#2a9a4a}
+.hito-nombre{font-size:11px;color:#fff;font-weight:500}
+.hito-fecha{font-size:10px;color:rgba(255,255,255,0.4)}
+.hito-dias{font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px}
+.hito-dias.urgente{color:#e24b4a;background:rgba(226,75,74,0.2)}
+.hito-dias.alerta{color:#ef9f27;background:rgba(239,159,39,0.18)}
+.hito-dias.ok{color:#2a9a4a;background:rgba(42,154,74,0.18)}
+.hito-add-btn{font-size:10px;color:rgba(255,255,255,0.35);background:none;border:1px dashed rgba(255,255,255,0.2);border-radius:7px;padding:4px 10px;cursor:pointer;font-family:inherit;flex-shrink:0;transition:all .2s}
+.hito-add-btn:hover{color:#fff;border-color:rgba(255,255,255,0.5)}
+.hitos-sin{font-size:11px;color:rgba(255,255,255,0.3);font-style:italic}
+
 .col-body{background:transparent!important;border:none!important;border-radius:0!important;padding:4px 0!important;display:flex!important;flex-direction:column!important;gap:6px!important;overflow-y:auto!important}
 .card{background:#fff!important;border:1px solid #e8e8e6!important;border-radius:8px!important;border-left:none!important;box-shadow:0 1px 3px rgba(0,0,0,.04)!important;margin:0!important;padding:11px 12px!important}
 .card:last-child{border-bottom:1px solid #e8e8e6!important}
@@ -1317,8 +1340,40 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
     </div>
   </div>
 
+  <!-- HITOS BAR FIJO ABAJO -->
+  <div class="hitos-bar" id="hitos-bar"></div>
+
   <!-- KPI BAR FIJO ABAJO -->
   <div class="kpi-bar" id="kpi-bar"></div>
+
+  <!-- MODAL HITOS -->
+  <div id="hitos-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:16px;padding:24px;width:90%;max-width:440px;max-height:90vh;overflow-y:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+        <div style="font-size:15px;font-weight:600;color:var(--text)">Gestionar hitos</div>
+        <button onclick="closeHitosModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3);line-height:1">&times;</button>
+      </div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Máximo 3 hitos por proyecto. Se muestran en la barra inferior.</div>
+      <!-- Selector proyecto -->
+      <div style="margin-bottom:14px">
+        <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:5px">Proyecto</label>
+        <select id="hito-biz" style="width:100%;height:34px;border:1px solid var(--border);border-radius:8px;font-size:13px;padding:0 10px;font-family:inherit">
+          <option value="0">Gestor HH</option>
+          <option value="1">Logístico</option>
+          <option value="2">Montevra</option>
+        </select>
+      </div>
+      <!-- Form nuevo hito -->
+      <div style="background:#f7f7f5;border-radius:10px;padding:14px;margin-bottom:16px">
+        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:10px">Nuevo hito</div>
+        <input id="hito-nombre" placeholder="Nombre del hito" style="width:100%;height:34px;border:1px solid var(--border);border-radius:8px;font-size:13px;padding:0 10px;margin-bottom:8px;box-sizing:border-box;font-family:inherit">
+        <input id="hito-fecha" type="date" style="width:100%;height:34px;border:1px solid var(--border);border-radius:8px;font-size:13px;padding:0 10px;margin-bottom:10px;box-sizing:border-box;font-family:inherit">
+        <button onclick="saveHito()" style="width:100%;height:34px;background:#1a2744;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit">+ Agregar hito</button>
+      </div>
+      <!-- Lista de hitos actuales -->
+      <div id="hitos-list"></div>
+    </div>
+  </div>
   <!-- INPUT OCULTO PARA SOPORTE -->
   <input type="file" id="soporte-file-input" accept="image/*,.pdf" style="display:none" onchange="subirSoporte(this)">
 
@@ -1425,6 +1480,7 @@ function logout(){
 
 function setBiz(i){
   biz=i;
+  setTimeout(()=>{ if(typeof renderHitosBar==='function') renderHitosBar(); }, 80);
   // Update desktop tabs
   for(let j=0;j<4;j++){
     const dt=document.getElementById('pt'+j);
@@ -2400,6 +2456,7 @@ function loadTasks(){
   if(faWhoEl) faWhoEl.innerHTML=us.map(u=>`<option value="${u.name}">${u.name}</option>`).join('');
   setBiz(3); // Start on General view
   buildRespButtons();
+  setTimeout(()=>{ if(typeof renderHitosBar==='function') renderHitosBar(); }, 200);
   setTimeout(checkRecurringOnLoad, 1500);
   window.dispatchEvent(new Event('app-ready'));
   // Firebase listener handles real-time sync automatically
@@ -2851,6 +2908,120 @@ function restoreTask(id){
   renderCurrent();
   renderPapelera();
 }
+
+// ── HITOS ─────────────────────────────────────────────────────
+let hitos = JSON.parse(localStorage.getItem('hh-hitos-v1')||'[]');
+
+function openHitosModal(){
+  renderHitosList();
+  document.getElementById('hitos-overlay').style.display='flex';
+}
+function closeHitosModal(){
+  document.getElementById('hitos-overlay').style.display='none';
+}
+function closeHitos(e){ if(e.target===document.getElementById('hitos-overlay')) closeHitosModal(); }
+
+function saveHito(){
+  const nombre = document.getElementById('hito-nombre').value.trim();
+  const fecha = document.getElementById('hito-fecha').value;
+  const bizVal = parseInt(document.getElementById('hito-biz').value);
+  if(!nombre || !fecha) return alert('Completa nombre y fecha.');
+  const delBiz = hitos.filter(h=>h.biz===bizVal);
+  if(delBiz.length >= 3) return alert('Máximo 3 hitos por proyecto.');
+  hitos.push({ id: Date.now()+'', nombre, fecha, biz: bizVal });
+  persistHitos();
+  document.getElementById('hito-nombre').value='';
+  document.getElementById('hito-fecha').value='';
+  renderHitosList();
+  renderHitosBar();
+}
+
+function deleteHito(id){
+  hitos = hitos.filter(h=>h.id!==id);
+  persistHitos();
+  renderHitosList();
+  renderHitosBar();
+}
+
+function persistHitos(){
+  localStorage.setItem('hh-hitos-v1', JSON.stringify(hitos));
+  if(window.persistHitosToFirebase) window.persistHitosToFirebase([...hitos]);
+}
+
+function renderHitosList(){
+  const bizVal = parseInt(document.getElementById('hito-biz').value);
+  const list = document.getElementById('hitos-list');
+  if(!list) return;
+  const filtrados = hitos.filter(h=>h.biz===bizVal);
+  if(!filtrados.length){
+    list.innerHTML='<div style="text-align:center;padding:16px;color:var(--text3);font-size:12px">Sin hitos para este proyecto</div>';
+    return;
+  }
+  const BIZ_N=['Gestor HH','Logístico','Montevra'];
+  list.innerHTML = filtrados.map(h=>{
+    const dias = Math.round((new Date(h.fecha+'T00:00:00') - new Date().setHours(0,0,0,0))/(864e5));
+    const cls = dias<=5?'urgente':dias<=15?'alerta':'ok';
+    const diasLabel = dias<0?'Vencido':dias===0?'Hoy':dias+'d';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f7f7f5;border-radius:8px;margin-bottom:6px">
+      <div class="hito-dot ${cls}" style="width:8px;height:8px;border-radius:50%;flex-shrink:0"></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500;color:var(--text)">${h.nombre}</div>
+        <div style="font-size:11px;color:var(--text3)">${h.fecha}</div>
+      </div>
+      <span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:5px;background:${cls==='urgente'?'#fcebeb':cls==='alerta'?'#faeeda':'#eaf3de'};color:${cls==='urgente'?'#a32d2d':cls==='alerta'?'#854f0b':'#3b6d11'}">${diasLabel}</span>
+      ${!isViewer?`<button onclick="deleteHito('${h.id}')" style="background:none;border:none;font-size:16px;cursor:pointer;color:#ccc;padding:0 2px">&times;</button>`:''}
+    </div>`;
+  }).join('');
+}
+
+function renderHitosBar(){
+  const bar = document.getElementById('hitos-bar');
+  if(!bar) return;
+  // Filtrar por proyecto actual (biz===3 = todos)
+  const filtrados = (typeof biz!=='undefined' && biz<3)
+    ? hitos.filter(h=>h.biz===biz)
+    : hitos;
+  // Ordenar por fecha
+  const sorted = [...filtrados].sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  const BIZ_C=['#639922','#378ADD','#D85A30'];
+  
+  if(!sorted.length){
+    bar.innerHTML=`${!isViewer?`<button onclick="openHitosModal()" title="Gestionar hitos" style="width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;flex-shrink:0;color:#fff">&#127919;</button>`:''}<span class="hitos-label">Hitos</span><div class="hitos-sep"></div><span class="hitos-sin">Sin hitos registrados — haz clic en el ícono para agregar</span>`;
+    return;
+  }
+  
+  const items = sorted.map(h=>{
+    const dias = Math.round((new Date(h.fecha+'T00:00:00') - new Date().setHours(0,0,0,0))/(864e5));
+    const cls = dias<=5?'urgente':dias<=15?'alerta':'ok';
+    const diasLabel = dias<0?'Venc.':dias===0?'Hoy':dias+'d';
+    const fmtFecha = (()=>{ const[y,m,d]=h.fecha.split('-'); const MES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']; return parseInt(d)+' '+MES[parseInt(m)-1]; })();
+    // Si estamos en vista general, mostrar chip de proyecto
+    const bizChip = (typeof biz!=='undefined' && biz===3) ? `<span style="font-size:9px;padding:1px 5px;border-radius:3px;background:${BIZ_C[h.biz]}22;color:${BIZ_C[h.biz]};font-weight:600">${['GHH','LOG','MTV'][h.biz]}</span>` : '';
+    return `<div class="hito-item ${cls}">
+      <div class="hito-dot ${cls}"></div>
+      ${bizChip}
+      <span class="hito-nombre">${h.nombre}</span>
+      <span class="hito-fecha">${fmtFecha}</span>
+      <span class="hito-dias ${cls}">${diasLabel}</span>
+    </div>`;
+  }).join('');
+  
+  bar.innerHTML=`${!isViewer?`<button onclick="openHitosModal()" title="Gestionar hitos" style="width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,0.1);border:1px solid rgba(42,154,74,0.5);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;flex-shrink:0">&#127919;</button>`:''}<span class="hitos-label">Hitos</span><div class="hitos-sep"></div>${items}`;
+}
+
+// Ajustar padding del contenido para dar espacio a la barra de hitos
+function adjustContentPadding(){
+  const main = document.querySelector('.main-content, #board, #global-view');
+  if(main) main.style.paddingBottom = '56px';
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  renderHitosBar();
+  adjustContentPadding();
+  document.getElementById('hito-biz')?.addEventListener('change', renderHitosList);
+  document.getElementById('hitos-overlay')?.addEventListener('click', closeHitos);
+});
+
 function renderPapelera(){
   const list = document.getElementById('papelera-list');
   if(!list) return;
@@ -5144,6 +5315,22 @@ onSnapshot(DELETED_REF, snap => {
 });
 
 // ── NOTAS FIREBASE SYNC ───────────────────────────────────────
+// ── HITOS FIREBASE SYNC ───────────────────────────────────────
+const HITOS_REF = doc(db, 'hh-socios', 'hitos');
+window.persistHitosToFirebase = async function(list) {
+  try {
+    await setDoc(HITOS_REF, { hitos: list, updatedAt: Date.now() });
+  } catch(e) { console.warn('Hitos write error:', e); }
+};
+onSnapshot(HITOS_REF, snap => {
+  if(!snap.exists()) return;
+  const data = snap.data();
+  if(!data.hitos || !Array.isArray(data.hitos)) return;
+  if(typeof hitos !== 'undefined') hitos = data.hitos;
+  localStorage.setItem('hh-hitos-v1', JSON.stringify(data.hitos));
+  if(typeof renderHitosBar === 'function') renderHitosBar();
+});
+
 // ── RECURRENTES FIREBASE SYNC ─────────────────────────────────
 window.persistRecurringToFirebase = async function(list) {
   try {
