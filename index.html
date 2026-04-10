@@ -2520,7 +2520,8 @@ function generateRecurring(){
 
 function checkRecurringOnLoad(){
   // Auto-generate recurring tasks silently without showing banner
-  loadRecurring();
+  // NO llamar loadRecurring() aqui - ya se cargo desde Firebase en app-ready
+  // loadRecurring() leeria localStorage y sobrescribiria los datos de Firebase
   if(!recurring.length) return;
   const now = new Date();
   const year = now.getFullYear();
@@ -2760,19 +2761,26 @@ function toggleDone(id){
   const t=tasks.find(x=>x.id===id);if(!t)return;
   t.status=t.status==='c'?'p':'c';persist();renderCurrent();
 }
-function delTask(id){
+async function delTask(id){
   if(!confirm('¿Eliminar esta tarea?'))return;
   const t = tasks.find(x=>x.id===id);
   if(t){
     deletedTasks.unshift({...t, deletedAt: Date.now()});
     window.deletedTasks = deletedTasks;
     localStorage.setItem('hh-deleted-v1', JSON.stringify(deletedTasks));
+    // Escribir eliminadas a Firebase
     if(window.persistDeletedImmediate) window.persistDeletedImmediate([...deletedTasks]);
   }
   tasks=tasks.filter(x=>x.id!==id);
   window.tasks=tasks;
   localStorage.setItem('hh-socios-v3', JSON.stringify(tasks));
-  if(window.persistTasksImmediate) window.persistTasksImmediate([...tasks]);
+  // Escritura directa a Firebase sin pasar por _safeToWrite
+  // El usuario eligió eliminar explícitamente — siempre se debe guardar
+  if(window._deleteWriteToFirebase) {
+    window._deleteWriteToFirebase([...tasks]);
+  } else if(window.persistTasksImmediate) {
+    window.persistTasksImmediate([...tasks]);
+  }
   renderCurrent();
 }
 function restoreTask(id){
@@ -4758,6 +4766,23 @@ function _safeToWrite(taskList) {
   return true;
 }
 
+// ── ESCRITURA DE ELIMINACIÓN — sin guard (el usuario eligió eliminar explícitamente) ──
+window._deleteWriteToFirebase = async function(taskList) {
+  const writeTime = _setLocalWriteTime();
+  // Actualizar el máximo conocido (nunca bajar) para que _safeToWrite no interfiera después
+  const known = parseInt(localStorage.getItem('hh-max-tasks-known') || '0');
+  // No actualizar el máximo — solo guardar
+  clearTimeout(tasksWriteTimer);
+  try {
+    await setDoc(TASKS_REF, { tasks: taskList, updatedAt: writeTime });
+    const ind = document.getElementById('sync-indicator');
+    if(ind){ ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0',2000); }
+    _hacerBackup(taskList);
+  } catch(e) {
+    console.error('❌ Error guardando eliminación en Firebase:', e);
+  }
+};
+
 // ── ESCRITURA INMEDIATA con guard de seguridad ─────────────────
 window.persistTasksImmediate = async function(taskList) {
   if(!_safeToWrite(taskList)) return; // BLOQUEAR si parece pérdida de datos
@@ -4862,9 +4887,7 @@ window.addEventListener('app-ready', async () => {
     if (!data.tasks || !Array.isArray(data.tasks)) return;
     const fbTime = data.updatedAt || 0;
     const localTime = _getLocalWriteTime();
-    if (fbTime <= localTime) {
-      // Ignorar snapshot de nuestra propia escritura (fbTime === localTime)
-      // o de escrituras anteriores a la nuestra (fbTime < localTime)
+    if (fbTime < localTime) {
       return;
     }
     // ── FILTRAR tareas que ya están en la papelera ──────────────
