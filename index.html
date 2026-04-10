@@ -2855,14 +2855,17 @@ function vaciarPapelera(){
   renderPapelera();
 }
 function persist(){
+  // Siempre sincronizar desde window.tasks primero para evitar datos viejos
+  if(window.tasks && window.tasks.length > 0) tasks = window.tasks;
   window.tasks = tasks;
   localStorage.setItem('hh-socios-v3', JSON.stringify(tasks));
   localStorage.setItem('hh-socios-updated', String(Date.now()));
-  // Always sync to Firebase
   if(window.persistToFirebase) window.persistToFirebase([...tasks]);
 }
 
 function autoAdvanceTasks(){
+  // Sincronizar desde window.tasks para evitar usar lista desactualizada
+  if(window.tasks && window.tasks.length > 0) tasks = window.tasks;
   // Tareas programadas con 5 días o menos pasan automáticamente a En Progreso
   let changed = false;
   tasks.forEach(t=>{
@@ -4756,9 +4759,9 @@ function _safeToWrite(taskList) {
   const newCount = taskList ? taskList.length : 0;
   // Actualizar el máximo conocido
   if(newCount > knownCount) localStorage.setItem('hh-max-tasks-known', String(newCount));
-  // Bloquear si la lista nueva tiene menos del 50% del máximo histórico
-  if(knownCount > 5 && newCount < knownCount * 0.5) {
-    console.error(`🛑 WRITE BLOQUEADO: intentando guardar ${newCount} tareas pero el máximo histórico es ${knownCount}. Posible pérdida de datos.`);
+  // Bloquear SOLO si se intenta guardar 0 tareas cuando hay historial (protección anti-vaciado)
+  if(knownCount > 5 && newCount === 0) {
+    console.error(`🛑 WRITE BLOQUEADO: intentando guardar 0 tareas pero el máximo histórico es ${knownCount}. Posible pérdida de datos.`);
     const ind = document.getElementById('sync-indicator');
     if(ind){ ind.textContent='⚠️ Write bloqueado'; ind.style.background='#fef3c7'; ind.style.color='#92400e'; ind.style.opacity='1'; setTimeout(()=>{ind.style.opacity='0';ind.textContent='⟳ Sincronizado';ind.style.background='#dcfce7';ind.style.color='#16a34a';},5000); }
     return false;
@@ -4769,9 +4772,8 @@ function _safeToWrite(taskList) {
 // ── ESCRITURA DE ELIMINACIÓN — sin guard (el usuario eligió eliminar explícitamente) ──
 window._deleteWriteToFirebase = async function(taskList) {
   const writeTime = _setLocalWriteTime();
-  // Actualizar el máximo conocido (nunca bajar) para que _safeToWrite no interfiera después
-  const known = parseInt(localStorage.getItem('hh-max-tasks-known') || '0');
-  // No actualizar el máximo — solo guardar
+  // Actualizar el máximo conocido al valor actual para que _safeToWrite no bloquee futuras escrituras
+  if(taskList) localStorage.setItem('hh-max-tasks-known', String(taskList.length));
   clearTimeout(tasksWriteTimer);
   try {
     await setDoc(TASKS_REF, { tasks: taskList, updatedAt: writeTime });
