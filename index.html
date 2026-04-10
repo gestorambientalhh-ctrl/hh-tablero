@@ -5419,9 +5419,25 @@ function closeBackupModal(){
   <script>
     if('serviceWorker' in navigator && location.hostname !== 'www.claudeusercontent.com'){
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(r => console.log('SW registrado'))
-          .catch(e => console.log('SW error:', e));
+        navigator.serviceWorker.register('/sw.js').then(reg => {
+          // Revisar actualizaciones cada vez que carga
+          reg.update();
+          // Si hay una nueva versión instalada esperando, activarla y recargar silenciosamente
+          reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            newWorker.addEventListener('statechange', () => {
+              if(newWorker.state === 'installed' && navigator.serviceWorker.controller){
+                // Nueva versión lista — recargar automáticamente
+                newWorker.postMessage({ type: 'SKIP_WAITING' });
+              }
+            });
+          });
+        }).catch(e => {});
+        // Cuando el SW nuevo toma control, recargar la página silenciosamente
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if(!refreshing){ refreshing = true; window.location.reload(); }
+        });
       });
     }
   </script>

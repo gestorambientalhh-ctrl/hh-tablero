@@ -14,6 +14,11 @@ self.addEventListener('install', e => {
   self.skipWaiting();
 });
 
+// Responder al mensaje de auto-update desde el cliente
+self.addEventListener('message', e => {
+  if(e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
+});
+
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
