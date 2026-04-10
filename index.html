@@ -518,9 +518,13 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 .kpi-bar{position:fixed;bottom:0;left:0;right:0;height:48px;background:#fff;border-top:1px solid #e2e8f0;display:none;align-items:center;justify-content:center;z-index:90;box-shadow:0 -2px 8px rgba(0,0,0,.06)}
 .kpi-bar.visible{display:flex}
 @media(max-width:700px){.kpi-bar{bottom:56px}}
+.main-wrap{padding-bottom:96px!important}
+#board,#global-view,#dash-view{padding-bottom:96px}
+@media(max-width:700px){.hitos-bar{bottom:104px;height:auto;min-height:44px}}
 
 /* HITOS BAR */
-.hitos-bar{position:fixed;bottom:0;left:0;right:0;height:44px;background:#1a2744;border-top:2px solid #2a9a4a;display:flex;align-items:center;padding:0 16px;gap:8px;z-index:89;box-shadow:0 -2px 8px rgba(0,0,0,.15)}
+.hitos-bar{position:fixed;bottom:48px;left:0;right:0;height:44px;background:#1a2744;border-top:2px solid #2a9a4a;display:none;align-items:center;padding:0 16px;gap:8px;z-index:91;box-shadow:0 -2px 8px rgba(0,0,0,.15)}
+.hitos-bar.visible{display:flex}
 @media(max-width:700px){.hitos-bar{bottom:56px;height:auto;min-height:44px;flex-wrap:wrap;padding:6px 12px}}
 .hitos-label{font-size:9px;font-weight:700;color:#2a9a4a;text-transform:uppercase;letter-spacing:1.2px;white-space:nowrap;flex-shrink:0}
 .hitos-sep{width:1px;height:24px;background:rgba(255,255,255,0.15);flex-shrink:0}
@@ -555,6 +559,9 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 <body>
 
 <!-- LOCK -->
+<!-- HITOS BAR FIJO ABAJO - fuera del app para ser siempre visible -->
+<div class="hitos-bar" id="hitos-bar" style="display:none"></div>
+
 <div id="lock-screen" style="position:fixed!important;top:0!important;left:0!important;width:100vw!important;height:100vh!important;display:flex!important;align-items:center!important;justify-content:center!important;background:#06111f;z-index:9999">
   <div class="lock-bg"></div>
   <div class="lock-grid"></div>
@@ -1340,9 +1347,6 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
     </div>
   </div>
 
-  <!-- HITOS BAR FIJO ABAJO -->
-  <div class="hitos-bar" id="hitos-bar"></div>
-
   <!-- KPI BAR FIJO ABAJO -->
   <div class="kpi-bar" id="kpi-bar"></div>
 
@@ -1713,11 +1717,13 @@ async function checkPw(){
     isViewer = false; isClient = false;
     document.getElementById('lock-screen').style.display='none';
     document.getElementById('app').style.display='block';
+    document.getElementById('hitos-bar').classList.add('visible');
     loadTasks();
   } else if(hex === 'a71d06b7a3402ca795d82da5531ea071d000436a9fa7e9b3ff00970042d9ef8a'){
     isViewer = true; isClient = false;
     document.getElementById('lock-screen').style.display='none';
     document.getElementById('app').style.display='block';
+    document.getElementById('hitos-bar').classList.add('visible');
     const banner = document.createElement('div');
     banner.className = 'viewer-banner';
     banner.innerHTML = '👁 Modo vista — solo lectura. Puedes ver el seguimiento pero no editar tareas.';
@@ -5407,7 +5413,7 @@ function closeBackupModal(){
 </script>
 
   <script>
-    if('serviceWorker' in navigator){
+    if('serviceWorker' in navigator && location.hostname !== 'www.claudeusercontent.com'){
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
           .then(r => console.log('SW registrado'))
