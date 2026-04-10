@@ -2422,6 +2422,8 @@ function loadRecurring(){
 
 function persistRecurring(){
   localStorage.setItem('hh-recurring-v1', JSON.stringify(recurring));
+  // Sincronizar a Firebase para que todos los dispositivos compartan las mismas recurrentes
+  if(window.persistRecurringToFirebase) window.persistRecurringToFirebase([...recurring]);
 }
 
 function openRec(){
@@ -4689,6 +4691,7 @@ const DELETED_REF  = doc(db, 'hh-socios', 'eliminadas');
 const ARCHIVOS_CLIENTE_REF = doc(db, 'hh-socios', 'archivos-cliente');
 const BACKUP_REF   = doc(db, 'hh-socios', 'backup-diario');
 const BACKUP2_REF  = doc(db, 'hh-socios', 'backup-semanal');
+const RECURRING_REF = doc(db, 'hh-socios', 'recurrentes');
 
 // Cargar info de backups para el modal
 window._loadBackupInfo = async function(){
@@ -4830,13 +4833,23 @@ window.addEventListener('app-ready', async () => {
   // Evita condicion de carrera donde TASKS snapshot procesa datos antes de que
   // DELETED snapshot haya actualizado window.deletedTasks.
   try {
-    const delSnap = await getDoc(DELETED_REF);
+    const [delSnap, recSnap] = await Promise.all([
+      getDoc(DELETED_REF),
+      getDoc(RECURRING_REF)
+    ]);
     if (delSnap.exists()) {
       const delData = delSnap.data();
       if (delData.deleted && Array.isArray(delData.deleted)) {
         deletedTasks = delData.deleted;
         window.deletedTasks = delData.deleted;
         localStorage.setItem('hh-deleted-v1', JSON.stringify(delData.deleted));
+      }
+    }
+    if (recSnap.exists()) {
+      const recData = recSnap.data();
+      if (recData.recurring && Array.isArray(recData.recurring)) {
+        recurring = recData.recurring;
+        localStorage.setItem('hh-recurring-v1', JSON.stringify(recData.recurring));
       }
     }
   } catch(e) { /* no critico - usamos localStorage como fallback */ }
@@ -4948,6 +4961,22 @@ onSnapshot(DELETED_REF, snap => {
 });
 
 // ── NOTAS FIREBASE SYNC ───────────────────────────────────────
+// ── RECURRENTES FIREBASE SYNC ─────────────────────────────────
+window.persistRecurringToFirebase = async function(list) {
+  try {
+    await setDoc(RECURRING_REF, { recurring: list, updatedAt: Date.now() });
+  } catch(e) { console.warn('Recurring write error:', e); }
+};
+
+onSnapshot(RECURRING_REF, snap => {
+  if(!snap.exists()) return;
+  const data = snap.data();
+  if(!data.recurring || !Array.isArray(data.recurring)) return;
+  // Actualizar local con los datos de Firebase (fuente de verdad)
+  recurring = data.recurring;
+  localStorage.setItem('hh-recurring-v1', JSON.stringify(data.recurring));
+});
+
 const NOTAS_REF = doc(db, 'hh-socios', 'notas');
 let notasSaveTimer = null;
 
