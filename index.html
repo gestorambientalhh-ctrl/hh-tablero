@@ -4823,17 +4823,32 @@ window.persistMeetingsToFirebase = function(meetingList) {
 
 // TASKS listener — solo aplica datos de Firebase si son MÁS NUEVOS que nuestro último write
 let tasksStarted = false;
-window.addEventListener('app-ready', () => {
+window.addEventListener('app-ready', async () => {
   if (tasksStarted) return;
   tasksStarted = true;
+  // PRE-CARGAR eliminadas desde Firebase ANTES de iniciar el listener de tareas.
+  // Evita condicion de carrera donde TASKS snapshot procesa datos antes de que
+  // DELETED snapshot haya actualizado window.deletedTasks.
+  try {
+    const delSnap = await getDoc(DELETED_REF);
+    if (delSnap.exists()) {
+      const delData = delSnap.data();
+      if (delData.deleted && Array.isArray(delData.deleted)) {
+        deletedTasks = delData.deleted;
+        window.deletedTasks = delData.deleted;
+        localStorage.setItem('hh-deleted-v1', JSON.stringify(delData.deleted));
+      }
+    }
+  } catch(e) { /* no critico - usamos localStorage como fallback */ }
   onSnapshot(TASKS_REF, snap => {
     if (!snap.exists()) return;
     const data = snap.data();
     if (!data.tasks || !Array.isArray(data.tasks)) return;
     const fbTime = data.updatedAt || 0;
     const localTime = _getLocalWriteTime();
-    if (fbTime < localTime) {
-      // log omitido en producción
+    if (fbTime <= localTime) {
+      // Ignorar snapshot de nuestra propia escritura (fbTime === localTime)
+      // o de escrituras anteriores a la nuestra (fbTime < localTime)
       return;
     }
     // ── FILTRAR tareas que ya están en la papelera ──────────────
