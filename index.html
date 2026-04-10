@@ -522,6 +522,10 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 #board,#global-view,#dash-view{padding-bottom:96px}
 @media(max-width:700px){.hitos-bar{bottom:104px;height:auto;min-height:44px}}
 
+/* ZOOM CONTROL */
+.zoom-btn{font-size:11px;font-weight:600;padding:0 8px;height:28px;border-radius:7px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;font-family:inherit;flex-shrink:0;transition:background .15s}
+.zoom-btn:hover{background:var(--border)}
+
 /* HITOS BAR */
 .hitos-bar{position:fixed;bottom:48px;left:0;right:0;height:44px;background:#1a2744;border-top:2px solid #2a9a4a;display:none;align-items:center;padding:0 16px;gap:8px;z-index:91;box-shadow:0 -2px 8px rgba(0,0,0,.15)}
 .hitos-bar.visible{display:flex!important}
@@ -674,6 +678,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
       <input class="search-top" type="text" placeholder="Buscar..." id="sq" oninput="renderCurrent()">
       <div id="fwho-btns" style="display:flex;gap:4px"></div><input type="hidden" id="fwho" value="">
 <button onclick="openUserModal()" title="Configurar usuarios" style="width:32px;height:32px;border-radius:50%;background:var(--bg2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px">👥</button>
+      <button class="zoom-btn" id="zoom-btn" onclick="cycleZoom()" title="Ajustar tamaño de interfaz">A</button>
       <button onclick="openBackupModal()" title="Respaldos de seguridad" style="width:32px;height:32px;border-radius:50%;background:var(--bg2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px">🛡️</button>
       <button class="avatar-btn" onclick="logout()" title="Salir">HH</button>
     </div>
@@ -3032,6 +3037,26 @@ document.addEventListener('DOMContentLoaded', ()=>{
   document.getElementById('hitos-overlay')?.addEventListener('click', closeHitos);
 });
 
+// ── ZOOM / TAMAÑO INTERFAZ ────────────────────────────────────
+const _ZOOM_LEVELS = [0.9, 1.0, 1.1, 1.2];
+const _ZOOM_LABELS = ['A-', 'A', 'A+', 'A++'];
+let _zoomIdx = parseInt(localStorage.getItem('hh-zoom-idx') || '1');
+
+function applyZoom(){
+  document.documentElement.style.fontSize = (_ZOOM_LEVELS[_zoomIdx] * 100) + '%';
+  const btn = document.getElementById('zoom-btn');
+  if(btn) btn.textContent = _ZOOM_LABELS[_zoomIdx];
+}
+
+function cycleZoom(){
+  _zoomIdx = (_zoomIdx + 1) % _ZOOM_LEVELS.length;
+  localStorage.setItem('hh-zoom-idx', String(_zoomIdx));
+  applyZoom();
+}
+
+// Aplicar zoom guardado al cargar
+document.addEventListener('DOMContentLoaded', applyZoom);
+
 function renderPapelera(){
   const list = document.getElementById('papelera-list');
   if(!list) return;
@@ -4548,16 +4573,25 @@ function renderTodo(){
 }
 
 function quickSaveNota(){
-  const titulo = document.getElementById('nota-input-titulo').value.trim();
+  const tituloEl = document.getElementById('nota-input-titulo');
+  const titulo = tituloEl.value.trim();
   if(!titulo) return;
   const contenido = document.getElementById('nota-input-contenido')?.value.trim()||'';
   const fecha = document.getElementById('nota-input-fecha')?.value || new Date().toISOString().split('T')[0];
   const biz = document.getElementById('nota-input-biz')?.value || '';
-  notas.unshift({
-    id: 'nota' + Date.now(),
-    titulo, contenido, fecha, biz,
-    creadaEn: new Date().toLocaleDateString('es-CO')
-  });
+  const editId = tituloEl.dataset.editId;
+  if(editId){
+    // Modo edición — actualizar nota existente
+    const idx = notas.findIndex(n=>n.id===editId);
+    if(idx>=0) notas[idx] = { ...notas[idx], titulo, contenido, fecha, biz };
+    delete tituloEl.dataset.editId;
+  } else {
+    notas.unshift({
+      id: 'nota' + Date.now(),
+      titulo, contenido, fecha, biz,
+      creadaEn: new Date().toLocaleDateString('es-CO')
+    });
+  }
   persistNotas();
   document.getElementById('nota-input-titulo').value = '';
   const extra = document.getElementById('nota-input-extra');
@@ -4565,6 +4599,26 @@ function quickSaveNota(){
   const cont = document.getElementById('nota-input-contenido');
   if(cont) cont.value='';
   renderNotas();
+}
+
+function editarNota(id){
+  const n = notas.find(x=>x.id===id);
+  if(!n) return;
+  // Rellenar formulario con datos actuales
+  document.getElementById('nota-input-titulo').value = n.titulo || '';
+  const extra = document.getElementById('nota-input-extra');
+  if(extra) extra.style.display = 'block';
+  const cont = document.getElementById('nota-input-contenido');
+  if(cont) cont.value = n.contenido || '';
+  const fecha = document.getElementById('nota-input-fecha');
+  if(fecha) fecha.value = n.fecha || '';
+  const biz = document.getElementById('nota-input-biz');
+  if(biz) biz.value = n.biz !== undefined ? n.biz : '';
+  // Guardar el id en edición
+  document.getElementById('nota-input-titulo').dataset.editId = id;
+  // Scroll arriba del panel de notas
+  const inp = document.getElementById('nota-input-titulo');
+  if(inp){ inp.focus(); inp.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
 }
 
 function delNota(id){
@@ -4619,7 +4673,8 @@ function renderNotas(){
           ${fechaFmt?`<div style="font-size:11px;color:var(--text3);margin-top:2px">${fechaFmt}${n.biz!==''&&n.biz!==undefined&&n.biz!==null?' · '+BIZ_N[n.biz]:''}</div>`:''}
         </div>
         ${n.contenido?`<span id="nota-arrow-${n.id}" style="color:var(--text3);font-size:10px;margin-top:3px;transition:transform .2s;flex-shrink:0">▼</span>`:''}
-        ${!isViewer?`<button onclick="event.stopPropagation();delNota('${n.id}')" style="background:none;border:none;color:#d1cdc7;cursor:pointer;font-size:16px;line-height:1;padding:0;flex-shrink:0">&times;</button>`:''}
+        ${!isViewer?`<button onclick="event.stopPropagation();editarNota('${n.id}')" style="background:none;border:none;color:#b4b2a9;cursor:pointer;font-size:13px;line-height:1;padding:0 2px;flex-shrink:0" title="Editar">✏️</button>`:''}
+      ${!isViewer?`<button onclick="event.stopPropagation();delNota('${n.id}')" style="background:none;border:none;color:#d1cdc7;cursor:pointer;font-size:16px;line-height:1;padding:0;flex-shrink:0">&times;</button>`:''}
       </div>
       ${n.contenido?`<div id="nota-body-${n.id}" style="display:none;padding:0 14px 10px 28px;font-size:12px;color:var(--text2);line-height:1.6;white-space:pre-wrap">${n.contenido}</div>`:''}
     </div>`;
