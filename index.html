@@ -524,7 +524,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 
 /* HITOS BAR */
 .hitos-bar{position:fixed;bottom:48px;left:0;right:0;height:44px;background:#1a2744;border-top:2px solid #2a9a4a;display:none;align-items:center;padding:0 16px;gap:8px;z-index:91;box-shadow:0 -2px 8px rgba(0,0,0,.15)}
-.hitos-bar.visible{display:flex}
+.hitos-bar.visible{display:flex!important}
 @media(max-width:700px){.hitos-bar{bottom:56px;height:auto;min-height:44px;flex-wrap:wrap;padding:6px 12px}}
 .hitos-label{font-size:9px;font-weight:700;color:#2a9a4a;text-transform:uppercase;letter-spacing:1.2px;white-space:nowrap;flex-shrink:0}
 .hitos-sep{width:1px;height:24px;background:rgba(255,255,255,0.15);flex-shrink:0}
@@ -1717,13 +1717,17 @@ async function checkPw(){
     isViewer = false; isClient = false;
     document.getElementById('lock-screen').style.display='none';
     document.getElementById('app').style.display='block';
-    document.getElementById('hitos-bar').classList.add('visible');
+    const _hBar = document.getElementById('hitos-bar');
+    _hBar.style.display = '';
+    _hBar.classList.add('visible');
     loadTasks();
   } else if(hex === 'a71d06b7a3402ca795d82da5531ea071d000436a9fa7e9b3ff00970042d9ef8a'){
     isViewer = true; isClient = false;
     document.getElementById('lock-screen').style.display='none';
     document.getElementById('app').style.display='block';
-    document.getElementById('hitos-bar').classList.add('visible');
+    const _hBar2 = document.getElementById('hitos-bar');
+    _hBar2.style.display = '';
+    _hBar2.classList.add('visible');
     const banner = document.createElement('div');
     banner.className = 'viewer-banner';
     banner.innerHTML = '👁 Modo vista — solo lectura. Puedes ver el seguimiento pero no editar tareas.';
