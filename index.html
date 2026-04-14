@@ -2785,6 +2785,15 @@ function saveNoteOnly(){
 }
 
 function closeNotesModalReset(){
+  // Restaurar input si estaba en modo solo lectura
+  const overlay = document.getElementById('notes-overlay');
+  if(overlay && overlay._readOnly){
+    overlay._readOnly = false;
+    const inp = document.getElementById('notes-input');
+    if(inp) inp.style.display = '';
+    const footerDef = document.getElementById('notes-footer-default');
+    if(footerDef) footerDef.style.display = 'flex';
+  }
   isVencidaCompletion=false;
   document.getElementById('notes-footer-default').style.display='flex';
   document.getElementById('notes-footer-vencida').style.display='none';
@@ -3349,7 +3358,10 @@ function cardHtml(t,showBiz){
       }
       ${t.isPayment&&!done?`<button class="ca-btn" onclick="abrirPagoParcial('${t.id}')" style="background:#2d4a7a;color:#fff;border-color:#2d4a7a">+ Pago</button>`:''}
       ${!isViewer?`<button class="ca-btn" onclick="abrirSubtarea('${t.id}')" title="Crear subtarea originada de esta tarea" style="background:#eef4ff;color:#2d4a7a;border-color:#c5d3e8">🔗 Subtarea</button>`:''}
-      ${!done?`<button class="ca-btn" onclick="openEdit('${t.id}')" title="Editar" style="margin-left:auto">✏️</button>`:'<span style="margin-left:auto"></span>'}
+      ${!done
+        ? `<button class="ca-btn" onclick="openEdit('${t.id}')" title="Editar" style="margin-left:auto">✏️</button>`
+        : `<button class="ca-btn" onclick="verNotasTarea('${t.id}')" title="Ver historial de notas" style="margin-left:auto;background:#f0fdf4;color:#16a34a;border-color:#bbf7d0">📋 Notas${t.notes&&t.notes.length?' ('+t.notes.length+')':''}</button>`
+      }
       <button class="ca-del" onclick="delTask('${t.id}')" title="Eliminar">×</button>
     </div>
   </div>`;
@@ -4620,6 +4632,42 @@ function editarNota(id){
   // Scroll arriba del panel de notas
   const inp = document.getElementById('nota-input-titulo');
   if(inp){ inp.focus(); inp.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+}
+
+function verNotasTarea(id){
+  const t = (window.tasks||tasks).find(x=>x.id===id);
+  if(!t) return;
+  const history = (t.notes||[]).slice().reverse();
+  const overlay = document.getElementById('notes-overlay');
+  const title = document.getElementById('notes-title');
+  const histEl = document.getElementById('notes-history');
+  const inp = document.getElementById('notes-input');
+
+  if(!overlay) return;
+  // Título
+  if(title) title.textContent = 'Historial — ' + t.title;
+  // Historial de notas
+  if(histEl){
+    if(!history.length){
+      histEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px">Sin notas registradas en esta tarea</div>';
+    } else {
+      histEl.innerHTML = history.map(n=>`
+        <div style="border-left:3px solid #e2e8f0;padding:8px 12px;margin-bottom:8px;background:#f9f9f8;border-radius:0 8px 8px 0">
+          <div style="font-size:13px;color:var(--text);line-height:1.5">${escapeHtml(n.text)}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">${n.from||'Equipo'} · ${n.date||''}</div>
+        </div>`).join('');
+    }
+  }
+  // Ocultar input y footer de acción (solo lectura)
+  if(inp) inp.style.display = 'none';
+  const footerDefault = document.getElementById('notes-footer-default');
+  const footerVencida = document.getElementById('notes-footer-vencida');
+  if(footerDefault) footerDefault.style.display = 'none';
+  if(footerVencida) footerVencida.style.display = 'none';
+  // Mostrar el modal
+  overlay.style.display = 'flex';
+  // Restaurar input al cerrar
+  overlay._readOnly = true;
 }
 
 function delNota(id){
