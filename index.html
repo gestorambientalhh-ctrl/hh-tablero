@@ -2785,20 +2785,28 @@ function saveNoteOnly(){
 }
 
 function closeNotesModalReset(){
-  // Restaurar input si estaba en modo solo lectura
   const overlay = document.getElementById('notes-overlay');
-  if(overlay && overlay._readOnly){
-    overlay._readOnly = false;
-    const inp = document.getElementById('notes-input');
-    if(inp) inp.style.display = '';
-    const footerDef = document.getElementById('notes-footer-default');
-    if(footerDef) footerDef.style.display = 'flex';
-  }
-  isVencidaCompletion=false;
-  document.getElementById('notes-footer-default').style.display='flex';
-  document.getElementById('notes-footer-vencida').style.display='none';
-  document.getElementById('notes-input').placeholder='Escribe una nota sobre este avance... (opcional)';
-  document.getElementById('notes-overlay').style.display='none';
+  if(!overlay) return;
+  // Marcar como no-readOnly
+  overlay._readOnly = false;
+  // Restaurar input siempre
+  const inp = document.getElementById('notes-input');
+  if(inp){ inp.style.display = ''; inp.value = ''; inp.placeholder = 'Escribe una nota sobre este avance... (opcional)'; }
+  // Restaurar footers
+  const fd = document.getElementById('notes-footer-default');
+  const fv = document.getElementById('notes-footer-vencida');
+  if(fd) fd.style.display = 'flex';
+  if(fv) fv.style.display = 'none';
+  // Limpiar historial para que no quede el de la tarea anterior
+  const hist = document.getElementById('notes-history');
+  if(hist) hist.innerHTML = '';
+  // Limpiar sub-título
+  const sub = document.getElementById('notes-sub');
+  if(sub) sub.textContent = '';
+  // Resetear flags
+  isVencidaCompletion = false;
+  // Cerrar modal
+  overlay.style.display = 'none';
 }
 
 function moveTask(id,dir){
@@ -4637,37 +4645,44 @@ function editarNota(id){
 function verNotasTarea(id){
   const t = (window.tasks||tasks).find(x=>x.id===id);
   if(!t) return;
-  const history = (t.notes||[]).slice().reverse();
   const overlay = document.getElementById('notes-overlay');
-  const title = document.getElementById('notes-title');
-  const histEl = document.getElementById('notes-history');
-  const inp = document.getElementById('notes-input');
-
   if(!overlay) return;
+
+  const history = (t.notes||[]).slice().reverse();
+
   // Título
-  if(title) title.textContent = 'Historial — ' + t.title;
-  // Historial de notas
+  const title = document.getElementById('notes-title');
+  if(title) title.textContent = '📋 ' + escapeHtml(t.title);
+
+  // Sub
+  const sub = document.getElementById('notes-sub');
+  if(sub) sub.textContent = history.length + ' nota' + (history.length!==1?'s':'') + ' registradas';
+
+  // Historial
+  const histEl = document.getElementById('notes-history');
   if(histEl){
     if(!history.length){
-      histEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px">Sin notas registradas en esta tarea</div>';
+      histEl.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3);font-size:12px">Esta tarea no tiene notas registradas</div>';
     } else {
       histEl.innerHTML = history.map(n=>`
-        <div style="border-left:3px solid #e2e8f0;padding:8px 12px;margin-bottom:8px;background:#f9f9f8;border-radius:0 8px 8px 0">
+        <div style="border-left:3px solid #2d4a7a;padding:8px 12px;margin-bottom:8px;background:#f0f4fa;border-radius:0 8px 8px 0">
           <div style="font-size:13px;color:var(--text);line-height:1.5">${escapeHtml(n.text)}</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:4px">${n.from||'Equipo'} · ${n.date||''}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">${escapeHtml(n.from||'Equipo')} · ${n.date||''}</div>
         </div>`).join('');
     }
   }
-  // Ocultar input y footer de acción (solo lectura)
+
+  // Modo solo lectura: ocultar input y footers
+  const inp = document.getElementById('notes-input');
   if(inp) inp.style.display = 'none';
-  const footerDefault = document.getElementById('notes-footer-default');
-  const footerVencida = document.getElementById('notes-footer-vencida');
-  if(footerDefault) footerDefault.style.display = 'none';
-  if(footerVencida) footerVencida.style.display = 'none';
-  // Mostrar el modal
-  overlay.style.display = 'flex';
-  // Restaurar input al cerrar
+  const fd = document.getElementById('notes-footer-default');
+  const fv = document.getElementById('notes-footer-vencida');
+  if(fd) fd.style.display = 'none';
+  if(fv) fv.style.display = 'none';
+
+  // Marcar como readOnly y abrir
   overlay._readOnly = true;
+  overlay.style.display = 'flex';
 }
 
 function delNota(id){
