@@ -5535,33 +5535,28 @@ function closeBackupModal(){
 </script>
 
   <script>
-    // Version check — fuerza recarga si hay versión nueva disponible
-    const _APP_VERSION = '20260410-v3';
-    if(localStorage.getItem('hh-app-version') !== _APP_VERSION){
-      localStorage.setItem('hh-app-version', _APP_VERSION);
-      if(localStorage.getItem('hh-app-version-prev')){
-        caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
-        window.location.reload(true);
-      }
-      localStorage.setItem('hh-app-version-prev', '1');
-    }
     if('serviceWorker' in navigator && location.hostname !== 'www.claudeusercontent.com'){
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js').then(reg => {
-          // Revisar actualizaciones cada vez que carga
+          // Forzar revisión de actualizaciones en cada carga
           reg.update();
-          // Si hay una nueva versión instalada esperando, activarla y recargar silenciosamente
+          // Activar nuevo SW inmediatamente cuando esté listo
           reg.addEventListener('updatefound', () => {
             const newWorker = reg.installing;
             newWorker.addEventListener('statechange', () => {
               if(newWorker.state === 'installed' && navigator.serviceWorker.controller){
-                // Nueva versión lista — recargar automáticamente
                 newWorker.postMessage({ type: 'SKIP_WAITING' });
               }
             });
           });
         }).catch(e => {});
-        // Cuando el SW nuevo toma control, recargar la página silenciosamente
+        // Escuchar mensaje NEW_VERSION del SW — recargar silenciosamente
+        navigator.serviceWorker.addEventListener('message', e => {
+          if(e.data && e.data.type === 'NEW_VERSION'){
+            window.location.reload();
+          }
+        });
+        // Cuando el SW nuevo toma control, recargar
         let refreshing = false;
         navigator.serviceWorker.addEventListener('controllerchange', () => {
           if(!refreshing){ refreshing = true; window.location.reload(); }
