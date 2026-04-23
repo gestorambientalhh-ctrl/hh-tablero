@@ -2872,13 +2872,6 @@ function setResp(v){
   renderCurrent();
 }
 
-function buildRespButtons(){
-  const users=getUsers().filter(u=>u.active!==false);
-  const bar=document.getElementById('section-bar-filters');
-  if(!bar) return;
-  bar.innerHTML=`<button class="resp-btn act" data-who="" onclick="setResp('')">Total</button>`+
-    users.map(u=>`<button class="resp-btn" data-who="${u.name}" onclick="setResp('${u.name}')">${u.name}</button>`).join('');
-}
 function toggleDone(id){
   const t=tasks.find(x=>x.id===id);if(!t)return;
   t.status=t.status==='c'?'p':'c';persist();renderCurrent();
@@ -4982,8 +4975,7 @@ function subirArchivoCliente(input){
   _aaSubiendoTipo = tipo;
   document.getElementById('aa-uploading').style.display='block';
 
-  // Subir a Google Drive via Apps Script (mismo mecanismo que soportes de pago)
-  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwSCVADRhqQJ2Mm_6owSm7N1UptNnXVsWkkpKKSe97-_waK1u5WHJUtkNrvlpUERVik/exec';
+  // Subir a Google Drive via Apps Script (usa la URL global APPS_SCRIPT_URL)
   const reader = new FileReader();
   reader.onload = function(e){
     const base64 = e.target.result.split(',')[1];
