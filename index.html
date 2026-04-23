@@ -4253,10 +4253,13 @@ function saveFlujoTask(){
     supportDesc:soporte||(flujoType==='pago'?'Comprobante de pago':'Comprobante de cobro'),
     supportDone:false,fromFlujo:true,
   };
-  // Agregar a AMBAS referencias para evitar que persist() sobreescriba
+  // Agregar a AMBAS referencias
   tasks.push(nuevaTarea);
   window.tasks = tasks;
-  persist();
+  // Guardar en localStorage inmediatamente
+  localStorage.setItem('hh-socios-v3', JSON.stringify(tasks));
+  // Escritura inmediata a Firebase (sin debounce — evita pérdida si se cierra rápido)
+  if(window.persistTasksImmediate) window.persistTasksImmediate([...tasks]);
   closeFlujoForm();
   renderFlujoBody();
 }
