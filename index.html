@@ -2694,6 +2694,7 @@ function saveTask(){
     cancelarSubtarea();
   }
   tasks.push(newTask);
+  window.tasks = tasks; // sincronizar antes de persist()
   }
   persist();
   document.getElementById('fa-title').value='';
@@ -3132,8 +3133,8 @@ function vaciarPapelera(){
   renderPapelera();
 }
 function persist(){
-  // Siempre sincronizar desde window.tasks primero para evitar datos viejos
-  if(window.tasks && window.tasks.length > 0) tasks = window.tasks;
+  // Solo sincronizar desde window.tasks si tiene MÁS tareas (evita sobreescribir recién agregadas)
+  if(window.tasks && window.tasks.length > tasks.length) tasks = window.tasks;
   window.tasks = tasks;
   localStorage.setItem('hh-socios-v3', JSON.stringify(tasks));
   localStorage.setItem('hh-socios-updated', String(Date.now()));
@@ -4008,14 +4009,17 @@ function saveFlujoTask(){
   const date=document.getElementById('fl-date').value;
   const who=document.getElementById('fl-who').value;
   const soporte=document.getElementById('fl-soporte').value.trim();
-  tasks.push({
+  const nuevaTarea = {
     id:Date.now()+'_fl_'+Math.random().toString(36).slice(2),
     title,who,pri:'normal',date,status:'p',biz:flujoBiz,
     entidad: entidad || title,
     isPayment:true,flujoType,flujoValue:value,
     supportDesc:soporte||(flujoType==='pago'?'Comprobante de pago':'Comprobante de cobro'),
     supportDone:false,fromFlujo:true,
-  });
+  };
+  // Agregar a AMBAS referencias para evitar que persist() sobreescriba
+  tasks.push(nuevaTarea);
+  window.tasks = tasks;
   persist();
   closeFlujoForm();
   renderFlujoBody();
