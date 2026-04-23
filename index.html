@@ -5491,9 +5491,10 @@ window.persistDeletedImmediate = async function(deletedList) {
 // ── ESCRITURA NORMAL con guard de seguridad ────────────────────
 window.persistToFirebase = function(taskList) {
   if(!_safeToWrite(taskList)) return; // BLOQUEAR si parece pérdida de datos
+  // Marcar timestamp ANTES del debounce para que onSnapshot ignore snapshots intermedios
+  const writeTime = _setLocalWriteTime();
   clearTimeout(tasksWriteTimer);
   tasksWriteTimer = setTimeout(async () => {
-    const writeTime = _setLocalWriteTime();
     try {
       await setDoc(TASKS_REF, _tasksPayload(taskList, writeTime));
       const ind = document.getElementById('sync-indicator');
