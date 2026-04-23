@@ -3319,6 +3319,15 @@ function semByDate(t){
   if(dl<=5)return{c:'#EF9F27',bg:'#FAEEDA',tc:'#633806',label:`${dl}d restantes`};
   return{c:'#639922',bg:'#EAF3DE',tc:'#27500A',label:`${dl}d restantes`};
 }
+function hitoBtn(taskId){
+  var esH = estaEnHitos(taskId);
+  var bg = esH ? '#1a2744' : 'var(--bg2)';
+  var col = esH ? '#2a9a4a' : 'var(--text3)';
+  var bc = esH ? '#2a9a4a' : 'var(--border)';
+  var title = esH ? 'Quitar hito' : 'Marcar como hito';
+  return '<button class="ca-btn" onclick="marcarComoHito(\'' + taskId + '\')" title="' + title + '" style="background:' + bg + ';color:' + col + ';border-color:' + bc + '">Hito</button>';
+}
+
 function cardHtml(t,showBiz){
   const done=t.status==='c';
   const sem=semByDate(t);
@@ -3369,6 +3378,7 @@ function cardHtml(t,showBiz){
       }
       ${t.isPayment&&!done?`<button class="ca-btn" onclick="abrirPagoParcial('${t.id}')" style="background:#2d4a7a;color:#fff;border-color:#2d4a7a">+ Pago</button>`:''}
       ${!isViewer?`<button class="ca-btn" onclick="abrirSubtarea('${t.id}')" title="Crear subtarea originada de esta tarea" style="background:#eef4ff;color:#2d4a7a;border-color:#c5d3e8">🔗 Subtarea</button>`:''}
+      ${!done&&!isViewer?hitoBtn(t.id):''}
       ${!done
         ? `<button class="ca-btn" onclick="openEdit('${t.id}')" title="Editar" style="margin-left:auto">✏️</button>`
         : `<button class="ca-btn" onclick="verNotasTarea('${t.id}')" title="Ver historial de notas" style="margin-left:auto;background:#f0fdf4;color:#16a34a;border-color:#bbf7d0">📋 Notas${t.notes&&t.notes.length?' ('+t.notes.length+')':''}</button>`
@@ -3449,6 +3459,62 @@ function renderBoard(){
     </div>`;
   });
   document.getElementById('board').innerHTML=html;
+}
+
+// ── HITOS DESDE TABLERO ──────────────────────────────────────
+function estaEnHitos(taskId){
+  return hitos.some(h => h.taskId === taskId);
+}
+
+function marcarComoHito(taskId){
+  const t = (window.tasks||tasks).find(x=>x.id===taskId);
+  if(!t) return;
+
+  // Si ya es hito, quitar
+  if(estaEnHitos(taskId)){
+    if(!confirm('¿Quitar "'+t.title+'" de los hitos?')) return;
+    hitos = hitos.filter(h => h.taskId !== taskId);
+    persistHitos();
+    renderHitosBar();
+    renderCurrent();
+    return;
+  }
+
+  // Verificar límite de 3 por proyecto
+  const delBiz = hitos.filter(h => h.biz === t.biz);
+  if(delBiz.length >= 3){
+    alert('Máximo 3 hitos por proyecto ('+['Gestor HH','Logístico','Montevra'][t.biz]+').\nElimina uno antes de agregar otro.');
+    return;
+  }
+
+  // Usar la fecha de la tarea o pedir una
+  const fecha = t.date || '';
+  if(!fecha){
+    alert('Esta tarea no tiene fecha — agrégale una fecha primero para convertirla en hito.');
+    return;
+  }
+
+  // Crear el hito con referencia a la tarea
+  hitos.push({
+    id: 'h' + Date.now(),
+    nombre: t.title,
+    fecha: fecha,
+    biz: t.biz,
+    taskId: taskId  // referencia a la tarea origen
+  });
+  persistHitos();
+  renderHitosBar();
+  renderCurrent();
+
+  // Mostrar confirmación breve
+  const bar = document.getElementById('hitos-bar');
+  if(bar){
+    const msg = document.createElement('span');
+    msg.style.cssText = 'font-size:11px;color:#2a9a4a;font-weight:600;padding:2px 8px;background:rgba(42,154,74,0.15);border-radius:6px;flex-shrink:0';
+    msg.textContent = '✓ Hito agregado';
+    bar.appendChild(msg);
+    setTimeout(()=>{ if(msg.parentNode) msg.remove(); renderHitosBar(); }, 2500);
+  }
 }
 
 function setVencFiltro(tipo){
