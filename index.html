@@ -157,6 +157,12 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 /* KANBAN BOARD */
 .board{display:flex;gap:14px;padding:16px;overflow-x:auto;overflow-y:auto;flex:1;align-items:flex-start;background:#eef2f7;-webkit-overflow-scrolling:touch}
 .col-wrap{width:260px;flex-shrink:0}
+.venc-filter{display:flex;align-items:center;gap:5px;padding:4px 2px 8px;flex-wrap:wrap}
+.venc-filter-btn{font-size:10px;padding:2px 8px;border-radius:999px;border:1px solid #fca5a5;background:#fff;color:#dc2626;cursor:pointer;font-family:inherit;font-weight:500;transition:all .15s}
+.venc-filter-btn.act{background:#dc2626;color:#fff;border-color:#dc2626}
+.venc-filter-dates{display:none;gap:4px;align-items:center;margin-top:4px;width:100%}
+.venc-filter-dates.show{display:flex}
+.venc-filter-dates input{height:26px;font-size:11px;border:1px solid #fca5a5;border-radius:6px;padding:0 6px;font-family:inherit;color:#7f1d1d;background:#fff5f5}
 .col-header{display:flex;align-items:center;gap:7px;padding:0 2px 10px}
 .col-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 .col-label{font-size:13px;font-weight:600;color:var(--text)}
@@ -1451,6 +1457,9 @@ function refreshWHO(){ WHO = getWHO(); }
 const SEM={urgente:{c:'#E24B4A',bg:'#FCEBEB',tc:'#791F1F'},alta:{c:'#EF9F27',bg:'#FAEEDA',tc:'#633806'},normal:{c:'#639922',bg:'#EAF3DE',tc:'#27500A'}};
 const MONTHS=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 window.tasks=[];let biz=0,tasks=window.tasks,curSection='tablero';
+let _vencFiltro = 'todo'; // 'todo' | 'semana' | 'mes' | 'custom'
+let _vencFechaDesde = '';
+let _vencFechaHasta = '';
 // Limpiar localStorage de recurrentes - Firebase es la fuente de verdad
 // Si hay definiciones en localStorage que no están en Firebase, se borran al cargar
 localStorage.removeItem('hh-recurring-v1');
@@ -3395,19 +3404,57 @@ function renderBoard(){
   keys.forEach((s,i)=>{
     const cards=cols[s];
     if(s==='v'&&cards.length===0)return;
+    // Para vencidas: aplicar filtro de fecha
+    let cardsToShow = cards;
+    let vencFiltradas = cards.length;
+    if(s==='v'){
+      const hoy = new Date(); hoy.setHours(0,0,0,0);
+      const lunes = new Date(hoy); lunes.setDate(hoy.getDate() - (hoy.getDay()===0?6:hoy.getDay()-1));
+      const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+      if(_vencFiltro==='semana'){
+        cardsToShow = cards.filter(t => t.date && new Date(t.date+'T00:00:00') >= lunes);
+      } else if(_vencFiltro==='mes'){
+        cardsToShow = cards.filter(t => t.date && new Date(t.date+'T00:00:00') >= inicioMes);
+      } else if(_vencFiltro==='custom' && _vencFechaDesde){
+        const desde = new Date(_vencFechaDesde+'T00:00:00');
+        const hasta = _vencFechaHasta ? new Date(_vencFechaHasta+'T00:00:00') : hoy;
+        cardsToShow = cards.filter(t => {
+          if(!t.date) return false;
+          const td = new Date(t.date+'T00:00:00');
+          return td >= desde && td <= hasta;
+        });
+      }
+    }
     html+=`<div class="col-wrap">
       <div class="col-header">
         <span class="col-dot" style="background:${dotC[i]}"></span>
         <span class="col-label">${labels[i]}</span>
-        <span class="col-cnt">${cards.length}</span>
+        <span class="col-cnt">${s==='v'?(cardsToShow.length<cards.length?cardsToShow.length+'/'+cards.length:cards.length):cards.length}</span>
       </div>
+      ${s==='v'?`<div class="venc-filter">
+        <button class="venc-filter-btn${_vencFiltro==='todo'?' act':''}" onclick="setVencFiltro('todo')">Todas</button>
+        <button class="venc-filter-btn${_vencFiltro==='semana'?' act':''}" onclick="setVencFiltro('semana')">Esta semana</button>
+        <button class="venc-filter-btn${_vencFiltro==='mes'?' act':''}" onclick="setVencFiltro('mes')">Este mes</button>
+        <button class="venc-filter-btn${_vencFiltro==='custom'?' act':''}" onclick="setVencFiltro('custom')">Rango</button>
+        <div class="venc-filter-dates${_vencFiltro==='custom'?' show':''}" id="venc-dates">
+          <input type="date" id="venc-desde" value="${_vencFechaDesde}" onchange="_vencFechaDesde=this.value;renderCurrent()" placeholder="Desde">
+          <span style="font-size:10px;color:#dc2626">—</span>
+          <input type="date" id="venc-hasta" value="${_vencFechaHasta}" onchange="_vencFechaHasta=this.value;renderCurrent()" placeholder="Hasta">
+        </div>
+      </div>`:''}
       <div class="col-body">
-        ${cards.length?cards.map(t=>cardHtml(t,false)).join(''):'<div class="empty-col">Sin tareas</div>'}
+        ${cardsToShow.length?cardsToShow.map(t=>cardHtml(t,false)).join(''):(cards.length?'<div class="empty-col" style="color:#dc2626;font-size:12px">Sin vencidas en este período</div>':'<div class="empty-col">Sin tareas</div>')}
         ${(s==='p'||s==='e')?`<button class="add-btn" onclick="toggleForm()">+ Agregar tarea</button>`:''}
       </div>
     </div>`;
   });
   document.getElementById('board').innerHTML=html;
+}
+
+function setVencFiltro(tipo){
+  _vencFiltro = tipo;
+  if(tipo !== 'custom'){ _vencFechaDesde = ''; _vencFechaHasta = ''; }
+  renderCurrent();
 }
 
 function changeStatusFromGeneral(id, newStatus){
