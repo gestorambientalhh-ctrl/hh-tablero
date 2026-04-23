@@ -1079,6 +1079,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
       </button>
       <div style="width:1px;height:18px;background:var(--border)"></div>
     </div>
+      <button onclick="generarReportePDF()" title="Generar reporte PDF del mes" style="height:32px;padding:0 12px;font-size:12px;font-weight:500;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:8px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px">📄 PDF</button>
       <button onclick="openFlujoForm()" id="btn-flujo-new" style="margin-left:auto;height:32px;padding:0 14px;font-size:12px;font-weight:500;background:#2d4a7a;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Nueva tarea de flujo
@@ -3056,6 +3057,135 @@ document.addEventListener('DOMContentLoaded', ()=>{
   document.getElementById('hito-biz')?.addEventListener('change', renderHitosList);
   document.getElementById('hitos-overlay')?.addEventListener('click', closeHitos);
 });
+
+
+// ── REPORTE PDF MENSUAL ────────────────────────────────────────
+function generarReportePDF(){
+  if(window.tasks && window.tasks.length > 0) tasks = window.tasks;
+  const BIZ_N = ['Gestor HH','Logístico','Montevra'];
+  const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  
+  // Determinar mes del reporte
+  const now = new Date();
+  const mesKey = flujoMesFilter || (now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0'));
+  const [anioR, mesNum] = mesKey.split('-');
+  const mesNombre = MESES_ES[parseInt(mesNum)-1] + ' ' + anioR;
+  const bizNombre = flujoBiz < 3 ? BIZ_N[flujoBiz] : 'Todos los proyectos';
+
+  // Filtrar tareas del mes y proyecto
+  const fl = tasks.filter(t => {
+    if(!t.isPayment) return false;
+    if(flujoBiz < 3 && t.biz !== flujoBiz) return false;
+    if(t.date && !t.date.startsWith(mesKey)) return false;
+    return true;
+  });
+
+  const pagos  = fl.filter(t => t.flujoType !== 'cobro');
+  const cobros = fl.filter(t => t.flujoType === 'cobro');
+  const totalPagos  = pagos.reduce((s,t)  => s+(t.flujoValue||0), 0);
+  const totalCobros = cobros.reduce((s,t) => s+(t.flujoValue||0), 0);
+  const neto = totalCobros - totalPagos;
+  const fmt = v => '$'+Math.round(v).toLocaleString('es-CO');
+
+  const rowsPagos = pagos.map(t => `
+    <tr>
+      <td>${t.date||''}</td>
+      <td>${t.title}</td>
+      <td>${t.entidad||''}</td>
+      <td style="color:#dc2626;font-weight:600">${fmt(t.flujoValue||0)}</td>
+      <td>${t.status==='c'?'✓ Pagado':'Pendiente'}</td>
+    </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:#888">Sin egresos este mes</td></tr>';
+
+  const rowsCobros = cobros.map(t => `
+    <tr>
+      <td>${t.date||''}</td>
+      <td>${t.title}</td>
+      <td>${t.entidad||''}</td>
+      <td style="color:#16a34a;font-weight:600">${fmt(t.flujoValue||0)}</td>
+      <td>${t.status==='c'?'✓ Cobrado':'Pendiente'}</td>
+    </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:#888">Sin ingresos este mes</td></tr>';
+
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Reporte Flujo — ${mesNombre}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: Arial, sans-serif; font-size: 12px; color: #1a1a1a; padding: 32px; }
+  .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:28px; border-bottom:3px solid #2d4a7a; padding-bottom:16px; }
+  .title { font-size:22px; font-weight:700; color:#2d4a7a; }
+  .subtitle { font-size:13px; color:#666; margin-top:4px; }
+  .kpis { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:28px; }
+  .kpi { border:1px solid #e2e8f0; border-radius:8px; padding:14px; }
+  .kpi-label { font-size:10px; text-transform:uppercase; letter-spacing:.5px; color:#666; margin-bottom:6px; }
+  .kpi-value { font-size:22px; font-weight:700; }
+  .kpi-value.red { color:#dc2626; }
+  .kpi-value.green { color:#16a34a; }
+  .kpi-value.blue { color:#2d4a7a; }
+  .section-title { font-size:13px; font-weight:700; color:#fff; background:#2d4a7a; padding:8px 14px; border-radius:6px 6px 0 0; margin-top:20px; }
+  .section-title.green { background:#16a34a; }
+  table { width:100%; border-collapse:collapse; }
+  th { background:#f8f9fa; padding:8px 10px; text-align:left; font-size:11px; text-transform:uppercase; color:#666; border-bottom:1px solid #e2e8f0; }
+  td { padding:8px 10px; border-bottom:1px solid #f0f0ee; font-size:12px; }
+  tr:last-child td { border-bottom:none; }
+  .footer { margin-top:32px; padding-top:12px; border-top:1px solid #e2e8f0; font-size:10px; color:#999; display:flex; justify-content:space-between; }
+  @media print { body { padding:16px; } }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="title">Reporte de Flujo</div>
+      <div class="subtitle">${mesNombre} · ${bizNombre}</div>
+    </div>
+    <div class="subtitle" style="text-align:right">Generado: ${now.toLocaleDateString('es-CO')}<br>HH Plataforma de Gestión</div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi">
+      <div class="kpi-label">Total Egresos</div>
+      <div class="kpi-value red">${fmt(totalPagos)}</div>
+      <div style="font-size:10px;color:#888;margin-top:4px">${pagos.length} movimiento${pagos.length!==1?'s':''}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Total Ingresos</div>
+      <div class="kpi-value green">${fmt(totalCobros)}</div>
+      <div style="font-size:10px;color:#888;margin-top:4px">${cobros.length} movimiento${cobros.length!==1?'s':''}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Neto del mes</div>
+      <div class="kpi-value ${neto>=0?'green':'red'}">${neto>=0?'+':''}${fmt(neto)}</div>
+      <div style="font-size:10px;color:#888;margin-top:4px">${neto>=0?'Positivo':'Negativo'}</div>
+    </div>
+  </div>
+
+  <div class="section-title">💰 Egresos / Pagos</div>
+  <table>
+    <thead><tr><th>Fecha</th><th>Concepto</th><th>Entidad</th><th>Valor</th><th>Estado</th></tr></thead>
+    <tbody>${rowsPagos}</tbody>
+  </table>
+
+  <div class="section-title green">📥 Ingresos / Cobros</div>
+  <table>
+    <thead><tr><th>Fecha</th><th>Concepto</th><th>Entidad</th><th>Valor</th><th>Estado</th></tr></thead>
+    <tbody>${rowsCobros}</tbody>
+  </table>
+
+  <div class="footer">
+    <span>HH Plataforma de Gestión — Reporte interno</span>
+    <span>${mesNombre} · ${bizNombre}</span>
+  </div>
+</body>
+</html>`;
+
+  // Abrir en ventana nueva e imprimir
+  const win = window.open('', '_blank', 'width=900,height=700');
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 600);
+}
 
 // ── ZOOM / TAMAÑO INTERFAZ ────────────────────────────────────
 const _ZOOM_LEVELS = [1.0, 1.1, 1.2, 1.35];
