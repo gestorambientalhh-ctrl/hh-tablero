@@ -5489,19 +5489,17 @@ window.persistDeletedImmediate = async function(deletedList) {
 };
 
 // ── ESCRITURA NORMAL con guard de seguridad ────────────────────
-window.persistToFirebase = function(taskList) {
-  if(!_safeToWrite(taskList)) return; // BLOQUEAR si parece pérdida de datos
-  // Marcar timestamp ANTES del debounce para que onSnapshot ignore snapshots intermedios
+window.persistToFirebase = async function(taskList) {
+  if(!_safeToWrite(taskList)) return;
+  // Sin debounce — escritura inmediata para evitar race condition con onSnapshot
   const writeTime = _setLocalWriteTime();
   clearTimeout(tasksWriteTimer);
-  tasksWriteTimer = setTimeout(async () => {
-    try {
-      await setDoc(TASKS_REF, _tasksPayload(taskList, writeTime));
-      const ind = document.getElementById('sync-indicator');
-      if(ind){ ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0',2000); }
-      _hacerBackup(taskList);
-    } catch(e) { console.warn('Tasks write error:', e); }
-  }, 800);
+  try {
+    await setDoc(TASKS_REF, _tasksPayload(taskList, writeTime));
+    const ind = document.getElementById('sync-indicator');
+    if(ind){ ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0',2000); }
+    _hacerBackup(taskList);
+  } catch(e) { console.warn('Tasks write error:', e); }
 };
 
 // ── RESTAURAR DESDE BACKUP ─────────────────────────────────────
