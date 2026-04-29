@@ -4646,7 +4646,7 @@ function subirSoporteParcial(input){
     const base64 = e.target.result.split(',')[1];
     const payload = {
       file: base64,
-      filename: (pago.esPagoTotal ? 'pago_total_' : 'pago_parcial_') + pago.id + '_' + file.name,
+      filename: (pago.esPagoTotal ? 'pago_total_' : 'pago_parcial_') + file.name,
       mimeType: file.type,
       fecha: pago.fecha,
       entidad: t.entidad || t.title,
