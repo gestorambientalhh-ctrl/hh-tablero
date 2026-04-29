@@ -723,6 +723,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
         <button class="sec-tab act" id="sec-tablero" onclick="showSection('tablero')">Tablero</button>
         <button class="sec-tab" id="sec-reuniones" onclick="showSection('reuniones')">📋 Reuniones</button>
         <button class="sec-tab" id="sec-flujo" onclick="showSection('flujo')">💸 Flujo</button>
+        <button class="sec-tab" id="sec-caja" onclick="showSection('caja')">📅 Caja</button>
         <div style="width:1px;height:18px;background:var(--border);margin:0 4px"></div>
         <button onclick="toggleForm()" style="display:flex;align-items:center;gap:5px;height:28px;padding:0 12px;background:#2d4a7a;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -1359,6 +1360,46 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
     </div>
   </div>
 
+
+  <!-- ══ MÓDULO FLUJO DE CAJA ══════════════════════════════════ -->
+  <div id="section-caja" style="display:none;position:fixed;top:52px;left:0;right:0;bottom:92px;flex-direction:column;overflow:hidden;z-index:50;background:#f7f7f5">
+    <!-- Header -->
+    <div style="background:#fff;border-bottom:1px solid #e8e8e6;padding:10px 16px;display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap">
+      <button onclick="showSection('tablero')" style="display:flex;align-items:center;gap:5px;height:30px;padding:0 10px;font-size:12px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text2);cursor:pointer;font-family:inherit">← Volver</button>
+      <span style="font-size:14px;font-weight:700;color:#1a2744">📅 Flujo de Caja</span>
+      <div id="caja-proj-tabs" style="display:flex;gap:4px;flex-wrap:wrap"></div>
+      <button onclick="abrirNuevaPartida()" style="margin-left:auto;height:30px;padding:0 12px;font-size:12px;font-weight:600;background:#1a2744;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit">+ Nueva partida</button>
+    </div>
+    <!-- KPIs -->
+    <div id="caja-kpis" style="display:flex;gap:8px;padding:10px 16px;flex-shrink:0;flex-wrap:wrap;background:#fff;border-bottom:1px solid #e8e8e6"></div>
+    <!-- Body semanas -->
+    <div id="caja-body" style="flex:1;overflow-y:auto;padding:12px 16px"></div>
+  </div>
+
+  <!-- Modal nueva partida -->
+  <div id="caja-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1100;align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:16px;padding:24px;width:90%;max-width:400px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div style="font-size:15px;font-weight:600">Nueva partida</div>
+        <button onclick="cerrarNuevaPartida()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3)">&times;</button>
+      </div>
+      <!-- Tipo -->
+      <div style="display:flex;gap:6px;margin-bottom:12px">
+        <button id="caja-tipo-egreso" onclick="setCajaTipo('egreso')" style="flex:1;height:32px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:#2d4a7a;color:#fff;border:none">Egreso</button>
+        <button id="caja-tipo-ingreso" onclick="setCajaTipo('ingreso')" style="flex:1;height:32px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;background:transparent;color:#787774;border:1px solid #e2e8f0">Ingreso</button>
+      </div>
+      <input id="caja-concepto" placeholder="Concepto (ej: Nómina Anderson)" style="width:100%;height:36px;border:1px solid var(--border);border-radius:8px;font-size:13px;padding:0 10px;margin-bottom:8px;box-sizing:border-box;font-family:inherit">
+      <input id="caja-valor" type="number" placeholder="Valor $" style="width:100%;height:36px;border:1px solid var(--border);border-radius:8px;font-size:13px;padding:0 10px;margin-bottom:8px;box-sizing:border-box;font-family:inherit">
+      <input id="caja-fecha" type="date" style="width:100%;height:36px;border:1px solid var(--border);border-radius:8px;font-size:13px;padding:0 10px;margin-bottom:8px;box-sizing:border-box;font-family:inherit">
+      <select id="caja-biz" style="width:100%;height:36px;border:1px solid var(--border);border-radius:8px;font-size:13px;padding:0 10px;margin-bottom:14px;box-sizing:border-box;font-family:inherit">
+        <option value="0">Gestor HH</option>
+        <option value="1">Logístico</option>
+        <option value="2">Montevra</option>
+      </select>
+      <button onclick="guardarPartida()" style="width:100%;height:36px;background:#1a2744;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Guardar partida</button>
+    </div>
+  </div>
+
   <!-- KPI BAR FIJO ABAJO -->
   <div class="kpi-bar" id="kpi-bar"></div>
 
@@ -1402,6 +1443,10 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
     <button class="mob-nav-btn" id="mobnav-reuniones" onclick="showSection('reuniones')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
       Reuniones
+    </button>
+    <button class="mob-nav-btn" id="mobnav-caja" onclick="showSection('caja')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M8 2v4M16 2v4M2 10h20"/></svg>
+      <span>Caja</span>
     </button>
     <button class="mob-nav-btn" id="mobnav-flujo" onclick="showSection('flujo')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
@@ -1527,13 +1572,13 @@ function showSection(s){
   curSection=s;
 
   // ── Tabs desktop
-  ['tablero','dashboard','reuniones','flujo'].forEach(sec=>{
+  ['tablero','dashboard','reuniones','flujo','caja'].forEach(sec=>{
     const el=document.getElementById('sec-'+sec);
     if(el) el.classList.toggle('act',sec===s);
   });
 
   // ── Tabs mobile
-  ['tablero','dashboard','reuniones','flujo','checklist'].forEach(sec=>{
+  ['tablero','dashboard','reuniones','flujo','checklist','caja'].forEach(sec=>{
     const el=document.getElementById('mobnav-'+sec);
     if(el) el.classList.toggle('act',sec===s);
   });
@@ -1542,9 +1587,11 @@ function showSection(s){
   const secTab=document.getElementById('section-tablero');
   const secReu=document.getElementById('section-reuniones');
   const secFl=document.getElementById('section-flujo');
+  const secCaja=document.getElementById('section-caja');
   if(secTab) secTab.style.display=(s==='tablero'||s==='dashboard')?'flex':'none';
   if(secReu) secReu.style.display=s==='reuniones'?'flex':'none';
   if(secFl)  secFl.style.display=s==='flujo'?'flex':'none';
+  if(secCaja) secCaja.style.display=s==='caja'?'flex':'none';
 
   // ── Buttons
   document.getElementById('btn-add').style.display=(s==='tablero'&&biz<3)?'flex':'none';
@@ -1564,6 +1611,8 @@ function showSection(s){
     renderChecklist();
   } else if(s==='flujo'){
     renderFlujo();
+  } else if(s==='caja'){
+    renderCaja();
   } else {
     renderCurrent();
   }
@@ -2943,6 +2992,210 @@ function restoreTask(id){
   if(window.persistDeletedImmediate) window.persistDeletedImmediate([...deletedTasks]);
   renderCurrent();
   renderPapelera();
+}
+
+
+// ════════════════════════════════════════════════════════════
+// MÓDULO FLUJO DE CAJA
+// ════════════════════════════════════════════════════════════
+let cajaPlan = JSON.parse(localStorage.getItem('hh-caja-v1') || '[]');
+let cajaBiz = 0;
+let _cajaTipo = 'egreso';
+const CAJA_BIZ_NAMES = ['Gestor HH', 'Logístico', 'Montevra'];
+const CAJA_BIZ_COLORS = ['#639922', '#378ADD', '#D85A30'];
+
+function cajaBotonesPartida(p) {
+  if(p.liberada) return '<span style="font-size:11px;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:5px;padding:2px 7px;white-space:nowrap">✓ Liberada</span>';
+  var btns = '';
+  if(!isViewer) {
+    btns += '<button onclick="liberarPartida(\'' + p.id + '\')" style="font-size:11px;background:#eef4ff;color:#2d4a7a;border:1px solid #c5d3e8;border-radius:5px;padding:2px 8px;cursor:pointer;font-family:inherit;white-space:nowrap;font-weight:600">↗ Liberar</button>';
+    btns += '<button onclick="eliminarPartida(\'' + p.id + '\')" style="background:none;border:none;font-size:15px;cursor:pointer;color:#ccc;padding:0 2px">&times;</button>';
+  }
+  return btns;
+}
+
+function persistCaja() {
+  localStorage.setItem('hh-caja-v1', JSON.stringify(cajaPlan));
+  if(window.persistCajaToFirebase) window.persistCajaToFirebase([...cajaPlan]);
+}
+
+function setCajaBiz(i) {
+  cajaBiz = i;
+  renderCaja();
+}
+
+function setCajaTipo(t) {
+  _cajaTipo = t;
+  document.getElementById('caja-tipo-egreso').style.cssText = t==='egreso'
+    ? 'flex:1;height:32px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:#2d4a7a;color:#fff;border:none'
+    : 'flex:1;height:32px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;background:transparent;color:#787774;border:1px solid #e2e8f0';
+  document.getElementById('caja-tipo-ingreso').style.cssText = t==='ingreso'
+    ? 'flex:1;height:32px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:#16a34a;color:#fff;border:none'
+    : 'flex:1;height:32px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;background:transparent;color:#787774;border:1px solid #e2e8f0';
+}
+
+function abrirNuevaPartida() {
+  document.getElementById('caja-concepto').value = '';
+  document.getElementById('caja-valor').value = '';
+  document.getElementById('caja-fecha').value = '';
+  document.getElementById('caja-biz').value = String(cajaBiz);
+  setCajaTipo('egreso');
+  document.getElementById('caja-overlay').style.display = 'flex';
+  setTimeout(()=>document.getElementById('caja-concepto').focus(), 100);
+}
+
+function cerrarNuevaPartida() {
+  document.getElementById('caja-overlay').style.display = 'none';
+}
+
+function guardarPartida() {
+  const concepto = document.getElementById('caja-concepto').value.trim();
+  const valor    = parseFloat(document.getElementById('caja-valor').value);
+  const fecha    = document.getElementById('caja-fecha').value;
+  const bizVal   = parseInt(document.getElementById('caja-biz').value);
+  if(!concepto || !valor || !fecha) { alert('Completa concepto, valor y fecha.'); return; }
+  cajaPlan.push({
+    id: 'cp' + Date.now(),
+    concepto, valor, fecha,
+    tipo: _cajaTipo,
+    biz: bizVal,
+    liberada: false,
+    creadaEn: new Date().toISOString()
+  });
+  persistCaja();
+  cerrarNuevaPartida();
+  renderCaja();
+}
+
+function eliminarPartida(id) {
+  if(!confirm('¿Eliminar esta partida?')) return;
+  cajaPlan = cajaPlan.filter(p => p.id !== id);
+  persistCaja();
+  renderCaja();
+}
+
+function liberarPartida(id) {
+  const p = cajaPlan.find(x => x.id === id);
+  if(!p) return;
+  if(!confirm('¿Liberar "' + p.concepto + '"? Se creará como tarea en el Flujo de ' + CAJA_BIZ_NAMES[p.biz] + '.')) return;
+
+  // Crear tarea en el Flujo
+  const nuevaTarea = {
+    id: Date.now() + '_caja_' + Math.random().toString(36).slice(2),
+    title: p.concepto,
+    who: WHO && Object.keys(WHO)[0] || 'Anderson',
+    pri: 'normal',
+    date: p.fecha,
+    status: 'p',
+    biz: p.biz,
+    entidad: p.concepto,
+    isPayment: true,
+    flujoType: p.tipo === 'ingreso' ? 'cobro' : 'pago',
+    flujoValue: p.valor,
+    supportDesc: p.tipo === 'ingreso' ? 'Comprobante de cobro' : 'Comprobante de pago',
+    supportDone: false,
+    fromFlujo: true,
+    fromCaja: true
+  };
+  tasks.push(nuevaTarea);
+  window.tasks = tasks;
+  persist();
+
+  // Marcar como liberada
+  p.liberada = true;
+  p.tareaId = nuevaTarea.id;
+  p.liberadaEn = new Date().toLocaleDateString('es-CO');
+  persistCaja();
+  renderCaja();
+}
+
+function renderCaja() {
+  // Tabs proyectos
+  const tabsEl = document.getElementById('caja-proj-tabs');
+  if(tabsEl) {
+    tabsEl.innerHTML = CAJA_BIZ_NAMES.map((n,i) =>
+      '<button onclick="setCajaBiz('+i+')" style="height:28px;padding:0 12px;border-radius:999px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;'+(cajaBiz===i?'background:#1a2744;color:#fff;border:none':'background:#fff;color:var(--text2);border:1px solid var(--border)')+'">' + n + '</button>'
+    ).join('');
+  }
+
+  const filtradas = cajaPlan.filter(p => p.biz === cajaBiz);
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+
+  // KPIs
+  const estaSemana = (() => {
+    const lunes = new Date(hoy);
+    lunes.setDate(hoy.getDate() - (hoy.getDay()===0?6:hoy.getDay()-1));
+    const domingo = new Date(lunes); domingo.setDate(lunes.getDate()+6);
+    return filtradas.filter(p => !p.liberada && p.tipo !== 'ingreso' && p.fecha >= lunes.toISOString().split('T')[0] && p.fecha <= domingo.toISOString().split('T')[0]);
+  })();
+  const prox4sem = filtradas.filter(p => {
+    if(p.liberada || p.tipo === 'ingreso') return false;
+    const d = new Date(p.fecha + 'T00:00:00');
+    const diff = (d-hoy)/864e5;
+    return diff >= 0 && diff <= 28;
+  });
+  const ingresosEsp = filtradas.filter(p => !p.liberada && p.tipo === 'ingreso' && new Date(p.fecha+'T00:00:00') >= hoy);
+  const totalEgr = prox4sem.reduce((s,p)=>s+p.valor,0);
+  const totalIng = ingresosEsp.reduce((s,p)=>s+p.valor,0);
+  const neto = totalIng - totalEgr;
+
+  const kpisEl = document.getElementById('caja-kpis');
+  if(kpisEl) {
+    kpisEl.innerHTML = [
+      {l:'Esta semana', v: estaSemana.reduce((s,p)=>s+p.valor,0), c:'#dc2626'},
+      {l:'Próx. 4 semanas', v: totalEgr, c:'#1a2744'},
+      {l:'Ingresos esperados', v: totalIng, c:'#16a34a'},
+      {l:'Neto proyectado', v: neto, c: neto>=0?'#16a34a':'#dc2626'}
+    ].map(k => '<div style="flex:1;min-width:110px;background:#fff;border:1px solid #e8e8e6;border-radius:8px;padding:8px 12px">'
+      + '<div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">'+k.l+'</div>'
+      + '<div style="font-size:17px;font-weight:700;color:'+k.c+'">'+(k.v>=0?'':'−')+'$'+Math.abs(Math.round(k.v)).toLocaleString('es-CO')+'</div>'
+      + '</div>').join('');
+  }
+
+  // Agrupar por semana
+  const semanas = {};
+  filtradas.forEach(p => {
+    const d = new Date(p.fecha + 'T00:00:00');
+    const lunes = new Date(d); lunes.setDate(d.getDate() - (d.getDay()===0?6:d.getDay()-1));
+    const key = lunes.toISOString().split('T')[0];
+    if(!semanas[key]) semanas[key] = [];
+    semanas[key].push(p);
+  });
+
+  const bodyEl = document.getElementById('caja-body');
+  if(!bodyEl) return;
+
+  const MES_CORTO = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+  if(!filtradas.length) {
+    bodyEl.innerHTML = '<div style="text-align:center;padding:48px 16px;color:#aaa"><div style="font-size:32px;margin-bottom:12px">📅</div><div style="font-size:14px">Sin partidas para '+CAJA_BIZ_NAMES[cajaBiz]+'</div><div style="font-size:12px;margin-top:6px">Presiona "+ Nueva partida" para planear un pago o ingreso</div></div>';
+    return;
+  }
+
+  bodyEl.innerHTML = Object.keys(semanas).sort().map(key => {
+    const lunes = new Date(key + 'T00:00:00');
+    const dom = new Date(lunes); dom.setDate(lunes.getDate()+6);
+    const label = lunes.getDate()+' '+MES_CORTO[lunes.getMonth()]+' — '+dom.getDate()+' '+MES_CORTO[dom.getMonth()];
+    const items = semanas[key];
+    const totalSem = items.reduce((s,p) => p.tipo==='ingreso' ? s+p.valor : s-p.valor, 0);
+
+    const rows = items.map(p => {
+      const esEgr = p.tipo !== 'ingreso';
+      return '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid #f0f0ee;'+(p.liberada?'opacity:.5':'')+'">'+
+        '<span style="font-size:10px;padding:2px 7px;border-radius:4px;font-weight:600;background:'+(esEgr?'#fef2f2':'#f0fdf4')+';color:'+(esEgr?'#dc2626':'#16a34a')+'">'+
+          (esEgr?'Egreso':'Ingreso')+'</span>'+
+        '<span style="flex:1;font-size:12px;color:var(--text)">'+p.concepto+'</span>'+
+        '<span style="font-size:12px;font-weight:600;color:'+(esEgr?'#dc2626':'#16a34a')+'">'+(esEgr?'-':'+')+'$'+Math.round(p.valor).toLocaleString('es-CO')+'</span>'+
+        '<span style="font-size:10px;color:var(--text3)">'+p.fecha+'</span>'+
+        cajaBotonesPartida(p)+'</div>';
+    }).join('');
+
+    return '<div style="background:#fff;border:1px solid #e8e8e6;border-radius:10px;margin-bottom:12px;overflow:hidden">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#f7f7f5;border-bottom:1px solid #e8e8e6">'+
+        '<span style="font-size:12px;font-weight:700;color:#1a2744">Semana '+label+'</span>'+
+        '<span style="font-size:12px;font-weight:700;color:'+(totalSem>=0?'#16a34a':'#dc2626')+'">'+(totalSem>=0?'+':'')+' $'+Math.abs(Math.round(totalSem)).toLocaleString('es-CO')+'</span>'+
+      '</div>'+rows+'</div>';
+  }).join('');
 }
 
 // ── HITOS ─────────────────────────────────────────────────────
@@ -5702,6 +5955,21 @@ onSnapshot(DELETED_REF, snap => {
 // ── NOTAS FIREBASE SYNC ───────────────────────────────────────
 // ── HITOS FIREBASE SYNC ───────────────────────────────────────
 const HITOS_REF = doc(db, 'hh-socios', 'hitos');
+const CAJA_REF  = doc(db, 'hh-socios', 'caja');
+// ── CAJA FIREBASE SYNC ────────────────────────────────────────
+window.persistCajaToFirebase = async function(list) {
+  try { await setDoc(CAJA_REF, { partidas: list, updatedAt: Date.now() }); }
+  catch(e) { console.warn('Caja write error:', e); }
+};
+onSnapshot(CAJA_REF, snap => {
+  if(!snap.exists()) return;
+  const data = snap.data();
+  if(!data.partidas) return;
+  if(typeof cajaPlan !== 'undefined') cajaPlan = data.partidas;
+  localStorage.setItem('hh-caja-v1', JSON.stringify(data.partidas));
+  if(typeof renderCaja === 'function' && document.getElementById('section-caja')?.style.display === 'flex') renderCaja();
+});
+
 window.persistHitosToFirebase = async function(list) {
   try {
     await setDoc(HITOS_REF, { hitos: list, updatedAt: Date.now() });
