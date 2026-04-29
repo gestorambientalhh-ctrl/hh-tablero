@@ -3449,6 +3449,18 @@ function semByDate(t){
   if(dl<=5)return{c:'#EF9F27',bg:'#FAEEDA',tc:'#633806',label:`${dl}d restantes`};
   return{c:'#639922',bg:'#EAF3DE',tc:'#27500A',label:`${dl}d restantes`};
 }
+function contarSubtareas(taskId){
+  const subs = (window.tasks||tasks).filter(x=>x.originId===taskId);
+  if(!subs.length) return '';
+  return '<span style="font-size:10px;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:4px;padding:1px 6px;font-weight:600">Sub '+subs.length+'</span>';
+}
+
+function mostrarOrigen(originId){
+  const p = (window.tasks||tasks).find(x=>x.id===originId);
+  if(!p) return '';
+  return '<div style="font-size:10px;color:#2d4a7a;margin-bottom:3px;display:flex;align-items:center;gap:4px"><span style="opacity:.5">↳</span><span style="opacity:.6">Subtarea de:</span>&nbsp;<strong>'+escapeHtml(p.title)+'</strong></div>';
+}
+
 function hitoBtn(taskId){
   var esH = estaEnHitos(taskId);
   var bg = esH ? '#1a2744' : 'var(--bg2)';
@@ -3481,6 +3493,8 @@ function cardHtml(t,showBiz){
         ${sem.label}
       </span>
       ${t.date?`<span class="date-pill${sem.vencida?' over':''}">${fmtDate(t.date)}</span>`:''}
+      ${t.originId?'<span style="font-size:10px;background:#eef4ff;color:#2d4a7a;border:1px solid #c5d3e8;border-radius:4px;padding:1px 6px;font-weight:600">↳ Subtarea</span>':''}
+      ${contarSubtareas(t.id)}
       ${showBiz?`<span class="biz-pill" style="background:${BIZ_C[t.biz]}20;color:${BIZ_C[t.biz]}">${BIZ_NAMES[t.biz]||''}</span>`:''}
       <div class="avatar-sm" style="background:${wa.bg};color:${wa.col}">${wa.init}</div>
     </div>
