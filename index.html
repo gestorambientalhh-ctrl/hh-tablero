@@ -158,14 +158,16 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 .board{display:flex;gap:14px;padding:16px;overflow-x:auto;overflow-y:auto;flex:1;align-items:flex-start;background:#eef2f7;-webkit-overflow-scrolling:touch}
 .col-wrap{width:260px;flex-shrink:0}
 /* SUBTAREAS EN TARJETA */
-.subtareas-panel{margin-top:6px;border-top:1px solid #f0f0ee;padding-top:6px}
-.sub-row{display:flex;align-items:center;gap:6px;padding:3px 0}
-.sub-row.done{opacity:.5}
-.sub-check{width:14px;height:14px;cursor:pointer;accent-color:#2d4a7a;flex-shrink:0}
-.sub-title{flex:1;font-size:11px;color:var(--text);line-height:1.3}
+.subtareas-panel{margin-top:8px;padding:6px 0;border-top:1px solid #e2e8f0}
+.subtareas-panel>div:first-child{font-size:10px;font-weight:600;color:#2d4a7a;margin-bottom:5px;display:flex;align-items:center;gap:4px}
+.sub-row{display:flex;align-items:center;gap:6px;padding:4px 0;font-size:11px}
+.sub-row.done{opacity:.6}
+.sub-check{width:14px;height:14px;cursor:pointer;accent-color:#2d4a7a;flex-shrink:0;margin-top:1px}
+.sub-title{flex:1;font-size:11px;color:var(--text);line-height:1.3;word-break:break-word}
 .sub-title.done{text-decoration:line-through;color:var(--text3)}
-.sub-comment{font-size:10px;color:#888;font-style:italic;margin-left:20px;padding:1px 0}
-.sub-del{background:none;border:none;cursor:pointer;color:#ccc;font-size:13px;padding:0;flex-shrink:0}
+.sub-comment{font-size:10px;color:#888;font-style:italic;margin-left:20px;padding:2px 0;margin-top:1px}
+.sub-del{background:none;border:none;cursor:pointer;color:#ccc;font-size:13px;padding:0;flex-shrink:0;transition:color .2s}
+.sub-del:hover{color:#999}
 .sub-comment-inp{font-size:10px;border:none;border-bottom:1px solid #e2e8f0;background:none;color:#666;font-family:inherit;width:calc(100% - 20px);padding:1px 2px;margin-left:20px;margin-top:2px}
 .sub-comment-inp:focus{outline:none;border-bottom-color:#2d4a7a}
 
@@ -2729,6 +2731,7 @@ function saveTask(){
   }
   tasks.push(newTask);
   window.tasks = tasks;
+  console.log('💾 Tarea guardada:', newTask);
   if(_subtareasFormulario.length > 0){
     _subtareasFormulario.forEach(function(s){
       tasks.push({id:Date.now()+'_sub_'+Math.random().toString(36).slice(2),title:s.titulo,who:whoVal,pri:priVal,date:dateVal,status:'p',biz:bizVal,originId:newTask.id,originTitle:newTask.title});
@@ -3539,11 +3542,12 @@ function subRowHtml(s){
 function renderSubtareasEnTarjeta(parentId){
   var subs = (window.tasks||tasks).filter(function(x){ return x.originId===parentId; });
   if(!subs.length) return '';
+  console.log('📌 Subtareas para '+parentId+':', subs);
   var completadas = subs.filter(function(s){ return s.status==='c'; }).length;
   var rows = subs.map(function(s){ return subRowHtml(s); }).join('');
   return '<div class="subtareas-panel">'
-    +'<div style="font-size:10px;font-weight:600;color:#2d4a7a;margin-bottom:3px;display:flex;align-items:center;gap:4px">'
-    +'<span>&#8627;</span><span>Subtareas</span>'
+    +'<div style="font-size:10px;font-weight:600;color:#2d4a7a;margin-bottom:5px;display:flex;align-items:center;gap:4px">'
+    +'<span>↙</span><span>Subtareas</span>'
     +'<span style="margin-left:4px;background:#eef4ff;border-radius:4px;padding:0 5px;font-weight:400">'+completadas+'/'+subs.length+'</span>'
     +'</div>'+rows+'</div>';
 }
@@ -5623,6 +5627,13 @@ window.persistToFirebase = async function(taskList) {
   // Sin debounce — escritura inmediata para evitar race condition con onSnapshot
   const writeTime = _setLocalWriteTime();
   clearTimeout(tasksWriteTimer);
+  
+  // 🔍 DEBUG: mostrar qué tareas con originId se están guardando
+  const subtareas = taskList.filter(t => t.originId);
+  if(subtareas.length > 0) {
+    console.log('🔗 GUARDANDO SUBTAREAS:', subtareas.map(t => ({id: t.id, title: t.title, originId: t.originId})));
+  }
+  
   try {
     await setDoc(TASKS_REF, _tasksPayload(taskList, writeTime));
     const ind = document.getElementById('sync-indicator');
@@ -5708,6 +5719,11 @@ window.addEventListener('app-ready', async () => {
     const localTime = _getLocalWriteTime();
     if (fbTime < localTime) {
       return;
+    }
+    // 🔍 DEBUG: mostrar qué tareas con originId se cargan desde Firebase
+    const subtareas = data.tasks.filter(t => t.originId);
+    if(subtareas.length > 0) {
+      console.log('🔗 CARGADAS SUBTAREAS DESDE FIREBASE:', subtareas.map(t => ({id: t.id, title: t.title, originId: t.originId})));
     }
     // ── FILTRAR: usar deletedIds y deletedRecKeys del mismo snapshot ──
     // Estos vienen del mismo documento — sin race conditions
