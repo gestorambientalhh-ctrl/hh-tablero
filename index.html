@@ -2714,11 +2714,13 @@ function saveTask(){
     supportDone: false
   };
   // Si viene de una tarea origen (subtarea)
-  if(_subtaskOriginId){
-    const parent = tasks.find(x=>x.id===_subtaskOriginId);
+  const formOriginId = document.getElementById('form-area').dataset.subtaskOriginId;  // 🔧 Leer del formulario
+  if(formOriginId){
+    const parent = tasks.find(x=>x.id===formOriginId);
     if(parent){
       newTask.originId = parent.id;
       newTask.originTitle = parent.title;
+      console.log('✅ SUBTAREA CREADA CON originId:', newTask.originId);
       // Registrar nota en la tarea padre
       if(!parent.notes) parent.notes = [];
       parent.notes.push({
@@ -2763,6 +2765,7 @@ function abrirSubtarea(parentId){
   // Abrir formulario normal
   const f = document.getElementById('form-area');
   f.style.display = 'block';
+  f.dataset.subtaskOriginId = parentId;  // 🔧 Guardar en el elemento mismo
   // Pre-seleccionar mismo proyecto y responsable
   document.getElementById('fa-biz').value = String(parent.biz ?? 0);
   document.getElementById('fa-who').value = parent.who || '';
@@ -2787,6 +2790,8 @@ function abrirSubtarea(parentId){
 
 function cancelarSubtarea(){
   _subtaskOriginId = null;
+  const f = document.getElementById('form-area');
+  if(f) f.dataset.subtaskOriginId = '';  // 🔧 Limpiar el atributo también
   const banner = document.getElementById('subtask-origin-banner');
   if(banner) banner.remove();
 }
