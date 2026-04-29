@@ -4304,12 +4304,13 @@ function subirSoporte(input){
     const base64 = e.target.result.split(',')[1];
     const payload = {
       file: base64,
-      filename: file.name,
+      filename: (t.flujoType === 'cobro' ? 'cobro_' : 'pago_total_') + file.name,
       mimeType: file.type,
-      fecha: t.date ? fmtDate(t.date) : new Date().toLocaleDateString('es-CO'),
+      fecha: t.date || new Date().toISOString().split('T')[0],
       entidad: t.entidad || t.title,
-      descripcion: t.supportDesc || t.title,
+      descripcion: (t.flujoType === 'cobro' ? 'Cobro — ' : 'Pago total — ') + (t.supportDesc || t.title),
       tipo: t.flujoType || 'pago',
+      esParcial: false,
       valor: t.flujoValue || 0
     };
     fetch(APPS_SCRIPT_URL, {
@@ -4430,7 +4431,7 @@ function renderFlujoBody(){
           ${parciales.map(p=>`
             <div style="display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text2);padding:2px 0">
               <span style="color:#16a34a;font-weight:600">✓</span>
-              <span>${p.desc||'Pago parcial'}</span>
+              <span>${p.desc||'Pago parcial'} ${p.valor?'('+fmtMoney(p.valor)+')':''}</span>
               <span style="color:#16a34a;font-weight:600;margin-left:auto">${fmtMoney(p.valor)}</span>
               <span style="color:var(--text3)">${p.fecha||''}</span>
               ${p.url?`<a href="${p.url}" target="_blank" style="color:#2d4a7a;text-decoration:none;font-size:10px">↗</a>`:''}
@@ -4645,12 +4646,13 @@ function subirSoporteParcial(input){
     const base64 = e.target.result.split(',')[1];
     const payload = {
       file: base64,
-      filename: `pago_parcial_${pago.id}_${file.name}`,
+      filename: (pago.esPagoTotal ? 'pago_total_' : 'pago_parcial_') + pago.id + '_' + file.name,
       mimeType: file.type,
       fecha: pago.fecha,
       entidad: t.entidad || t.title,
-      descripcion: pago.desc + ' - ' + t.title,
+      descripcion: (pago.esPagoTotal ? 'Pago total' : 'Pago parcial') + ' — ' + (pago.desc ? pago.desc + ' — ' : '') + t.title,
       tipo: t.flujoType || 'pago',
+      esParcial: !pago.esPagoTotal,
       valor: pago.valor
     };
     fetch(APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify(payload) })
