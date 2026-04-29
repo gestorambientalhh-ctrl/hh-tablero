@@ -177,7 +177,9 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 .venc-filter-dates{display:none;gap:4px;align-items:center;margin-top:4px;width:100%}
 .venc-filter-dates.show{display:flex}
 .venc-filter-dates input{height:26px;font-size:11px;border:1px solid #fca5a5;border-radius:6px;padding:0 6px;font-family:inherit;color:#7f1d1d;background:#fff5f5}
-.col-header{display:flex;align-items:center;gap:7px;padding:0 2px 10px}
+.col-header{display:flex;align-items:center;gap:7px;padding:0 2px 10px;user-select:none}
+.col-header[onclick]{transition:all .2s;border-radius:6px}
+.col-header[onclick]:hover{background:rgba(99,153,34,.05);padding:4px 8px 6px}
 .col-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 .col-label{font-size:13px;font-weight:600;color:var(--text)}
 .col-cnt{font-size:12px;color:var(--text3)}
@@ -697,12 +699,22 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
       </button>
       <input class="search-top" type="text" placeholder="Buscar..." id="sq" oninput="renderCurrent()">
       <div id="fwho-btns" style="display:flex;gap:4px"></div><input type="hidden" id="fwho" value="">
+      <!-- 🔧 BADGE COMPLETADAS -->
+      <button id="completed-badge" onclick="toggleCompletedDropdown()" title="Mostrar tareas completadas" style="height:28px;padding:0 12px;font-size:12px;font-weight:500;border:1.5px solid var(--border);border-radius:6px;background:var(--bg);cursor:pointer;font-family:inherit;color:var(--text2);display:flex;align-items:center;gap:6px;transition:all .2s">
+        <span>✅</span>
+        <span id="completed-count">0</span>
+      </button>
 <button onclick="openUserModal()" title="Configurar usuarios" style="width:32px;height:32px;border-radius:50%;background:var(--bg2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px">👥</button>
       <button class="zoom-btn" id="zoom-btn" onclick="cycleZoom()" title="Ajustar tamaño de interfaz">A</button>
       <button onclick="openBackupModal()" title="Respaldos de seguridad" style="width:32px;height:32px;border-radius:50%;background:var(--bg2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px">🛡️</button>
       <button class="avatar-btn" onclick="logout()" title="Salir">HH</button>
     </div>
   </nav>
+
+  <!-- 🔧 DROPDOWN COMPLETADAS -->
+  <div id="completed-dropdown" style="position:absolute;top:52px;right:150px;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;min-width:320px;max-height:400px;overflow-y:auto;z-index:100;display:none;box-shadow:0 4px 16px rgba(0,0,0,.1);-webkit-overflow-scrolling:touch">
+    <div id="completed-list" style="padding:8px;font-size:12px"></div>
+  </div>
 
   <!-- MAIN LAYOUT -->
   <div class="app-layout">
@@ -3482,6 +3494,7 @@ window.renderCurrent=function renderCurrent(){
   if(curSection==='dashboard'){
     document.getElementById('dash-view').style.display='block';
     renderDashboard();
+    updateCompletedCount();  // 🔧 Actualizar contador
     return;
   }
   // tablero section
@@ -3494,6 +3507,7 @@ window.renderCurrent=function renderCurrent(){
     document.getElementById('kpi-bar').classList.remove('visible');
     renderBoard();
   }
+  updateCompletedCount();  // 🔧 Actualizar contador
 }
 
 function daysLeft(d){
@@ -3692,13 +3706,17 @@ function renderBoard(){
   cols.p.sort(sortByDate); // closest deadline first
   cols.e.sort(sortByDate);
   cols.c.sort((a,b)=>b.date?.localeCompare(a.date||'')||0); // newest completed first
-  const labels=['Vencidas','Programado','En progreso','Completada'];
-  const dotC=['#E24B4A','#B4B2A9','#378ADD','#639922'];
-  const keys=['v','p','e','c'];
+  const labels=['Vencidas','Programado','En progreso'];
+  const dotC=['#E24B4A','#B4B2A9','#378ADD'];
+  const keys=['v','p','e'];  // 🔧 Completada ya no está aquí - se muestra en dropdown arriba
   let html='';
   keys.forEach((s,i)=>{
     const cards=cols[s];
     if(s==='v'&&cards.length===0)return;
+    
+    // 🔧 COMPLETADA COLLAPSIBLE: Check localStorage para estado expandido
+    let isCompletedExpanded = s==='c' ? (localStorage.getItem('hh-completed-expanded')==='true') : true;
+    
     // Para vencidas: aplicar filtro de fecha
     let cardsToShow = cards;
     let vencFiltradas = cards.length;
@@ -3721,8 +3739,9 @@ function renderBoard(){
       }
     }
     html+=`<div class="col-wrap">
-      <div class="col-header">
+      <div class="col-header${s==='c'?` onclick="toggleCompletedColumn()" style="cursor:pointer"`:''}" id="col-header-${s}">
         <span class="col-dot" style="background:${dotC[i]}"></span>
+        ${s==='c'?`<span style="margin-right:4px;font-size:14px">${isCompletedExpanded?'▼':'▶'}</span>`:''}
         <span class="col-label">${labels[i]}</span>
         <span class="col-cnt">${s==='v'?(cardsToShow.length<cards.length?cardsToShow.length+'/'+cards.length:cards.length):cards.length}</span>
       </div>
@@ -3737,13 +3756,62 @@ function renderBoard(){
           <input type="date" id="venc-hasta" value="${_vencFechaHasta}" onchange="_vencFechaHasta=this.value;renderCurrent()" placeholder="Hasta">
         </div>
       </div>`:''}
-      <div class="col-body">
+      <div class="col-body"${s==='c' && !isCompletedExpanded ? ` style="display:none"` : ''} id="col-body-${s}">
         ${cardsToShow.length?cardsToShow.map(t=>cardHtml(t,false)).join(''):(cards.length?'<div class="empty-col" style="color:#dc2626;font-size:12px">Sin vencidas en este período</div>':'<div class="empty-col">Sin tareas</div>')}
         ${(s==='p'||s==='e')?`<button class="add-btn" onclick="toggleForm()">+ Agregar tarea</button>`:''}
       </div>
     </div>`;
   });
   document.getElementById('board').innerHTML=html;
+}
+
+// ── TOGGLE COMPLETADA COLUMN ──────────────────────────────────
+function toggleCompletedColumn(){
+  const isCurrentlyExpanded = localStorage.getItem('hh-completed-expanded') === 'true';
+  localStorage.setItem('hh-completed-expanded', !isCurrentlyExpanded ? 'true' : 'false');
+  renderCurrent();
+}
+
+// 🔧 TOGGLE COMPLETADAS DROPDOWN EN BARRA SUPERIOR
+function toggleCompletedDropdown(){
+  const dropdown = document.getElementById('completed-dropdown');
+  if(dropdown.style.display === 'none'){
+    renderCompletedDropdown();
+    dropdown.style.display = 'block';
+  } else {
+    dropdown.style.display = 'none';
+  }
+}
+
+// 🔧 RENDERIZAR COMPLETADAS EN DROPDOWN
+function renderCompletedDropdown(){
+  const completadas = (window.tasks || tasks).filter(t => t.status === 'c');
+  const listEl = document.getElementById('completed-list');
+  
+  if(completadas.length === 0){
+    listEl.innerHTML = '<div style="padding:12px;color:#888;text-align:center">No hay tareas completadas</div>';
+    return;
+  }
+  
+  listEl.innerHTML = completadas.map(t => {
+    const statusColor = getStatusColor(t);
+    return `
+      <div onclick="openEdit('${t.id}');document.getElementById('completed-dropdown').style.display='none'" style="padding:8px 10px;margin:4px 0;background:${statusColor.bg};border-radius:5px;cursor:pointer;border-left:3px solid ${statusColor.c};transition:all .2s;display:flex;align-items:flex-start;gap:8px;hover:background:${statusColor.bg}99">
+        <span style="font-size:18px;flex-shrink:0">✓</span>
+        <div style="flex:1">
+          <div style="font-weight:500;color:${statusColor.tc};font-size:11px;line-height:1.3;word-break:break-word">${t.title}</div>
+          <div style="font-size:10px;color:#888;margin-top:2px">${t.date ? fmtDate(t.date) : 'Sin fecha'}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// 🔧 ACTUALIZAR CONTADOR DE COMPLETADAS
+function updateCompletedCount(){
+  const count = (window.tasks || tasks).filter(t => t.status === 'c').length;
+  const countEl = document.getElementById('completed-count');
+  if(countEl) countEl.textContent = count;
 }
 
 // ── HITOS DESDE TABLERO ──────────────────────────────────────
