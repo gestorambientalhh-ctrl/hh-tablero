@@ -795,6 +795,18 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
               <input id="fa-support-desc" type="text" placeholder="Ej: Factura, comprobante..." style="height:34px;font-size:12px;border:1px solid #F59E0B;border-radius:6px;padding:0 8px;font-family:inherit;width:200px">
             </div>
           </div>
+          <div class="form-field" id="fa-subtarea-wrap">
+            <label style="display:flex;align-items:center;gap:5px;cursor:pointer;height:34px;margin-bottom:0">
+              <input type="checkbox" id="fa-es-subtarea" onchange="toggleSubtareaSelector()" style="width:15px;height:15px;cursor:pointer;accent-color:#2d4a7a">
+              <span style="font-size:12px;color:var(--text2);white-space:nowrap">🔗 Es subtarea</span>
+            </label>
+          </div>
+          <div id="fa-subtarea-select-wrap" style="display:none">
+            <div class="form-field">
+              <label>Tarea padre</label>
+              <select id="fa-subtarea-parent" style="height:34px;font-size:12px;border:1px solid #2d4a7a;border-radius:6px;padding:0 8px;font-family:inherit;min-width:180px"></select>
+            </div>
+          </div>
           <button class="btn-save" onclick="saveTask()">Guardar</button>
           <button class="btn-cancel" onclick="toggleForm()">Cancelar</button>
         </div>
@@ -1061,6 +1073,12 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
           <label>Nota de edición (opcional)</label>
           <textarea id="edit-note" placeholder="¿Por qué se editó esta tarea?"></textarea>
         </div>
+      </div>
+      <div style="padding:8px 20px 4px">
+        <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:5px">🔗 Tarea padre (deja vacío si no es subtarea)</label>
+        <select id="edit-subtarea-parent" style="width:100%;height:34px;border:1px solid var(--border);border-radius:8px;font-size:13px;padding:0 10px;font-family:inherit">
+          <option value="">— Sin tarea padre —</option>
+        </select>
       </div>
       <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end">
         <button class="btn-cancel" onclick="closeEdit()">Cancelar</button>
@@ -2186,6 +2204,8 @@ function openEdit(id){
   document.getElementById('edit-biz').value = String(t.biz ?? 0);
   document.getElementById('edit-payment').checked = t.isPayment || false;
   document.getElementById('edit-support-desc').value = t.supportDesc || '';
+  // Poblar selector de tarea padre
+  poblarSelectSubtarea('edit-subtarea-parent', t.originId || '');
   document.getElementById('edit-flujo-value').value = t.flujoValue || '';
   document.getElementById('edit-payment-wrap').style.display = t.isPayment ? 'flex' : 'none';
   setEditFlujoType(t.flujoType || 'pago');
@@ -2225,6 +2245,17 @@ function saveEdit(){
   t.biz = parseInt(document.getElementById('edit-biz').value);
   t.isPayment = document.getElementById('edit-payment').checked;
   t.supportDesc = t.isPayment ? document.getElementById('edit-support-desc').value.trim() : '';
+  // Guardar tarea padre si se seleccionó
+  const parentSelEdit = document.getElementById('edit-subtarea-parent');
+  if(parentSelEdit){
+    const parentId = parentSelEdit.value;
+    if(parentId){
+      const parent = (window.tasks||tasks).find(x=>x.id===parentId);
+      if(parent){ t.originId = parent.id; t.originTitle = parent.title; }
+    } else {
+      t.originId = null; t.originTitle = null;
+    }
+  }
   if(t.isPayment){
     const rawVal = parseFloat(document.getElementById('edit-flujo-value').value);
     if(!isNaN(rawVal) && rawVal >= 0) t.flujoValue = rawVal;
@@ -2736,6 +2767,12 @@ function saveTask(){
     supportDesc: supportDesc,
     supportDone: false
   };
+  // Leer selector de subtarea del formulario si está marcado
+  const cbSubtarea = document.getElementById('fa-es-subtarea');
+  const selSubtarea = document.getElementById('fa-subtarea-parent');
+  if(cbSubtarea && cbSubtarea.checked && selSubtarea && selSubtarea.value){
+    _subtaskOriginId = selSubtarea.value;
+  }
   // Si viene de una tarea origen (subtarea)
   if(_subtaskOriginId){
     const parent = tasks.find(x=>x.id===_subtaskOriginId);
@@ -2804,6 +2841,35 @@ function cancelarSubtarea(){
   _subtaskOriginId = null;
   const banner = document.getElementById('subtask-origin-banner');
   if(banner) banner.remove();
+  const cb = document.getElementById('fa-es-subtarea');
+  if(cb) { cb.checked = false; }
+  const wrap = document.getElementById('fa-subtarea-select-wrap');
+  if(wrap) wrap.style.display = 'none';
+}
+
+function toggleSubtareaSelector(){
+  const cb = document.getElementById('fa-es-subtarea');
+  const wrap = document.getElementById('fa-subtarea-select-wrap');
+  const sel = document.getElementById('fa-subtarea-parent');
+  if(!cb || !wrap || !sel) return;
+  if(cb.checked){
+    wrap.style.display = 'flex';
+    // Poblar select con tareas activas
+    const allTasks = (window.tasks||tasks).filter(t => t.status !== 'c');
+    sel.innerHTML = '<option value="">— Selecciona tarea padre —</option>' +
+      allTasks.map(t => '<option value="'+t.id+'">'+escapeHtml(t.title)+'</option>').join('');
+  } else {
+    wrap.style.display = 'none';
+    _subtaskOriginId = null;
+  }
+}
+
+function poblarSelectSubtarea(selectId, currentOriginId){
+  const sel = document.getElementById(selectId);
+  if(!sel) return;
+  const allTasks = (window.tasks||tasks).filter(t => t.status !== 'c');
+  sel.innerHTML = '<option value="">— Sin tarea padre —</option>' +
+    allTasks.map(t => '<option value="'+t.id+'"'+(t.id===currentOriginId?' selected':'')+'>'+escapeHtml(t.title)+'</option>').join('');
 }
 
 let isVencidaCompletion = false;
