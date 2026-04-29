@@ -3434,6 +3434,7 @@ function getFiltered(){
   const q=(document.getElementById('sq').value||'').toLowerCase();
   const who=document.getElementById('fwho').value;
   return tasks.filter(t=>{
+    if(t.originId) return false; // subtareas no se muestran en el kanban
     if(_bizFilter!==-1?t.biz!==_bizFilter:(biz<3&&t.biz!==biz))return false;
     if(q&&!t.title.toLowerCase().includes(q))return false;
     if(who&&t.who!==who)return false;
