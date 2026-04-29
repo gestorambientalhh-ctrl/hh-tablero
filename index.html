@@ -157,6 +157,11 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 /* KANBAN BOARD */
 .board{display:flex;gap:14px;padding:16px;overflow-x:auto;overflow-y:auto;flex:1;align-items:flex-start;background:#eef2f7;-webkit-overflow-scrolling:touch}
 .col-wrap{width:260px;flex-shrink:0}
+/* 🔧 OCULTAR COMPLETADA - MÉTODO MÚLTIPLE */
+.col-wrap[style*="display:none"] { display:none!important; }
+.board > .col-wrap:has(.col-label:contains("Completada")) { display:none!important; }
+/* Si todo lo demás falla, ocultar la última columna visible */
+.board > div:last-child { display:none!important; }
 /* SUBTAREAS EN TARJETA */
 .subtareas-panel{margin-top:8px;padding:6px 0;border-top:1px solid #e2e8f0}
 .subtareas-panel>div:first-child{font-size:10px;font-weight:600;color:#2d4a7a;margin-bottom:5px;display:flex;align-items:center;gap:4px}
@@ -3738,7 +3743,7 @@ function renderBoard(){
         });
       }
     }
-    html+=`<div class="col-wrap">
+    html+=`<div class="col-wrap"${s==='c'?' style="display:none!important"':''}>
       <div class="col-header${s==='c'?` onclick="toggleCompletedColumn()" style="cursor:pointer"`:''}" id="col-header-${s}">
         <span class="col-dot" style="background:${dotC[i]}"></span>
         ${s==='c'?`<span style="margin-right:4px;font-size:14px">${isCompletedExpanded?'▼':'▶'}</span>`:''}
@@ -3763,6 +3768,15 @@ function renderBoard(){
     </div>`;
   });
   document.getElementById('board').innerHTML=html;
+  // 🔧 ELIMINAR COLUMNA COMPLETADA SI APARECE (por cualquier razón)
+  const colWraps = document.querySelectorAll('.col-wrap');
+  colWraps.forEach(col => {
+    const label = col.querySelector('.col-label');
+    if(label && label.textContent.trim() === 'Completada'){
+      col.style.display = 'none !important';
+      col.remove(); // También la eliminamos del DOM completamente
+    }
+  });
 }
 
 // ── TOGGLE COMPLETADA COLUMN ──────────────────────────────────
@@ -3794,12 +3808,16 @@ function renderCompletedDropdown(){
   }
   
   listEl.innerHTML = completadas.map(t => {
-    const statusColor = getStatusColor(t);
+    // 🔧 Colores simples para completadas
+    const bgColor = '#f0fdf4';
+    const borderColor = '#4ade80';
+    const textColor = '#16a34a';
+    
     return `
-      <div onclick="openEdit('${t.id}');document.getElementById('completed-dropdown').style.display='none'" style="padding:8px 10px;margin:4px 0;background:${statusColor.bg};border-radius:5px;cursor:pointer;border-left:3px solid ${statusColor.c};transition:all .2s;display:flex;align-items:flex-start;gap:8px;hover:background:${statusColor.bg}99">
+      <div onclick="openEdit('${t.id}');document.getElementById('completed-dropdown').style.display='none'" style="padding:8px 10px;margin:4px 0;background:${bgColor};border-radius:5px;cursor:pointer;border-left:3px solid ${borderColor};transition:all .2s;display:flex;align-items:flex-start;gap:8px">
         <span style="font-size:18px;flex-shrink:0">✓</span>
         <div style="flex:1">
-          <div style="font-weight:500;color:${statusColor.tc};font-size:11px;line-height:1.3;word-break:break-word">${t.title}</div>
+          <div style="font-weight:500;color:${textColor};font-size:11px;line-height:1.3;word-break:break-word">${t.title}</div>
           <div style="font-size:10px;color:#888;margin-top:2px">${t.date ? fmtDate(t.date) : 'Sin fecha'}</div>
         </div>
       </div>
