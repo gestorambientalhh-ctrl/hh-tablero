@@ -2715,17 +2715,21 @@ function saveTask(){
   };
   // Si viene de una tarea origen (subtarea)
   const formEl = document.getElementById('form-area');
-  const formOriginId = formEl.dataset.subtaskOriginId;  // 🔧 Leer del formulario
-  console.log('📋 saveTask: formOriginId=', formOriginId);
-  console.log('📋 saveTask: formEl.dataset=', formEl.dataset);
+  const formOriginId = formEl.dataset.subtaskOriginId || _subtaskOriginId;  // 🔧 Intenta dataset, sino usa global
+  console.log('📋 saveTask:');
+  console.log('  - formOriginId:', formOriginId);
+  console.log('  - _subtaskOriginId:', _subtaskOriginId);
+  console.log('  - _subtaskOriginParent:', _subtaskOriginParent);
+  
   if(formOriginId && formOriginId !== ''){
-    console.log('🔗 Detectada subtarea originId=', formOriginId);
-    const parent = tasks.find(x=>x.id===formOriginId);
-    console.log('🔍 Parent para subtarea:', parent ? {id: parent.id, title: parent.title} : 'NO ENCONTRADO');
+    console.log('🔗 DETECTADA SUBTAREA con originId=', formOriginId);
+    // 🔧 Intenta con el objeto guardado primero
+    let parent = _subtaskOriginParent || tasks.find(x=>x.id===formOriginId);
+    console.log('🔍 Parent resuelto:', parent ? {id: parent.id, title: parent.title} : 'NO ENCONTRADO');
     if(parent){
       newTask.originId = parent.id;
       newTask.originTitle = parent.title;
-      console.log('✅ SUBTAREA CREADA CON originId:', {id: newTask.id, originId: newTask.originId, title: newTask.title});
+      console.log('✅✅✅ SUBTAREA CREADA CON originId:', {id: newTask.id, originId: newTask.originId, title: newTask.title});
       // Registrar nota en la tarea padre
       if(!parent.notes) parent.notes = [];
       parent.notes.push({
@@ -2734,11 +2738,11 @@ function saveTask(){
         from: 'Sistema'
       });
     } else {
-      console.warn('⚠️ Parent NO ENCONTRADO para originId=', formOriginId);
+      console.warn('⚠️⚠️⚠️ Parent NO ENCONTRADO para originId=', formOriginId);
     }
     cancelarSubtarea();
   } else {
-    console.log('❌ NO HAY formOriginId - creando tarea normal');
+    console.log('❌ NO HAY originId - creando TAREA NORMAL (no subtarea)');
   }
   tasks.push(newTask);
   window.tasks = tasks;
@@ -2766,6 +2770,7 @@ let pendingMove={id:null,dir:null};
 
 // ── SUBTAREAS / TAREA ORIGINADA ────────────────────────────────
 let _subtaskOriginId = null; // ID de la tarea padre al crear subtarea
+let _subtaskOriginParent = null; // 🔧 Guardar TAMBIÉN el objeto padre completo
 
 function abrirSubtarea(parentId){
   console.log('🔗 ABRIENDO SUBTAREA: parentId=', parentId);
@@ -2773,11 +2778,13 @@ function abrirSubtarea(parentId){
   console.log('🔍 Parent encontrado:', parent ? {id: parent.id, title: parent.title} : 'NO ENCONTRADO');
   if(!parent) return;
   _subtaskOriginId = parentId;
+  _subtaskOriginParent = parent;  // 🔧 Guardar referencia del padre
   // Abrir formulario normal
   const f = document.getElementById('form-area');
   f.style.display = 'block';
-  f.dataset.subtaskOriginId = parentId;  // 🔧 Guardar en el elemento mismo
-  console.log('✅ Formulario dataset.subtaskOriginId asignado a:', f.dataset.subtaskOriginId);
+  f.dataset.subtaskOriginId = parentId;  // También en dataset
+  console.log('✅ Subtarea abierta - originId:', _subtaskOriginId);
+  console.log('✅ Parent guardado:', _subtaskOriginParent);
   // Pre-seleccionar mismo proyecto y responsable
   document.getElementById('fa-biz').value = String(parent.biz ?? 0);
   document.getElementById('fa-who').value = parent.who || '';
@@ -2802,8 +2809,9 @@ function abrirSubtarea(parentId){
 
 function cancelarSubtarea(){
   _subtaskOriginId = null;
+  _subtaskOriginParent = null;  // 🔧 Limpiar también el objeto
   const f = document.getElementById('form-area');
-  if(f) f.dataset.subtaskOriginId = '';  // 🔧 Limpiar el atributo también
+  if(f) f.dataset.subtaskOriginId = '';  // Limpiar el atributo también
   const banner = document.getElementById('subtask-origin-banner');
   if(banner) banner.remove();
 }
