@@ -3276,7 +3276,7 @@ function applyZoom(){
 }
 
 function cycleZoom(){
-  // 🔧 Solo baja: A+++ → A++ → A+ → A → A+++ (ciclo inverso)
+  // 🔧 Solo baja: A+++ → A++ → A+ → A → A+++
   _zoomIdx = (_zoomIdx - 1 + _ZOOM_LEVELS.length) % _ZOOM_LEVELS.length;
   localStorage.setItem('hh-zoom-idx', String(_zoomIdx));
   applyZoom();
