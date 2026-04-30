@@ -3804,16 +3804,27 @@ function renderBoard(){
 // 🔧 CARGAR NOTAS EN PANEL DERECHO DEL KANBAN
 function loadKanbanNotesPanel(){
   const notesEl = document.getElementById('kanban-notes-panel');
-  if(!notesEl) return;
+  if(!notesEl) {
+    console.log('❌ kanban-notes-panel NO ENCONTRADO');
+    return;
+  }
+  
+  console.log('✅ kanban-notes-panel ENCONTRADO');
   
   const allNotes = [];
-  (window.tasks || tasks).forEach(t => {
-    if(t.notes && Array.isArray(t.notes)){
+  const taskList = (window.tasks || tasks);
+  console.log(`📋 Total tareas: ${taskList.length}`);
+  
+  taskList.forEach(t => {
+    if(t.notes && Array.isArray(t.notes) && t.notes.length > 0){
+      console.log(`📝 Tarea "${t.title}" tiene ${t.notes.length} notas`);
       t.notes.forEach(n => {
         allNotes.push({...n, taskTitle: t.title, taskId: t.id});
       });
     }
   });
+  
+  console.log(`📌 Total notas recopiladas: ${allNotes.length}`);
   
   if(allNotes.length === 0){
     notesEl.innerHTML = '<div style="color:#888;text-align:center;padding:20px">Sin notas</div>';
@@ -3827,6 +3838,8 @@ function loadKanbanNotesPanel(){
       <div style="color:#888;font-size:10px">${n.date || 'Sin fecha'}</div>
     </div>`;
   }).join('');
+  
+  console.log('✅ Notas cargadas en el panel');
 }
 
 // ── TOGGLE COMPLETADA COLUMN ──────────────────────────────────
