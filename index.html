@@ -3674,8 +3674,8 @@ function cardHtml(t,showBiz){
       <span class="card-title${done?' done':''}">${t.title}</span>
       ${t.biz!==undefined?`<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;background:#fff;border:1.5px solid ${BIZ_C[t.biz]};color:${BIZ_C[t.biz]};white-space:nowrap;flex-shrink:0">${BIZ_NAMES[t.biz]||''}</span>`:''}
     </div>
-    ${t.isPayment&&t.flujoValue?`<div style="font-size:12px;font-weight:700;margin:3px 0 4px 0;padding:3px 8px;border-radius:5px;display:inline-block;background:${t.flujoType==='cobro'?'#f0fdf4':'#fff5f5'};color:${t.flujoType==='cobro'?'#16a34a':'#dc2626'}">
-      ${t.flujoType==='cobro'?'↑ Cobro':'↓ Pago'} $${Number(t.flujoValue).toLocaleString('es-CO')}
+    ${(t.isPayment||t.flujoType)&&t.flujoValue?`<div style="font-size:13px;font-weight:800;margin:4px 0;padding:4px 10px;border-radius:6px;display:inline-block;background:${t.flujoType==='cobro'?'#dcfce7':'#fee2e2'};color:${t.flujoType==='cobro'?'#15803d':'#b91c1c'};border:1.5px solid ${t.flujoType==='cobro'?'#86efac':'#fca5a5'}">
+      ${t.flujoType==='cobro'?'↑':'↓'} $${Number(t.flujoValue).toLocaleString('es-CO')}
     </div>`:''}
     <div class="card-meta">
       <span class="sem-pill" style="background:${sem.bg};color:${sem.tc}">
