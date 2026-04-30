@@ -3267,17 +3267,17 @@ function generarReportePDF(){
 // ── ZOOM / TAMAÑO INTERFAZ ────────────────────────────────────
 const _ZOOM_LEVELS = [1.0, 1.1, 1.2, 1.35];
 const _ZOOM_LABELS = ['A', 'A+', 'A++', 'A+++'];
-let _zoomIdx = parseInt(localStorage.getItem('hh-zoom-idx') || '0');
+let _zoomIdx = parseInt(localStorage.getItem('hh-zoom-idx') || '3'); // 🔧 Default A+++
 
 function applyZoom(){
-  // Usar zoom del body — funciona con px, rem, todo
   document.body.style.zoom = _ZOOM_LEVELS[_zoomIdx];
   const btn = document.getElementById('zoom-btn');
   if(btn) btn.textContent = _ZOOM_LABELS[_zoomIdx];
 }
 
 function cycleZoom(){
-  _zoomIdx = (_zoomIdx + 1) % _ZOOM_LEVELS.length;
+  // 🔧 Solo baja: A+++ → A++ → A+ → A → A+++ (ciclo inverso)
+  _zoomIdx = (_zoomIdx - 1 + _ZOOM_LEVELS.length) % _ZOOM_LEVELS.length;
   localStorage.setItem('hh-zoom-idx', String(_zoomIdx));
   applyZoom();
 }
@@ -3843,7 +3843,7 @@ function createFixedNotesPanel(){
   // Crear wrapper para el panel fijo
   const wrapper = document.createElement('div');
   wrapper.id = 'fixed-notes-panel-wrapper';
-  wrapper.style.cssText = 'position:fixed;right:0;top:52px;width:260px;height:calc(100vh - 52px);background:var(--bg);border-left:1.5px solid var(--border);display:flex;flex-direction:column;z-index:50;box-shadow:-2px 0 8px rgba(0,0,0,.07)';
+  wrapper.style.cssText = 'position:fixed;right:0;top:52px;width:360px;height:calc(100vh - 52px);background:var(--bg);border-left:1.5px solid var(--border);display:flex;flex-direction:column;z-index:50;box-shadow:-2px 0 8px rgba(0,0,0,.07)';
   
   wrapper.innerHTML = `
     <div class="col-header" style="padding: 12px 10px; border-bottom: 1px solid var(--border)">
