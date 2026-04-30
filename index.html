@@ -3365,6 +3365,11 @@ function persist(){
   // Solo sincronizar desde window.tasks si tiene MÁS tareas (evita sobreescribir recién agregadas)
   if(window.tasks && window.tasks.length > tasks.length) tasks = window.tasks;
   window.tasks = tasks;
+  // 🔧 Asegurar que permanentDeletedIds esté cargado antes de persistir
+  if(!window.permanentDeletedIds || window.permanentDeletedIds.size === 0){
+    const saved = JSON.parse(localStorage.getItem('hh-blacklist-ids')||'[]');
+    if(saved.length > 0) window.permanentDeletedIds = new Set(saved);
+  }
   localStorage.setItem('hh-socios-v3', JSON.stringify(tasks));
   localStorage.setItem('hh-socios-updated', String(Date.now()));
   if(window.persistToFirebase) window.persistToFirebase([...tasks]);
@@ -4841,6 +4846,11 @@ function saveFlujoTask(){
   // Agregar a AMBAS referencias
   tasks.push(nuevaTarea);
   window.tasks = tasks;
+  // 🔧 Asegurar que permanentDeletedIds esté cargado antes de persistir
+  if(!window.permanentDeletedIds || window.permanentDeletedIds.size === 0){
+    const saved = JSON.parse(localStorage.getItem('hh-blacklist-ids')||'[]');
+    if(saved.length > 0) window.permanentDeletedIds = new Set(saved);
+  }
   // Guardar en localStorage inmediatamente
   localStorage.setItem('hh-socios-v3', JSON.stringify(tasks));
   // Escritura inmediata a Firebase (sin debounce — evita pérdida si se cierra rápido)
@@ -5068,10 +5078,29 @@ function renderFlujoBody(){
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
     <div><div style="font-size:11px;font-weight:600;color:#dc2626;margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px;display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#dc2626;display:inline-block"></span>Pagos / Egresos</div>
-    <div style="background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden">${mkCards(pagos,'pago')}</div></div>
+    <div style="background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden">${mkCards(pagos.filter(t=>t.status!=='c'),'pago')}</div></div>
     <div><div style="font-size:11px;font-weight:600;color:#16a34a;margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px;display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#16a34a;display:inline-block"></span>Cobros / Ingresos</div>
-    <div style="background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden">${mkCards(cobros,'cobro')}</div></div>
-  </div>`;
+    <div style="background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden">${mkCards(cobros.filter(t=>t.status!=='c'),'cobro')}</div></div>
+  </div>
+  
+  <!-- 🔧 HISTORIAL: tareas completadas -->
+  ${fl.filter(t=>t.status==='c').length > 0 ? `
+  <div style="margin-top:20px">
+    <button onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';this.querySelector('span').textContent=this.nextElementSibling.style.display==='none'?'▶':'▼'" 
+      style="display:flex;align-items:center;gap:8px;background:none;border:none;cursor:pointer;font-family:inherit;width:100%;padding:6px 0;margin-bottom:6px">
+      <span style="font-size:11px">▶</span>
+      <span style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Historial completados (${fl.filter(t=>t.status==='c').length})</span>
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+    </button>
+    <div style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><div style="font-size:11px;font-weight:600;color:#888;margin-bottom:8px">Pagos completados</div>
+        <div style="background:#fafafa;border:1px solid var(--border);border-radius:10px;overflow:hidden">${mkCards(pagos.filter(t=>t.status==='c'),'pago')}</div></div>
+        <div><div style="font-size:11px;font-weight:600;color:#888;margin-bottom:8px">Cobros completados</div>
+        <div style="background:#fafafa;border:1px solid var(--border);border-radius:10px;overflow:hidden">${mkCards(cobros.filter(t=>t.status==='c'),'cobro')}</div></div>
+      </div>
+    </div>
+  </div>` : ''}`;
 
   // Poblar selector de meses
   const mesSel = document.getElementById('flujo-mes-sel');
