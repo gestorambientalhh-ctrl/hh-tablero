@@ -3265,7 +3265,9 @@ const _ZOOM_LABELS = ['A', 'A+', 'A++', 'A+++'];
 let _zoomIdx = parseInt(localStorage.getItem('hh-zoom-idx') || '3'); // 🔧 Default A+++
 
 function applyZoom(){
-  document.body.style.zoom = _ZOOM_LEVELS[_zoomIdx];
+  // 🔧 Zoom solo al #app — el lock-screen queda independiente y centrado
+  const appEl = document.getElementById('app');
+  if(appEl) appEl.style.zoom = _ZOOM_LEVELS[_zoomIdx];
   const btn = document.getElementById('zoom-btn');
   if(btn) btn.textContent = _ZOOM_LABELS[_zoomIdx];
 }
@@ -3838,10 +3840,9 @@ function createFixedNotesPanel(){
   wrapper.style.cssText = 'position:fixed;right:0;top:52px;width:360px;height:calc(100vh - 52px);background:var(--bg);border-left:1.5px solid var(--border);display:flex;flex-direction:column;z-index:50;box-shadow:-2px 0 8px rgba(0,0,0,.07)';
 
   wrapper.innerHTML = `
-    <!-- Header tabs Notas / To-Do -->
-    <div style="display:flex;align-items:center;border-bottom:1px solid var(--border);flex-shrink:0;padding:0 14px;height:44px;gap:0">
-      <button onclick="switchNotasTab('notas')" style="flex:1;height:44px;background:none;border:none;border-bottom:2px solid #2d4a7a;font-size:13px;font-weight:600;color:#1a1a1a;cursor:pointer;font-family:inherit">Notas</button>
-      <button onclick="switchNotasTab('todo')" style="flex:1;height:44px;background:none;border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:400;color:#787774;cursor:pointer;font-family:inherit">To-Do</button>
+    <!-- Header solo Notas -->
+    <div style="display:flex;align-items:center;border-bottom:1px solid var(--border);flex-shrink:0;padding:0 14px;height:44px">
+      <span style="font-size:13px;font-weight:600;color:#1a1a1a">📝 Notas</span>
     </div>
     <!-- Formulario de agregar nota -->
     <div style="padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0">
