@@ -3883,6 +3883,21 @@ function createFixedNotesPanel(){
   }
 }
 
+// 🔧 EXPANDIR/COLAPSAR CONTENIDO DE NOTA AL HACER CLIC
+function toggleNotaFija(id){
+  const el = document.getElementById('nfc-'+id);
+  if(!el) return;
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+// 🔧 ELIMINAR NOTA DESDE EL PANEL FIJO
+function eliminarNotaFija(id){
+  notas = notas.filter(n => n.id !== id);
+  persistNotas();
+  loadKanbanNotesPanelFixed();
+  if(typeof renderNotasBody === 'function') renderNotasBody();
+}
+
 // 🔧 EDITAR NOTA DESDE EL PANEL FIJO
 function editarNotaFija(id){
   const nota = notas.find(n => n.id === id);
@@ -3957,20 +3972,16 @@ function loadKanbanNotesPanelFixed(){
     const colorDot = n.color || '#2d4a7a';
     const proyecto = n.biz !== '' && n.biz !== undefined ? (['Gestor HH','Logístico','Montevra'][n.biz] || '') : '';
     const fecha = n.fecha ? n.fecha.replace(/(\d{4})-(\d{2})-(\d{2})/,'$3/$2') : (n.creadaEn || '');
-    const contenidoEsc = (n.contenido||'').replace(/'/g,"&#39;").replace(/"/g,"&quot;");
-    return `<div 
-      style="padding:7px 8px;margin-bottom:5px;background:var(--bg2);border-radius:6px;border-left:3px solid ${colorDot};font-size:12px;position:relative;display:flex;align-items:center;gap:6px;cursor:default"
-      title="${contenidoEsc}"
-      onmouseenter="this.querySelector('.nota-detalle').style.display='block'"
-      onmouseleave="this.querySelector('.nota-detalle').style.display='none'">
-      <div style="flex:1;min-width:0">
-        <div style="font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${n.titulo || 'Sin título'}</div>
-        <div style="color:#888;font-size:10px">${fecha}${proyecto ? ' · '+proyecto : ''}</div>
-        <!-- Tooltip al hacer hover -->
-        <div class="nota-detalle" style="display:none;position:absolute;left:0;right:0;top:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:11px;color:var(--text2);z-index:100;box-shadow:0 4px 12px rgba(0,0,0,.12);margin-top:2px;line-height:1.5;white-space:pre-wrap;word-break:break-word">${n.contenido || '<em>Sin contenido</em>'}</div>
+    return `<div id="nf-${n.id}" style="padding:7px 8px;margin-bottom:5px;background:var(--bg2);border-radius:6px;border-left:3px solid ${colorDot};font-size:12px">
+      <div style="display:flex;align-items:center;gap:4px">
+        <div onclick="toggleNotaFija('${n.id}')" style="flex:1;min-width:0;cursor:pointer">
+          <div style="font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${n.titulo || 'Sin título'}</div>
+          <div style="color:#888;font-size:10px">${fecha}${proyecto ? ' · '+proyecto : ''}</div>
+        </div>
+        <button onclick="editarNotaFija('${n.id}')" title="Editar" style="background:none;border:none;cursor:pointer;font-size:12px;padding:2px 3px;color:#aaa;border-radius:3px" onmouseenter="this.style.color='#2d4a7a'" onmouseleave="this.style.color='#aaa'">✏️</button>
+        <button onclick="eliminarNotaFija('${n.id}')" title="Eliminar" style="background:none;border:none;cursor:pointer;font-size:12px;padding:2px 3px;color:#aaa;border-radius:3px" onmouseenter="this.style.color='#dc2626'" onmouseleave="this.style.color='#aaa'">🗑️</button>
       </div>
-      <!-- Lápiz editar -->
-      <button onclick="editarNotaFija('${n.id}')" style="flex-shrink:0;background:none;border:none;cursor:pointer;color:#b0a090;padding:2px 4px;font-size:13px;border-radius:4px;transition:color .15s" onmouseenter="this.style.color='#2d4a7a'" onmouseleave="this.style.color='#b0a090'">✏️</button>
+      <div id="nfc-${n.id}" style="display:none;margin-top:6px;font-size:11px;color:var(--text2);line-height:1.5;white-space:pre-wrap;word-break:break-word;border-top:1px solid var(--border);padding-top:6px">${n.contenido || '<em style="color:#bbb">Sin contenido</em>'}</div>
     </div>`;
   }).join('');
 }
