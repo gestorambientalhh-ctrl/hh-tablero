@@ -3881,7 +3881,7 @@ function loadKanbanNotesPanelFixed(){
     const colorDot = n.color || '#2d4a7a';
     const proyecto = n.biz !== '' && n.biz !== undefined ? (['Gestor HH','Logístico','Montevra'][n.biz] || '') : '';
     const fecha = n.fecha ? n.fecha.replace(/(\d{4})-(\d{2})-(\d{2})/,'$3/$2') : (n.creadaEn || '');
-    return `<div style="padding:10px 8px;margin-bottom:8px;background:var(--bg2);border-radius:6px;border-left:3px solid ${colorDot};cursor:pointer;font-size:12px" onclick="toggleNotasPanel()">
+    return `<div style="padding:10px 8px;margin-bottom:8px;background:var(--bg2);border-radius:6px;border-left:3px solid ${colorDot};font-size:12px">
       <div style="font-weight:600;color:var(--text);margin-bottom:3px;line-height:1.3">${n.titulo || 'Sin título'}</div>
       ${n.contenido ? `<div style="color:var(--text2);font-size:11px;margin-bottom:4px;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${n.contenido}</div>` : ''}
       <div style="color:#888;font-size:10px">${fecha}${proyecto ? ' · '+proyecto : ''}</div>
