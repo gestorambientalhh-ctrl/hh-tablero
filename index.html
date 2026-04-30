@@ -705,11 +705,6 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
       </button>
       <input class="search-top" type="text" placeholder="Buscar..." id="sq" oninput="renderCurrent()">
       <div id="fwho-btns" style="display:flex;gap:4px"></div><input type="hidden" id="fwho" value="">
-      <!-- 🔧 BADGE COMPLETADAS -->
-      <button id="completed-badge" onclick="toggleCompletedDropdown()" title="Mostrar tareas completadas" style="height:28px;padding:0 12px;font-size:12px;font-weight:500;border:1.5px solid var(--border);border-radius:6px;background:var(--bg);cursor:pointer;font-family:inherit;color:var(--text2);display:flex;align-items:center;gap:6px;transition:all .2s">
-        <span>✅</span>
-        <span id="completed-count">0</span>
-      </button>
 <button onclick="openUserModal()" title="Configurar usuarios" style="width:32px;height:32px;border-radius:50%;background:var(--bg2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px">👥</button>
       <button class="zoom-btn" id="zoom-btn" onclick="cycleZoom()" title="Ajustar tamaño de interfaz">A</button>
       <button onclick="openBackupModal()" title="Respaldos de seguridad" style="width:32px;height:32px;border-radius:50%;background:var(--bg2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px">🛡️</button>
@@ -3859,49 +3854,37 @@ function createFixedNotesPanel(){
   if(boardContainer) {
     boardContainer.style.position = 'relative';
     boardContainer.appendChild(wrapper);
-    loadKanbanNotesPanelFixed();
+    // Esperar a que notas estén cargadas desde Firebase/localStorage
+    setTimeout(() => loadKanbanNotesPanelFixed(), 300);
   }
 }
 
-// 🔧 CARGAR NOTAS EN PANEL FIJO
+// 🔧 CARGAR NOTAS EN PANEL FIJO - usa notas globales (mismo sistema del panel lateral)
 function loadKanbanNotesPanelFixed(){
   const notesEl = document.getElementById('kanban-notes-panel-fixed');
-  if(!notesEl) {
-    console.log('❌ kanban-notes-panel-fixed NO ENCONTRADO');
+  if(!notesEl) return;
+  
+  // Usar las notas globales (mismo array que el panel de Notas)
+  const notasGlobales = (typeof notas !== 'undefined' && notas.length > 0) 
+    ? notas 
+    : JSON.parse(localStorage.getItem('hh-notas-v1') || '[]');
+  
+  if(notasGlobales.length === 0){
+    notesEl.innerHTML = '<div style="color:#888;text-align:center;padding:20px;font-size:12px">Sin notas</div>';
     return;
   }
   
-  console.log('✅ kanban-notes-panel-fixed ENCONTRADO');
+  // Ordenar por fecha más reciente primero
+  const sorted = [...notasGlobales].sort((a,b) => (b.date||'').localeCompare(a.date||''));
   
-  const allNotes = [];
-  const taskList = (window.tasks || tasks);
-  console.log(`📋 Total tareas: ${taskList.length}`);
-  
-  taskList.forEach(t => {
-    if(t.notes && Array.isArray(t.notes) && t.notes.length > 0){
-      console.log(`📝 Tarea "${t.title}" tiene ${t.notes.length} notas`);
-      t.notes.forEach(n => {
-        allNotes.push({...n, taskTitle: t.title, taskId: t.id});
-      });
-    }
-  });
-  
-  console.log(`📌 Total notas recopiladas: ${allNotes.length}`);
-  
-  if(allNotes.length === 0){
-    notesEl.innerHTML = '<div style="color:#888;text-align:center;padding:20px">Sin notas</div>';
-    return;
-  }
-  
-  // Mostrar últimas 5 notas
-  notesEl.innerHTML = allNotes.slice(0, 5).map(n => {
-    return `<div style="padding:8px;margin-bottom:8px;background:var(--bg2);border-radius:6px;border-left:3px solid #2d4a7a;cursor:pointer;font-size:11px" onclick="openEdit('${n.taskId}')">
-      <div style="color:#2d4a7a;font-weight:600;margin-bottom:3px">${n.taskTitle}</div>
-      <div style="color:#888;font-size:10px">${n.date || 'Sin fecha'}</div>
+  notesEl.innerHTML = sorted.map(n => {
+    const colorDot = n.color || '#888';
+    const proyecto = n.biz !== undefined ? (['Gestor HH','Logístico','Montevra'][n.biz] || '') : '';
+    return `<div style="padding:10px 8px;margin-bottom:8px;background:var(--bg2);border-radius:6px;border-left:3px solid ${colorDot};cursor:pointer;font-size:12px" onclick="toggleNotasPanel()">
+      <div style="font-weight:600;color:var(--text);margin-bottom:3px;line-height:1.3">${n.title || 'Sin título'}</div>
+      <div style="color:#888;font-size:10px">${n.date ? n.date.replace(/(\d{4})-(\d{2})-(\d{2})/,'$3/$2/$1') : ''}${proyecto ? ' · '+proyecto : ''}</div>
     </div>`;
   }).join('');
-  
-  console.log('✅ Notas cargadas en el panel fijo');
 }
 
 // ── TOGGLE COMPLETADA COLUMN ──────────────────────────────────
@@ -4265,6 +4248,11 @@ function renderGlobal(){
     </select>
     ${weekDropdown}
     <button onclick="clearGlobalFilters()" style="height:28px;padding:0 8px;font-size:11px;border:1px solid var(--border);border-radius:5px;background:var(--bg);cursor:pointer;color:var(--text3)">✕</button>
+    <!-- 🔧 BADGE TAREAS COMPLETADAS EN VERDE -->
+    <button id="completed-badge" onclick="toggleCompletedDropdown()" style="height:28px;padding:0 12px;font-size:12px;font-weight:600;border:1.5px solid #16a34a;border-radius:6px;background:#f0fdf4;cursor:pointer;font-family:inherit;color:#16a34a;display:flex;align-items:center;gap:6px;transition:all .2s;margin-left:auto">
+      ✅ Tareas completadas
+      <span id="completed-count" style="background:#16a34a;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px">0</span>
+    </button>
   </div>
 
   <!-- 4 COLUMNAS -->
