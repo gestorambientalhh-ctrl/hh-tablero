@@ -3883,21 +3883,54 @@ function createFixedNotesPanel(){
   }
 }
 
+// 🔧 EDITAR NOTA DESDE EL PANEL FIJO
+function editarNotaFija(id){
+  const nota = notas.find(n => n.id === id);
+  if(!nota) return;
+  
+  // Rellenar formulario del panel fijo con los datos de la nota
+  const inp = document.getElementById('nota-input-titulo2');
+  const cont = document.getElementById('nota-input-contenido2');
+  const fecha = document.getElementById('nota-input-fecha2');
+  const biz = document.getElementById('nota-input-biz2');
+  const extra = document.getElementById('nota-input-extra2');
+  
+  if(!inp) return;
+  inp.value = nota.titulo || '';
+  if(cont) cont.value = nota.contenido || '';
+  if(fecha) fecha.value = nota.fecha || '';
+  if(biz) biz.value = nota.biz ?? '';
+  if(extra) extra.style.display = 'block';
+  
+  // Cambiar el botón Guardar para que actualice en lugar de crear
+  inp.dataset.editId = id;
+  inp.focus();
+}
+
 // 🔧 GUARDAR NOTA DESDE EL PANEL FIJO
 function quickSaveNota2(){
-  const titulo = document.getElementById('nota-input-titulo2')?.value?.trim();
+  const inp = document.getElementById('nota-input-titulo2');
+  const titulo = inp?.value?.trim();
   if(!titulo) return;
   const contenido = document.getElementById('nota-input-contenido2')?.value?.trim() || '';
   const fecha = document.getElementById('nota-input-fecha2')?.value || new Date().toISOString().split('T')[0];
   const biz = document.getElementById('nota-input-biz2')?.value ?? '';
-  const nueva = { id: 'nota'+Date.now(), titulo, contenido, fecha, biz, creadaEn: new Date().toLocaleDateString('es-CO') };
-  notas.unshift(nueva);
+  
+  const editId = inp.dataset.editId;
+  if(editId){
+    // Actualizar nota existente
+    const idx = notas.findIndex(n => n.id === editId);
+    if(idx !== -1){ notas[idx] = {...notas[idx], titulo, contenido, fecha, biz}; }
+    delete inp.dataset.editId;
+  } else {
+    // Crear nota nueva
+    const nueva = { id: 'nota'+Date.now(), titulo, contenido, fecha, biz, creadaEn: new Date().toLocaleDateString('es-CO') };
+    notas.unshift(nueva);
+  }
   persistNotas();
-  // Limpiar formulario
-  document.getElementById('nota-input-titulo2').value = '';
+  inp.value = '';
   document.getElementById('nota-input-contenido2').value = '';
   document.getElementById('nota-input-extra2').style.display = 'none';
-  // Refrescar panel fijo y panel lateral
   loadKanbanNotesPanelFixed();
   if(typeof renderNotasBody === 'function') renderNotasBody();
 }
@@ -3924,10 +3957,20 @@ function loadKanbanNotesPanelFixed(){
     const colorDot = n.color || '#2d4a7a';
     const proyecto = n.biz !== '' && n.biz !== undefined ? (['Gestor HH','Logístico','Montevra'][n.biz] || '') : '';
     const fecha = n.fecha ? n.fecha.replace(/(\d{4})-(\d{2})-(\d{2})/,'$3/$2') : (n.creadaEn || '');
-    return `<div style="padding:10px 8px;margin-bottom:8px;background:var(--bg2);border-radius:6px;border-left:3px solid ${colorDot};font-size:12px">
-      <div style="font-weight:600;color:var(--text);margin-bottom:3px;line-height:1.3">${n.titulo || 'Sin título'}</div>
-      ${n.contenido ? `<div style="color:var(--text2);font-size:11px;margin-bottom:4px;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${n.contenido}</div>` : ''}
-      <div style="color:#888;font-size:10px">${fecha}${proyecto ? ' · '+proyecto : ''}</div>
+    const contenidoEsc = (n.contenido||'').replace(/'/g,"&#39;").replace(/"/g,"&quot;");
+    return `<div 
+      style="padding:7px 8px;margin-bottom:5px;background:var(--bg2);border-radius:6px;border-left:3px solid ${colorDot};font-size:12px;position:relative;display:flex;align-items:center;gap:6px;cursor:default"
+      title="${contenidoEsc}"
+      onmouseenter="this.querySelector('.nota-detalle').style.display='block'"
+      onmouseleave="this.querySelector('.nota-detalle').style.display='none'">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${n.titulo || 'Sin título'}</div>
+        <div style="color:#888;font-size:10px">${fecha}${proyecto ? ' · '+proyecto : ''}</div>
+        <!-- Tooltip al hacer hover -->
+        <div class="nota-detalle" style="display:none;position:absolute;left:0;right:0;top:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:11px;color:var(--text2);z-index:100;box-shadow:0 4px 12px rgba(0,0,0,.12);margin-top:2px;line-height:1.5;white-space:pre-wrap;word-break:break-word">${n.contenido || '<em>Sin contenido</em>'}</div>
+      </div>
+      <!-- Lápiz editar -->
+      <button onclick="editarNotaFija('${n.id}')" style="flex-shrink:0;background:none;border:none;cursor:pointer;color:#b0a090;padding:2px 4px;font-size:13px;border-radius:4px;transition:color .15s" onmouseenter="this.style.color='#2d4a7a'" onmouseleave="this.style.color='#b0a090'">✏️</button>
     </div>`;
   }).join('');
 }
