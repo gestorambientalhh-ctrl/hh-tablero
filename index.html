@@ -3878,11 +3878,12 @@ function loadKanbanNotesPanelFixed(){
   const sorted = [...notasGlobales].sort((a,b) => (b.date||'').localeCompare(a.date||''));
   
   notesEl.innerHTML = sorted.map(n => {
-    const colorDot = n.color || '#888';
-    const proyecto = n.biz !== undefined ? (['Gestor HH','Logístico','Montevra'][n.biz] || '') : '';
+    const colorDot = n.color || '#2d4a7a';
+    const proyecto = n.biz !== '' && n.biz !== undefined ? (['Gestor HH','Logístico','Montevra'][n.biz] || '') : '';
+    const fecha = n.fecha ? n.fecha.replace(/(\d{4})-(\d{2})-(\d{2})/,'$3/$2') : (n.creadaEn || '');
     return `<div style="padding:10px 8px;margin-bottom:8px;background:var(--bg2);border-radius:6px;border-left:3px solid ${colorDot};cursor:pointer;font-size:12px" onclick="toggleNotasPanel()">
-      <div style="font-weight:600;color:var(--text);margin-bottom:3px;line-height:1.3">${n.title || 'Sin título'}</div>
-      <div style="color:#888;font-size:10px">${n.date ? n.date.replace(/(\d{4})-(\d{2})-(\d{2})/,'$3/$2/$1') : ''}${proyecto ? ' · '+proyecto : ''}</div>
+      <div style="font-weight:600;color:var(--text);margin-bottom:3px;line-height:1.3">${n.titulo || 'Sin título'}</div>
+      <div style="color:#888;font-size:10px">${fecha}${proyecto ? ' · '+proyecto : ''}</div>
     </div>`;
   }).join('');
 }
