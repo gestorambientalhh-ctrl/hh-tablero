@@ -3669,6 +3669,9 @@ function cardHtml(t,showBiz){
       <span class="card-title${done?' done':''}">${t.title}</span>
       ${t.biz!==undefined?`<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;background:#fff;border:1.5px solid ${BIZ_C[t.biz]};color:${BIZ_C[t.biz]};white-space:nowrap;flex-shrink:0">${BIZ_NAMES[t.biz]||''}</span>`:''}
     </div>
+    ${t.isPayment&&t.flujoValue?`<div style="font-size:12px;font-weight:700;margin:3px 0 4px 0;padding:3px 8px;border-radius:5px;display:inline-block;background:${t.flujoType==='cobro'?'#f0fdf4':'#fff5f5'};color:${t.flujoType==='cobro'?'#16a34a':'#dc2626'}">
+      ${t.flujoType==='cobro'?'↑ Cobro':'↓ Pago'} $${Number(t.flujoValue).toLocaleString('es-CO')}
+    </div>`:''}
     <div class="card-meta">
       <span class="sem-pill" style="background:${sem.bg};color:${sem.tc}">
         <span style="width:6px;height:6px;border-radius:50%;background:${sem.c};display:inline-block"></span>
@@ -6382,9 +6385,7 @@ function closeBackupModal(){
     if('serviceWorker' in navigator && location.hostname !== 'www.claudeusercontent.com'){
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js').then(reg => {
-          // Forzar revisión de actualizaciones en cada carga
           reg.update();
-          // Activar nuevo SW inmediatamente cuando esté listo
           reg.addEventListener('updatefound', () => {
             const newWorker = reg.installing;
             newWorker.addEventListener('statechange', () => {
@@ -6394,18 +6395,34 @@ function closeBackupModal(){
             });
           });
         }).catch(e => {});
-        // Escuchar mensaje NEW_VERSION del SW — recargar silenciosamente
         navigator.serviceWorker.addEventListener('message', e => {
           if(e.data && e.data.type === 'NEW_VERSION'){
             window.location.reload();
           }
         });
-        // Cuando el SW nuevo toma control, recargar
         let refreshing = false;
         navigator.serviceWorker.addEventListener('controllerchange', () => {
           if(!refreshing){ refreshing = true; window.location.reload(); }
         });
       });
+    }
+
+    // 🔧 AUTO-DETECCIÓN DE VERSIÓN NUEVA
+    // Cada vez que se despliega un nuevo index.html, este número cambia
+    const APP_VERSION = '20260430-001';
+    const storedVersion = localStorage.getItem('hh-app-version');
+    if(storedVersion && storedVersion !== APP_VERSION){
+      // Hay nueva versión — limpiar cache y recargar
+      localStorage.setItem('hh-app-version', APP_VERSION);
+      if('caches' in window){
+        caches.keys().then(keys => {
+          keys.forEach(key => caches.delete(key));
+        });
+      }
+      // Recargar forzado después de limpiar
+      setTimeout(() => window.location.reload(true), 200);
+    } else {
+      localStorage.setItem('hh-app-version', APP_VERSION);
     }
   </script>
 </body>
