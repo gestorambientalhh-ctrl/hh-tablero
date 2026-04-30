@@ -4343,7 +4343,7 @@ function renderGlobal(){
 
   let html = `
   <!-- FILTROS BAR -->
-  <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:10px 16px;background:#fff;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;margin:-12px -16px 16px">
+  <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:10px 16px;padding-right:20px;background:#fff;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;margin:-12px -16px 16px">
     <span style="font-size:11px;color:var(--text2);font-weight:600">Ver:</span>
     <button class="resp-btn${!who?' act':''}" onclick="setResp('')">Todos</button>
     ${users.map(u=>`<button class="resp-btn${who===u.name?' act':''}" onclick="setResp('${u.name}')">${u.name}</button>`).join('')}
@@ -4359,8 +4359,8 @@ function renderGlobal(){
     ${weekDropdown}
     <button onclick="clearGlobalFilters()" style="height:28px;padding:0 8px;font-size:11px;border:1px solid var(--border);border-radius:5px;background:var(--bg);cursor:pointer;color:var(--text3)">✕</button>
     <!-- 🔧 BADGE TAREAS COMPLETADAS EN VERDE -->
-    <button id="completed-badge" onclick="toggleCompletedDropdown()" style="height:28px;padding:0 12px;font-size:12px;font-weight:600;border:1.5px solid #16a34a;border-radius:6px;background:#f0fdf4;cursor:pointer;font-family:inherit;color:#16a34a;display:flex;align-items:center;gap:6px;transition:all .2s;margin-left:auto">
-      ✅ Tareas completadas
+    <button id="completed-badge" onclick="toggleCompletedDropdown()" style="height:28px;padding:0 12px;font-size:12px;font-weight:600;border:1.5px solid #16a34a;border-radius:6px;background:#f0fdf4;cursor:pointer;font-family:inherit;color:#16a34a;display:flex;align-items:center;gap:6px;transition:all .2s">
+      ✅ Completadas
       <span id="completed-count" style="background:#16a34a;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px">0</span>
     </button>
   </div>
