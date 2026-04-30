@@ -4311,6 +4311,8 @@ function renderGlobal(){
     gm.innerHTML = '<option value="">Todos los meses</option>' +
       sorted.map(m=>{ const[y,mo]=m.split('-'); return `<option value="${m}" ${monthFilter===m?'selected':''}>${MES2[parseInt(mo)-1]} ${y}</option>`; }).join('');
   }
+  // 🔧 Panel fijo de notas a la derecha
+  createFixedNotesPanel();
 }
 
 // Helper filter functions for general view
