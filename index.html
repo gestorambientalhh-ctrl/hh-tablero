@@ -3843,18 +3843,7 @@ function createFixedNotesPanel(){
   // Crear wrapper para el panel fijo
   const wrapper = document.createElement('div');
   wrapper.id = 'fixed-notes-panel-wrapper';
-  wrapper.style.cssText = `
-    position: absolute;
-    right: 0;
-    top: 0;
-    width: 260px;
-    height: 100%;
-    background: var(--bg);
-    border-left: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    z-index: 10;
-  `;
+  wrapper.style.cssText = 'position:fixed;right:0;top:52px;width:260px;height:calc(100vh - 52px);background:var(--bg);border-left:1.5px solid var(--border);display:flex;flex-direction:column;z-index:50;box-shadow:-2px 0 8px rgba(0,0,0,.07)';
   
   wrapper.innerHTML = `
     <div class="col-header" style="padding: 12px 10px; border-bottom: 1px solid var(--border)">
