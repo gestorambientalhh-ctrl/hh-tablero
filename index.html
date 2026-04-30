@@ -161,7 +161,8 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 .col-wrap[style*="display:none"] { display:none!important; }
 .board > .col-wrap:has(.col-label:contains("Completada")) { display:none!important; }
 /* Si todo lo demás falla, ocultar la última columna visible */
-.board > div:last-child { display:none!important; }
+/* 🔧 REMOVIDA: Esta regla escondía la columna de notas */
+/* .board > div:last-child { display:none!important; } */
 /* SUBTAREAS EN TARJETA */
 .subtareas-panel{margin-top:8px;padding:6px 0;border-top:1px solid #e2e8f0}
 .subtareas-panel>div:first-child{font-size:10px;font-weight:600;color:#2d4a7a;margin-bottom:5px;display:flex;align-items:center;gap:4px}
@@ -3768,28 +3769,22 @@ function renderBoard(){
     </div>`;
   });
   
-  // 🔧 RENDERIZAR EN DOS PARTES: COLUMNAS SCROLLEABLES + NOTAS FIJAS
-  const boardHtml = `
-    <div style="display:flex;height:100%;gap:0">
-      <!-- Columnas scrolleables a la izquierda -->
-      <div style="flex:1;overflow-x:auto;overflow-y:hidden">
-        ${html}
-      </div>
-      <!-- Columna de Notas fija a la derecha -->
-      <div class="col-wrap" style="width:260px;flex-shrink:0;background:var(--bg);border-left:1px solid var(--border);display:flex;flex-direction:column">
-        <div class="col-header">
-          <span style="font-size:12px;font-weight:700">📝 Notas</span>
-        </div>
-        <div class="col-content" id="kanban-notes-panel" style="padding:0 10px;font-size:11px;color:var(--text2);overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch">
-          Cargando...
-        </div>
-      </div>
-    </div>
-  `;
+  // 🔧 CONSTRUIR HTML SIN TEMPLATE LITERALS
+  let boardHtml = '<div style="display:flex;gap:0;width:100%">';
+  
+  // Columnas scrolleables
+  boardHtml += '<div style="flex:1;overflow-x:auto;overflow-y:hidden">' + html + '</div>';
+  
+  // Columna de Notas
+  boardHtml += '<div class="col-wrap" style="width:260px;flex-shrink:0;background:var(--bg);border-left:1px solid var(--border);display:flex;flex-direction:column">';
+  boardHtml += '<div class="col-header"><span style="font-size:12px;font-weight:700">📝 Notas</span></div>';
+  boardHtml += '<div class="col-content" id="kanban-notes-panel" style="padding:0 10px;font-size:11px;color:var(--text2);overflow-y:auto;flex:1">';
+  boardHtml += 'Cargando...';
+  boardHtml += '</div></div></div>';
   
   document.getElementById('board').innerHTML=boardHtml;
   // 🔧 Cargar notas en el panel derecho
-  setTimeout(() => loadKanbanNotesPanel(), 0);
+  setTimeout(() => loadKanbanNotesPanel(), 10);
   // 🔧 ELIMINAR COLUMNA COMPLETADA SI APARECE (por cualquier razón)
   const colWraps = document.querySelectorAll('.col-wrap');
   colWraps.forEach(col => {
