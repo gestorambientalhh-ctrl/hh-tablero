@@ -3775,16 +3775,13 @@ function renderBoard(){
   // Columnas scrolleables
   boardHtml += '<div style="flex:1;overflow-x:auto;overflow-y:hidden">' + html + '</div>';
   
-  // Columna de Notas
-  boardHtml += '<div class="col-wrap" style="width:260px;flex-shrink:0;background:var(--bg);border-left:1px solid var(--border);display:flex;flex-direction:column">';
-  boardHtml += '<div class="col-header"><span style="font-size:12px;font-weight:700">📝 Notas</span></div>';
-  boardHtml += '<div class="col-content" id="kanban-notes-panel" style="padding:0 10px;font-size:11px;color:var(--text2);overflow-y:auto;flex:1">';
-  boardHtml += 'Cargando...';
-  boardHtml += '</div></div></div>';
+  boardHtml += '</div>';
   
   document.getElementById('board').innerHTML=boardHtml;
-  // 🔧 Cargar notas en el panel derecho
+  // 🔧 Cargar notas en el panel derecho (SEPARADO)
   setTimeout(() => loadKanbanNotesPanel(), 10);
+  // 🔧 Crear panel FIJO de notas a la derecha (FUERA del board)
+  createFixedNotesPanel();
   // 🔧 ELIMINAR COLUMNA COMPLETADA SI APARECE (por cualquier razón)
   const colWraps = document.querySelectorAll('.col-wrap');
   colWraps.forEach(col => {
@@ -3835,6 +3832,87 @@ function loadKanbanNotesPanel(){
   }).join('');
   
   console.log('✅ Notas cargadas en el panel');
+}
+
+// 🔧 CREAR PANEL FIJO DE NOTAS A LA DERECHA DEL BOARD
+function createFixedNotesPanel(){
+  // Remover panel anterior si existe
+  const oldPanel = document.getElementById('fixed-notes-panel-wrapper');
+  if(oldPanel) oldPanel.remove();
+  
+  // Crear wrapper para el panel fijo
+  const wrapper = document.createElement('div');
+  wrapper.id = 'fixed-notes-panel-wrapper';
+  wrapper.style.cssText = `
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 260px;
+    height: 100%;
+    background: var(--bg);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    z-index: 10;
+  `;
+  
+  wrapper.innerHTML = `
+    <div class="col-header" style="padding: 12px 10px; border-bottom: 1px solid var(--border)">
+      <span style="font-size:12px;font-weight:700">📝 Notas</span>
+    </div>
+    <div class="col-content" id="kanban-notes-panel-fixed" style="padding:0 10px;font-size:11px;color:var(--text2);overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch">
+      Cargando...
+    </div>
+  `;
+  
+  // Obtener el contenedor padre del board
+  const boardContainer = document.getElementById('board').parentElement;
+  if(boardContainer) {
+    boardContainer.style.position = 'relative';
+    boardContainer.appendChild(wrapper);
+    loadKanbanNotesPanelFixed();
+  }
+}
+
+// 🔧 CARGAR NOTAS EN PANEL FIJO
+function loadKanbanNotesPanelFixed(){
+  const notesEl = document.getElementById('kanban-notes-panel-fixed');
+  if(!notesEl) {
+    console.log('❌ kanban-notes-panel-fixed NO ENCONTRADO');
+    return;
+  }
+  
+  console.log('✅ kanban-notes-panel-fixed ENCONTRADO');
+  
+  const allNotes = [];
+  const taskList = (window.tasks || tasks);
+  console.log(`📋 Total tareas: ${taskList.length}`);
+  
+  taskList.forEach(t => {
+    if(t.notes && Array.isArray(t.notes) && t.notes.length > 0){
+      console.log(`📝 Tarea "${t.title}" tiene ${t.notes.length} notas`);
+      t.notes.forEach(n => {
+        allNotes.push({...n, taskTitle: t.title, taskId: t.id});
+      });
+    }
+  });
+  
+  console.log(`📌 Total notas recopiladas: ${allNotes.length}`);
+  
+  if(allNotes.length === 0){
+    notesEl.innerHTML = '<div style="color:#888;text-align:center;padding:20px">Sin notas</div>';
+    return;
+  }
+  
+  // Mostrar últimas 5 notas
+  notesEl.innerHTML = allNotes.slice(0, 5).map(n => {
+    return `<div style="padding:8px;margin-bottom:8px;background:var(--bg2);border-radius:6px;border-left:3px solid #2d4a7a;cursor:pointer;font-size:11px" onclick="openEdit('${n.taskId}')">
+      <div style="color:#2d4a7a;font-weight:600;margin-bottom:3px">${n.taskTitle}</div>
+      <div style="color:#888;font-size:10px">${n.date || 'Sin fecha'}</div>
+    </div>`;
+  }).join('');
+  
+  console.log('✅ Notas cargadas en el panel fijo');
 }
 
 // ── TOGGLE COMPLETADA COLUMN ──────────────────────────────────
