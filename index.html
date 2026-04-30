@@ -145,7 +145,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 .leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 
 /* FORM */
-.form-area{padding:12px 16px;border-bottom:1px solid var(--border);background:var(--bg);display:none;flex-shrink:0}
+.form-area{padding:12px 16px;padding-right:376px;border-bottom:1px solid var(--border);background:var(--bg);display:none;flex-shrink:0}
 .form-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px}
 .form-row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
 .form-field{display:flex;flex-direction:column;gap:3px}
@@ -3006,7 +3006,18 @@ async function delTask(id){
   tasks = allTasks.filter(x=>x.id!==id);
   window.tasks = tasks;
   localStorage.setItem('hh-socios-v3', JSON.stringify(tasks));
+  
+  // 🔧 Guardar scroll antes de renderizar
+  const colVenc = document.querySelector('.col-content');
+  const scrollPos = colVenc ? colVenc.scrollTop : 0;
+  
   renderCurrent();
+  
+  // 🔧 Restaurar scroll después de renderizar
+  setTimeout(() => {
+    const colVencNew = document.querySelector('.col-content');
+    if(colVencNew) colVencNew.scrollTop = scrollPos;
+  }, 0);
 
   // Eliminación atómica en Firebase: lee, filtra, añade a deletedIds, escribe en un solo doc
   if(window._atomicDeleteFromFirebase){
@@ -4866,35 +4877,42 @@ function subirSoporte(input){
   const t = tasks.find(x=>x.id===taskId);
   if(!t) return;
 
-  // Show loading state
   const btn = document.getElementById('soporte-btn-'+taskId);
   if(btn){ btn.textContent='⏳ Subiendo...'; btn.disabled=true; }
 
   const reader = new FileReader();
   reader.onload = function(e){
     const base64 = e.target.result.split(',')[1];
+    const esPrimerSoporte = !t.soportes || t.soportes.length === 0;
+    const numFactura = (t.soportes ? t.soportes.length : 0) + 1;
     const payload = {
       file: base64,
       filename: file.name,
       mimeType: file.type,
       fecha: t.date ? fmtDate(t.date) : new Date().toLocaleDateString('es-CO'),
       entidad: t.entidad || t.title,
-      descripcion: t.supportDesc || t.title,
+      descripcion: (t.supportDesc || t.title) + ' - Factura ' + numFactura,
       tipo: t.flujoType || 'pago',
-      valor: t.flujoValue || 0
+      // 🔧 Opción C: solo la primera factura tiene valor, las demás $0
+      valor: esPrimerSoporte ? (t.flujoValue || 0) : 0
     };
-    fetch(APPS_SCRIPT_URL, {
-      method:'POST',
-      body: JSON.stringify(payload)
-    })
+    fetch(APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify(payload) })
     .then(r=>r.json())
     .then(data=>{
       if(data.ok){
         t.supportDone = true;
-        t.soporteUrl = data.url;
+        // 🔧 Guardar en array de soportes (múltiples PDFs)
+        if(!t.soportes) t.soportes = [];
+        // Migrar soporteUrl antiguo al nuevo array
+        if(t.soporteUrl && !t.soportes.length){
+          t.soportes.push({ url: t.soporteUrl, nombre: 'Soporte 1' });
+        }
+        t.soportes.push({ url: data.url, nombre: file.name });
+        t.soporteUrl = data.url; // compatibilidad
         persist();
         renderFlujoBody();
-        alert('✅ Soporte subido correctamente a Drive y registrado en la hoja.');
+        if(btn){ btn.textContent='📎 + Otro PDF'; btn.disabled=false; }
+        alert('✅ PDF subido correctamente. Puedes subir más PDFs si necesitas.');
       } else {
         alert('❌ Error: ' + (data.error||'Error desconocido'));
         if(btn){ btn.textContent='📎 Subir soporte'; btn.disabled=false; }
@@ -4906,6 +4924,8 @@ function subirSoporte(input){
     });
   };
   reader.readAsDataURL(file);
+  // Limpiar input para permitir subir el mismo archivo de nuevo
+  input.value = '';
 }
 
 function fmtMoney(v){
@@ -5018,8 +5038,8 @@ function renderFlujoBody(){
             ${totalValor?`<span style="font-weight:600;color:${vc};font-size:12px">${fmtMoney(totalValor)}</span>`:''}
             ${badge}
             ${!done&&!isViewer?`<button onclick="abrirPagoParcial('${t.id}')" style="background:#2d4a7a;color:#fff;border:none;border-radius:5px;padding:2px 8px;font-size:11px;cursor:pointer;font-weight:500">+ Pago</button>`:''}
-            ${t.soporteUrl?`<a href="${t.soporteUrl}" target="_blank" style="font-size:11px;color:#2d4a7a;text-decoration:none;border:1px solid #c5d3e8;border-radius:5px;padding:2px 6px">↗</a>`:''}
-            ${!done&&!isViewer?`<button onclick="openEdit('${t.id}')" style="background:none;border:1px solid var(--border);border-radius:5px;padding:2px 5px;font-size:11px;cursor:pointer;color:var(--text2)">✏️</button>`:''}
+            ${(t.soportes && t.soportes.length) ? t.soportes.map((s,i)=>`<a href="${s.url}" target="_blank" title="${s.nombre||'Soporte '+(i+1)}" style="font-size:11px;color:#2d4a7a;text-decoration:none;border:1px solid #c5d3e8;border-radius:5px;padding:2px 6px">📄 ${i+1}</a>`).join('') : (t.soporteUrl?`<a href="${t.soporteUrl}" target="_blank" style="font-size:11px;color:#2d4a7a;text-decoration:none;border:1px solid #c5d3e8;border-radius:5px;padding:2px 6px">📄 1</a>`:'')}
+            ${!done&&!isViewer?`<button id="soporte-btn-${t.id}" onclick="document.getElementById('soporte-file-input').dataset.taskId='${t.id}';document.getElementById('soporte-file-input').click()" style="background:none;border:1px solid #c5d3e8;border-radius:5px;padding:2px 6px;font-size:11px;cursor:pointer;color:#2d4a7a">${(t.soportes&&t.soportes.length)?'📎 +':'📎'}</button>`:''}
             ${!isViewer?`<button onclick="delTask('${t.id}');renderFlujoBody()" style="background:none;border:none;font-size:15px;cursor:pointer;color:#d1cdc7;line-height:1;padding:0 2px">×</button>`:''}
           </div>
         </div>
