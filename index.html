@@ -3829,30 +3829,76 @@ function loadKanbanNotesPanel(){
   console.log('✅ Notas cargadas en el panel');
 }
 
-// 🔧 CREAR PANEL FIJO DE NOTAS A LA DERECHA - reutiliza el notas-panel existente
+// 🔧 CREAR PANEL FIJO DE NOTAS A LA DERECHA
 function createFixedNotesPanel(){
-  // Si ya existe el wrapper, no recrear
   if(document.getElementById('fixed-notes-panel-wrapper')) return;
 
   const wrapper = document.createElement('div');
   wrapper.id = 'fixed-notes-panel-wrapper';
   wrapper.style.cssText = 'position:fixed;right:0;top:52px;width:360px;height:calc(100vh - 52px);background:var(--bg);border-left:1.5px solid var(--border);display:flex;flex-direction:column;z-index:50;box-shadow:-2px 0 8px rgba(0,0,0,.07)';
 
-  // Mover el contenido del notas-panel original dentro del wrapper fijo
-  const notasPanel = document.getElementById('notas-panel');
-  if(notasPanel){
-    // Copiar estilos para que sea visible y fijo
-    notasPanel.style.cssText = 'position:static;width:100%;height:100%;display:flex;flex-direction:column;transform:none;border:none;box-shadow:none;background:transparent';
-    wrapper.appendChild(notasPanel);
-  }
+  wrapper.innerHTML = `
+    <!-- Header tabs Notas / To-Do -->
+    <div style="display:flex;align-items:center;border-bottom:1px solid var(--border);flex-shrink:0;padding:0 14px;height:44px;gap:0">
+      <button onclick="switchNotasTab('notas')" style="flex:1;height:44px;background:none;border:none;border-bottom:2px solid #2d4a7a;font-size:13px;font-weight:600;color:#1a1a1a;cursor:pointer;font-family:inherit">Notas</button>
+      <button onclick="switchNotasTab('todo')" style="flex:1;height:44px;background:none;border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:400;color:#787774;cursor:pointer;font-family:inherit">To-Do</button>
+    </div>
+    <!-- Formulario de agregar nota -->
+    <div style="padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0">
+      <input id="nota-input-titulo2" type="text" placeholder="Agregar una nota..." onkeydown="if(event.key==='Enter')quickSaveNota2()" style="width:100%;height:36px;font-size:13px;border:none;border-bottom:2px solid #2d4a7a;outline:none;background:transparent;font-family:inherit;color:var(--text);padding:0 2px">
+      <div id="nota-input-extra2" style="display:none;margin-top:8px">
+        <textarea id="nota-input-contenido2" placeholder="Detalles..." style="width:100%;height:70px;font-size:12px;border:0.5px solid #e2e8f0;border-radius:8px;padding:8px;font-family:inherit;outline:none;resize:none;color:var(--text);background:var(--bg2)"></textarea>
+        <div style="display:flex;gap:6px;margin-top:6px;align-items:center">
+          <input id="nota-input-fecha2" type="date" style="font-size:11px;border:0.5px solid #e2e8f0;border-radius:6px;padding:3px 6px;font-family:inherit;color:var(--text2);background:var(--bg2)">
+          <select id="nota-input-biz2" style="font-size:11px;border:0.5px solid #e2e8f0;border-radius:6px;padding:3px 6px;font-family:inherit;color:var(--text2);background:var(--bg2);flex:1">
+            <option value="">General</option>
+            <option value="0">Gestor HH</option>
+            <option value="1">Logístico</option>
+            <option value="2">Montevra</option>
+          </select>
+          <button onclick="quickSaveNota2()" style="height:28px;padding:0 10px;font-size:11px;font-weight:500;background:#2d4a7a;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit">Guardar</button>
+        </div>
+      </div>
+    </div>
+    <!-- Lista de notas -->
+    <div id="kanban-notes-panel-fixed" style="flex:1;overflow-y:auto;padding:6px 10px;-webkit-overflow-scrolling:touch"></div>
+  `;
 
   const boardContainer = document.getElementById('board')?.parentElement;
   if(boardContainer){
     boardContainer.style.position = 'relative';
     boardContainer.appendChild(wrapper);
-    // Asegurar que las notas estén cargadas y mostradas
-    if(typeof renderNotasBody === 'function') renderNotasBody();
+    setTimeout(() => {
+      loadKanbanNotesPanelFixed();
+      // Mostrar extra al enfocar titulo
+      const inp = document.getElementById('nota-input-titulo2');
+      if(inp){
+        inp.addEventListener('focus', ()=>{ document.getElementById('nota-input-extra2').style.display='block'; });
+        // Poner fecha de hoy
+        const fd = document.getElementById('nota-input-fecha2');
+        if(fd) fd.value = new Date().toISOString().split('T')[0];
+      }
+    }, 300);
   }
+}
+
+// 🔧 GUARDAR NOTA DESDE EL PANEL FIJO
+function quickSaveNota2(){
+  const titulo = document.getElementById('nota-input-titulo2')?.value?.trim();
+  if(!titulo) return;
+  const contenido = document.getElementById('nota-input-contenido2')?.value?.trim() || '';
+  const fecha = document.getElementById('nota-input-fecha2')?.value || new Date().toISOString().split('T')[0];
+  const biz = document.getElementById('nota-input-biz2')?.value ?? '';
+  const nueva = { id: 'nota'+Date.now(), titulo, contenido, fecha, biz, creadaEn: new Date().toLocaleDateString('es-CO') };
+  notas.unshift(nueva);
+  persistNotas();
+  // Limpiar formulario
+  document.getElementById('nota-input-titulo2').value = '';
+  document.getElementById('nota-input-contenido2').value = '';
+  document.getElementById('nota-input-extra2').style.display = 'none';
+  // Refrescar panel fijo y panel lateral
+  loadKanbanNotesPanelFixed();
+  if(typeof renderNotasBody === 'function') renderNotasBody();
 }
 
 // 🔧 CARGAR NOTAS EN PANEL FIJO - usa notas globales (mismo sistema del panel lateral)
