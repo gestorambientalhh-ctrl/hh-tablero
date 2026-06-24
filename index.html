@@ -3288,14 +3288,21 @@ function generarReportePDF(){
   const neto = totalCobros - totalPagos;
   const fmt = v => '$'+Math.round(v).toLocaleString('es-CO');
 
-  const rowsPagos = pagos.map(t => `
-    <tr>
+  let hayFaltantes = false;
+  const rowsPagos = pagos.map(t => {
+    const faltaInfo = !t.supportDone && (!t.title || !String(t.title).trim());
+    if(faltaInfo) hayFaltantes = true;
+    const rowStyle = faltaInfo ? ' style="background:#FEF3C7"' : '';
+    const concepto = (t.title && String(t.title).trim()) ? t.title : (faltaInfo ? '⚠️ Sin concepto' : '');
+    return `
+    <tr${rowStyle}>
       <td>${t.date||''}</td>
-      <td>${t.title}</td>
+      <td>${concepto}${faltaInfo?' <span style="color:#b45309;font-weight:600">· falta soporte</span>':''}</td>
       <td>${t.entidad||''}</td>
       <td style="color:#dc2626;font-weight:600">${fmt(t.flujoValue||0)}</td>
       <td>${t.status==='c'?'✓ Pagado':'Pendiente'}</td>
-    </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:#888">Sin egresos este mes</td></tr>';
+    </tr>`;
+  }).join('') || '<tr><td colspan="5" style="text-align:center;color:#888">Sin egresos este mes</td></tr>';
 
   const rowsCobros = cobros.map(t => `
     <tr>
@@ -3366,6 +3373,7 @@ function generarReportePDF(){
     <thead><tr><th>Fecha</th><th>Concepto</th><th>Entidad</th><th>Valor</th><th>Estado</th></tr></thead>
     <tbody>${rowsPagos}</tbody>
   </table>
+  ${hayFaltantes?`<div style="margin-top:8px;font-size:11px;color:#92400e;display:flex;align-items:center;gap:8px"><span style="display:inline-block;width:14px;height:14px;background:#FEF3C7;border:1px solid #f59e0b;border-radius:3px"></span> Resaltado: pago sin soporte registrado y sin concepto.</div>`:''}
 
   <div class="section-title green">📥 Ingresos / Cobros</div>
   <table>
