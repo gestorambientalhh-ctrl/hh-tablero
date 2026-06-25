@@ -1371,8 +1371,9 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
           Al guardar deberás adjuntar el soporte de este pago
         </div>
       </div>
-      <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end">
+      <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
         <button onclick="closePagoParcial()" style="height:32px;padding:0 14px;font-size:12px;border:1px solid var(--border);border-radius:8px;background:none;cursor:pointer;color:var(--text2);font-family:inherit">Cancelar</button>
+        <button onclick="savePagoSinSoporte()" style="height:32px;padding:0 12px;font-size:12px;font-weight:600;border:1.5px solid #F59E0B;border-radius:8px;background:#FEF3C7;color:#92400E;cursor:pointer;font-family:inherit">Sin soporte</button>
         <button id="pp-save-btn" onclick="savePagoParcial()" style="height:32px;padding:0 16px;font-size:12px;font-weight:500;background:#2d4a7a;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit">Registrar y subir soporte →</button>
       </div>
     </div>
@@ -3288,21 +3289,14 @@ function generarReportePDF(){
   const neto = totalCobros - totalPagos;
   const fmt = v => '$'+Math.round(v).toLocaleString('es-CO');
 
-  let hayFaltantes = false;
-  const rowsPagos = pagos.map(t => {
-    const faltaInfo = !t.supportDone && (!t.title || !String(t.title).trim());
-    if(faltaInfo) hayFaltantes = true;
-    const rowStyle = faltaInfo ? ' style="background:#FEF3C7"' : '';
-    const concepto = (t.title && String(t.title).trim()) ? t.title : (faltaInfo ? '⚠️ Sin concepto' : '');
-    return `
-    <tr${rowStyle}>
+  const rowsPagos = pagos.map(t => `
+    <tr>
       <td>${t.date||''}</td>
-      <td>${concepto}${faltaInfo?' <span style="color:#b45309;font-weight:600">· falta soporte</span>':''}</td>
+      <td>${t.title}</td>
       <td>${t.entidad||''}</td>
       <td style="color:#dc2626;font-weight:600">${fmt(t.flujoValue||0)}</td>
       <td>${t.status==='c'?'✓ Pagado':'Pendiente'}</td>
-    </tr>`;
-  }).join('') || '<tr><td colspan="5" style="text-align:center;color:#888">Sin egresos este mes</td></tr>';
+    </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:#888">Sin egresos este mes</td></tr>';
 
   const rowsCobros = cobros.map(t => `
     <tr>
@@ -3373,7 +3367,6 @@ function generarReportePDF(){
     <thead><tr><th>Fecha</th><th>Concepto</th><th>Entidad</th><th>Valor</th><th>Estado</th></tr></thead>
     <tbody>${rowsPagos}</tbody>
   </table>
-  ${hayFaltantes?`<div style="margin-top:8px;font-size:11px;color:#92400e;display:flex;align-items:center;gap:8px"><span style="display:inline-block;width:14px;height:14px;background:#FEF3C7;border:1px solid #f59e0b;border-radius:3px"></span> Resaltado: pago sin soporte registrado y sin concepto.</div>`:''}
 
   <div class="section-title green">📥 Ingresos / Cobros</div>
   <table>
@@ -5471,6 +5464,38 @@ function savePagoParcial(){
   inp.click();
 }
 
+function savePagoSinSoporte(){
+  const valorStr = document.getElementById('pp-valor').value;
+  if(!valorStr){ document.getElementById('pp-valor').focus(); return; }
+  const valor = parseFloat(valorStr);
+  if(!valor || valor <= 0){ alert('Ingresa un valor válido'); return; }
+  const t = tasks.find(x=>x.id===_ppTaskId);
+  if(!t) return;
+
+  // Verificar que no supere el saldo
+  const parciales = t.pagosParciales || [];
+  const totalPagado = parciales.reduce((s,p)=>s+(p.valor||0),0);
+  const saldo = (t.flujoValue||0) - totalPagado;
+  if(t.flujoValue && valor > saldo + 1){
+    if(!confirm(`El valor ($${valor.toLocaleString('es-CO')}) supera el saldo ($${saldo.toLocaleString('es-CO')}). ¿Continuar?`)) return;
+  }
+
+  if(!confirm('Este pago quedará registrado SIN soporte. ¿Continuar?')) return;
+
+  const pago = {
+    id: 'pp'+Date.now(),
+    valor,
+    fecha: document.getElementById('pp-fecha').value,
+    desc: document.getElementById('pp-desc').value.trim() || (_ppTipo==='total' ? 'Pago total' : 'Pago parcial'),
+    url: null,
+    esPagoTotal: _ppTipo === 'total',
+    sinSoporte: true
+  };
+
+  closePagoParcial();
+  guardarPagoParcialEnTask(t, pago);
+}
+
 function subirSoporteParcial(input){
   const file = input.files[0];
   const taskId = input.dataset.taskId;
@@ -5516,8 +5541,8 @@ function guardarPagoParcialEnTask(t, pago){
   // Si es pago total → marcar completada directamente
   if(pago.esPagoTotal){
     t.status = 'c';
-    t.supportDone = true;
-    alert('✅ Pago total registrado. La tarea se marcó como completada.');
+    if(!pago.sinSoporte) t.supportDone = true;
+    alert(pago.sinSoporte ? '✅ Pago total registrado SIN soporte (queda pendiente de soporte).' : '✅ Pago total registrado. La tarea se marcó como completada.');
     window._ppPendiente = null;
     persist();
     renderFlujoBody();
@@ -5529,8 +5554,8 @@ function guardarPagoParcialEnTask(t, pago){
   const saldo = (t.flujoValue||0) - totalPagado;
   if(t.flujoValue && saldo <= 0){
     t.status = 'c';
-    t.supportDone = true;
-    alert('✅ Saldo completo. La tarea se marcó como completada.');
+    if(!pago.sinSoporte) t.supportDone = true;
+    alert(pago.sinSoporte ? '✅ Saldo completo (registrado SIN soporte, queda pendiente de soporte).' : '✅ Saldo completo. La tarea se marcó como completada.');
   } else if(pago.url){
     alert('✅ Pago parcial registrado y soporte subido a Drive.');
   } else {
