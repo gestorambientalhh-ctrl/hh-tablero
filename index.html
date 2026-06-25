@@ -5493,6 +5493,22 @@ function savePagoSinSoporte(){
   };
 
   closePagoParcial();
+
+  // Enviar la fila a la hoja de Google SIN soporte (columna soporte vacía → sale amarilla)
+  try {
+    fetch(APPS_SCRIPT_URL, {
+      method:'POST',
+      body: JSON.stringify({
+        sinSoporte: true,
+        fecha: pago.fecha,
+        entidad: t.entidad || t.title,
+        descripcion: pago.desc + ' - ' + t.title,
+        tipo: t.flujoType || 'pago',
+        valor: pago.valor
+      })
+    }).catch(()=>{});
+  } catch(err){}
+
   guardarPagoParcialEnTask(t, pago);
 }
 
