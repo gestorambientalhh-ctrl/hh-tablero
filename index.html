@@ -1384,6 +1384,35 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
   <!-- INPUT SOPORTE PAGO PARCIAL — CARPETA COMPLETA -->
   <input type="file" id="soporte-parcial-carpeta-input" webkitdirectory directory multiple style="display:none" onchange="subirSoporteParcial(this)">
 
+  <!-- MODAL ELEGIR TIPO DE SOPORTE (archivos sueltos o carpeta) -->
+  <div id="elegir-soporte-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:600;align-items:center;justify-content:center;padding:20px">
+    <div style="background:#fff;border-radius:14px;width:100%;max-width:400px;box-shadow:0 8px 32px rgba(0,0,0,.2);overflow:hidden">
+      <div style="padding:18px 20px 14px;border-bottom:1px solid #f0f0ee;display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:15px;font-weight:700;color:#1a1a1a">Adjuntar soporte</div>
+          <div style="font-size:12px;color:#9e9e9c;margin-top:2px">¿Qué vas a subir para este pago?</div>
+        </div>
+        <button onclick="cerrarElegirSoporte()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#b3b3b0;line-height:1;padding:0 4px">&times;</button>
+      </div>
+      <div style="padding:18px 20px;display:flex;flex-direction:column;gap:10px">
+        <button onclick="elegirTipoSoporte('archivos')" style="display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;background:#f7f9fc;border:1.5px solid #d9e2f0;border-radius:10px;cursor:pointer;font-family:inherit;text-align:left;transition:all .15s" onmouseover="this.style.background='#eef2f9';this.style.borderColor='#2d4a7a'" onmouseout="this.style.background='#f7f9fc';this.style.borderColor='#d9e2f0'">
+          <span style="font-size:26px;line-height:1">📄</span>
+          <span style="flex:1">
+            <span style="display:block;font-size:14px;font-weight:600;color:#2d4a7a">Archivos sueltos</span>
+            <span style="display:block;font-size:11px;color:#9e9e9c;margin-top:2px">Selecciona uno o varios documentos</span>
+          </span>
+        </button>
+        <button onclick="elegirTipoSoporte('carpeta')" style="display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;background:#f7f9fc;border:1.5px solid #d9e2f0;border-radius:10px;cursor:pointer;font-family:inherit;text-align:left;transition:all .15s" onmouseover="this.style.background='#eef2f9';this.style.borderColor='#2d4a7a'" onmouseout="this.style.background='#f7f9fc';this.style.borderColor='#d9e2f0'">
+          <span style="font-size:26px;line-height:1">📁</span>
+          <span style="flex:1">
+            <span style="display:block;font-size:14px;font-weight:600;color:#2d4a7a">Carpeta completa</span>
+            <span style="display:block;font-size:11px;color:#9e9e9c;margin-top:2px">Sube todos los archivos de una carpeta</span>
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- CHECKLIST SECTION -->
   <div id="section-checklist" style="display:none;position:fixed;top:52px;left:0;right:0;bottom:0;flex-direction:column;overflow:hidden;z-index:50;background:#eef2f7">
     <div class="ck-header">
@@ -5464,12 +5493,26 @@ function savePagoParcial(){
 
   closePagoParcial();
 
-  // Un solo botón: pregunta si es carpeta completa o archivo(s) sueltos
-  const esCarpeta = confirm('¿Vas a subir una CARPETA completa de soportes?\n\nAceptar = elegir carpeta\nCancelar = elegir archivo(s) sueltos');
-  const inp = document.getElementById(esCarpeta ? 'soporte-parcial-carpeta-input' : 'soporte-parcial-input');
-  inp.dataset.taskId = _ppTaskId || t.id;
+  // Modal bonito para elegir entre archivos sueltos o carpeta completa
+  window._ppTaskIdSoporte = _ppTaskId || t.id;
+  document.getElementById('elegir-soporte-overlay').style.display = 'flex';
+}
+
+// Elección desde el modal bonito: 'archivos' o 'carpeta'
+function elegirTipoSoporte(modo){
+  document.getElementById('elegir-soporte-overlay').style.display = 'none';
+  const inp = document.getElementById(modo === 'carpeta' ? 'soporte-parcial-carpeta-input' : 'soporte-parcial-input');
+  inp.dataset.taskId = window._ppTaskIdSoporte;
   inp.value = '';
   inp.click();
+}
+
+function cerrarElegirSoporte(){
+  document.getElementById('elegir-soporte-overlay').style.display = 'none';
+  // Si cierra sin elegir, se guarda el pago sin soporte
+  const t = tasks.find(x=>x.id===window._ppTaskIdSoporte);
+  const pago = window._ppPendiente;
+  if(t && pago) guardarPagoParcialEnTask(t, pago);
 }
 
 function savePagoSinSoporte(){
