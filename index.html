@@ -1481,6 +1481,8 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
   </div>
   <!-- INPUT OCULTO PARA SOPORTE -->
   <input type="file" id="soporte-file-input" accept="image/*,.pdf" multiple style="display:none" onchange="subirSoporte(this)">
+  <!-- INPUT OCULTO PARA SOPORTE — CARPETA COMPLETA -->
+  <input type="file" id="soporte-carpeta-input" webkitdirectory directory multiple style="display:none" onchange="subirSoporte(this)">
 
   <!-- MOBILE BOTTOM NAV -->->
   <nav class="mob-nav">
@@ -4991,6 +4993,13 @@ function abrirSoporte(taskId){
   inp.value = '';
   inp.click();
 }
+function abrirSoporteCarpeta(taskId){
+  const inp = document.getElementById('soporte-carpeta-input');
+  if(!inp) return;
+  inp.dataset.taskId = taskId;
+  inp.value = '';
+  inp.click();
+}
 
 async function subirSoporte(input){
   const files = Array.from(input.files || []);
@@ -5228,7 +5237,8 @@ function renderFlujoBody(){
             ${badge}
             ${!done&&!isViewer?`<button onclick="abrirPagoParcial('${t.id}')" style="background:#2d4a7a;color:#fff;border:none;border-radius:5px;padding:2px 8px;font-size:11px;cursor:pointer;font-weight:500">+ Pago</button>`:''}
             ${(t.soportes && t.soportes.length) ? t.soportes.map((s,i)=>`<a href="${s.url}" target="_blank" title="${s.nombre||'Soporte '+(i+1)}" style="font-size:11px;color:#2d4a7a;text-decoration:none;border:1px solid #c5d3e8;border-radius:5px;padding:2px 6px">📄 ${i+1}</a>`).join('') : (t.soporteUrl?`<a href="${t.soporteUrl}" target="_blank" style="font-size:11px;color:#2d4a7a;text-decoration:none;border:1px solid #c5d3e8;border-radius:5px;padding:2px 6px">📄 1</a>`:'')}
-            ${!done&&!isViewer?`<button id="soporte-btn-${t.id}" onclick="document.getElementById('soporte-file-input').dataset.taskId='${t.id}';document.getElementById('soporte-file-input').click()" style="background:none;border:1px solid #c5d3e8;border-radius:5px;padding:2px 6px;font-size:11px;cursor:pointer;color:#2d4a7a">${(t.soportes&&t.soportes.length)?'📎 +':'📎'}</button>`:''}
+            ${!done&&!isViewer?`<button id="soporte-btn-${t.id}" onclick="document.getElementById('soporte-file-input').dataset.taskId='${t.id}';document.getElementById('soporte-file-input').click()" title="Subir archivo(s) de soporte" style="background:none;border:1px solid #c5d3e8;border-radius:5px;padding:2px 6px;font-size:11px;cursor:pointer;color:#2d4a7a">${(t.soportes&&t.soportes.length)?'📎 +':'📎'}</button>`:''}
+            ${!done&&!isViewer?`<button onclick="abrirSoporteCarpeta('${t.id}')" title="Subir carpeta completa de soportes" style="background:none;border:1px solid #c5d3e8;border-radius:5px;padding:2px 6px;font-size:11px;cursor:pointer;color:#2d4a7a">📁</button>`:''}
             ${!isViewer?`<button onclick="delTask('${t.id}');renderFlujoBody()" style="background:none;border:none;font-size:15px;cursor:pointer;color:#d1cdc7;line-height:1;padding:0 2px">×</button>`:''}
           </div>
         </div>
