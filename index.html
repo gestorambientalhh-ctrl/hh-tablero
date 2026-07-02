@@ -1380,7 +1380,9 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
   </div>
 
   <!-- INPUT SOPORTE PAGO PARCIAL -->
-  <input type="file" id="soporte-parcial-input" accept="image/*,.pdf" style="display:none" onchange="subirSoporteParcial(this)">
+  <input type="file" id="soporte-parcial-input" accept="image/*,.pdf" multiple style="display:none" onchange="subirSoporteParcial(this)">
+  <!-- INPUT SOPORTE PAGO PARCIAL — CARPETA COMPLETA -->
+  <input type="file" id="soporte-parcial-carpeta-input" webkitdirectory directory multiple style="display:none" onchange="subirSoporteParcial(this)">
 
   <!-- CHECKLIST SECTION -->
   <div id="section-checklist" style="display:none;position:fixed;top:52px;left:0;right:0;bottom:0;flex-direction:column;overflow:hidden;z-index:50;background:#eef2f7">
@@ -1481,8 +1483,6 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
   </div>
   <!-- INPUT OCULTO PARA SOPORTE -->
   <input type="file" id="soporte-file-input" accept="image/*,.pdf" multiple style="display:none" onchange="subirSoporte(this)">
-  <!-- INPUT OCULTO PARA SOPORTE — CARPETA COMPLETA -->
-  <input type="file" id="soporte-carpeta-input" webkitdirectory directory multiple style="display:none" onchange="subirSoporte(this)">
 
   <!-- MOBILE BOTTOM NAV -->->
   <nav class="mob-nav">
@@ -4993,13 +4993,6 @@ function abrirSoporte(taskId){
   inp.value = '';
   inp.click();
 }
-function abrirSoporteCarpeta(taskId){
-  const inp = document.getElementById('soporte-carpeta-input');
-  if(!inp) return;
-  inp.dataset.taskId = taskId;
-  inp.value = '';
-  inp.click();
-}
 
 async function subirSoporte(input){
   const files = Array.from(input.files || []);
@@ -5222,7 +5215,7 @@ function renderFlujoBody(){
               <span>${p.desc||'Pago parcial'}</span>
               <span style="color:#16a34a;font-weight:600;margin-left:auto">${fmtMoney(p.valor)}</span>
               <span style="color:var(--text3)">${p.fecha||''}</span>
-              ${p.url?`<a href="${p.url}" target="_blank" style="color:#2d4a7a;text-decoration:none;font-size:10px">↗</a>`:''}
+              ${(p.urls&&p.urls.length) ? p.urls.map((u,i)=>`<a href="${u}" target="_blank" style="color:#2d4a7a;text-decoration:none;font-size:10px">↗${p.urls.length>1?(i+1):''}</a>`).join('') : (p.url?`<a href="${p.url}" target="_blank" style="color:#2d4a7a;text-decoration:none;font-size:10px">↗</a>`:'')}
             </div>`).join('')}
         </div>` : '';
 
@@ -5238,7 +5231,6 @@ function renderFlujoBody(){
             ${!done&&!isViewer?`<button onclick="abrirPagoParcial('${t.id}')" style="background:#2d4a7a;color:#fff;border:none;border-radius:5px;padding:2px 8px;font-size:11px;cursor:pointer;font-weight:500">+ Pago</button>`:''}
             ${(t.soportes && t.soportes.length) ? t.soportes.map((s,i)=>`<a href="${s.url}" target="_blank" title="${s.nombre||'Soporte '+(i+1)}" style="font-size:11px;color:#2d4a7a;text-decoration:none;border:1px solid #c5d3e8;border-radius:5px;padding:2px 6px">📄 ${i+1}</a>`).join('') : (t.soporteUrl?`<a href="${t.soporteUrl}" target="_blank" style="font-size:11px;color:#2d4a7a;text-decoration:none;border:1px solid #c5d3e8;border-radius:5px;padding:2px 6px">📄 1</a>`:'')}
             ${!done&&!isViewer?`<button id="soporte-btn-${t.id}" onclick="document.getElementById('soporte-file-input').dataset.taskId='${t.id}';document.getElementById('soporte-file-input').click()" title="Subir archivo(s) de soporte" style="background:none;border:1px solid #c5d3e8;border-radius:5px;padding:2px 6px;font-size:11px;cursor:pointer;color:#2d4a7a">${(t.soportes&&t.soportes.length)?'📎 +':'📎'}</button>`:''}
-            ${!done&&!isViewer?`<button onclick="abrirSoporteCarpeta('${t.id}')" title="Subir carpeta completa de soportes" style="background:none;border:1px solid #c5d3e8;border-radius:5px;padding:2px 6px;font-size:11px;cursor:pointer;color:#2d4a7a">📁</button>`:''}
             ${!isViewer?`<button onclick="delTask('${t.id}');renderFlujoBody()" style="background:none;border:none;font-size:15px;cursor:pointer;color:#d1cdc7;line-height:1;padding:0 2px">×</button>`:''}
           </div>
         </div>
@@ -5411,7 +5403,7 @@ function abrirPagoParcial(taskId){
         <span style="flex:1">${p.desc||'Pago parcial'}</span>
         <strong style="color:#16a34a">${fmtMoney(p.valor)}</strong>
         <span>${p.fecha||''}</span>
-        ${p.url?`<a href="${p.url}" target="_blank" style="color:#2d4a7a">↗</a>`:''}
+        ${(p.urls&&p.urls.length) ? p.urls.map((u,i)=>`<a href="${u}" target="_blank" style="color:#2d4a7a">↗${p.urls.length>1?(i+1):''}</a>`).join('') : (p.url?`<a href="${p.url}" target="_blank" style="color:#2d4a7a">↗</a>`:'')}
       </div>`).join('');
   } else {
     hist.style.display='none';
@@ -5464,13 +5456,17 @@ function savePagoParcial(){
     fecha: document.getElementById('pp-fecha').value,
     desc: document.getElementById('pp-desc').value.trim() || (_ppTipo==='total' ? 'Pago total' : 'Pago parcial'),
     url: null,
+    urls: [],
     esPagoTotal: _ppTipo === 'total'
   };
 
   closePagoParcial();
-  // Abrir selector de soporte
-  const inp = document.getElementById('soporte-parcial-input');
+
+  // Un solo botón: pregunta si es carpeta completa o archivo(s) sueltos
+  const esCarpeta = confirm('¿Vas a subir una CARPETA completa de soportes?\n\nAceptar = elegir carpeta\nCancelar = elegir archivo(s) sueltos');
+  const inp = document.getElementById(esCarpeta ? 'soporte-parcial-carpeta-input' : 'soporte-parcial-input');
   inp.dataset.taskId = _ppTaskId || t.id;
+  inp.value = '';
   inp.click();
 }
 
@@ -5522,42 +5518,55 @@ function savePagoSinSoporte(){
   guardarPagoParcialEnTask(t, pago);
 }
 
-function subirSoporteParcial(input){
-  const file = input.files[0];
+async function subirSoporteParcial(input){
+  const files = Array.from(input.files || []);
   const taskId = input.dataset.taskId;
   const t = tasks.find(x=>x.id===taskId);
   const pago = window._ppPendiente;
   if(!t || !pago) return;
 
-  if(!file){
+  if(!files.length){
     // Guardar sin soporte si cancela
     guardarPagoParcialEnTask(t, pago);
     return;
   }
 
-  const btn = document.querySelector(`[data-ppid="${taskId}"]`);
-  const reader = new FileReader();
-  reader.onload = function(e){
-    const base64 = e.target.result.split(',')[1];
+  pago.urls = pago.urls || [];
+
+  for(let i=0;i<files.length;i++){
+    const file = files[i];
+    let base64;
+    try {
+      base64 = await new Promise((res,rej)=>{
+        const r = new FileReader();
+        r.onload = e => res(e.target.result.split(',')[1]);
+        r.onerror = rej;
+        r.readAsDataURL(file);
+      });
+    } catch(e){ continue; }
+
+    // Solo el primer archivo del pago lleva el valor; los siguientes van en $0
+    const esPrimero = pago.urls.length === 0;
     const payload = {
       file: base64,
       filename: `pago_parcial_${pago.id}_${file.name}`,
       mimeType: file.type,
       fecha: pago.fecha,
       entidad: t.entidad || t.title,
-      descripcion: pago.desc + ' - ' + t.title,
+      descripcion: pago.desc + ' - ' + t.title + (files.length>1 ? ` (${i+1}/${files.length})` : ''),
       tipo: t.flujoType || 'pago',
-      valor: pago.valor
+      valor: esPrimero ? pago.valor : 0
     };
-    fetch(APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify(payload) })
-    .then(r=>r.json())
-    .then(data=>{
-      if(data.ok) pago.url = data.url;
-      guardarPagoParcialEnTask(t, pago);
-    })
-    .catch(()=>{ guardarPagoParcialEnTask(t, pago); });
-  };
-  reader.readAsDataURL(file);
+
+    try {
+      const resp = await fetch(APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify(payload) });
+      const data = await resp.json();
+      if(data.ok) pago.urls.push(data.url);
+    } catch(err){ /* continúa con el siguiente archivo */ }
+  }
+
+  pago.url = pago.urls[0] || null; // compatibilidad con código que lee pago.url
+  guardarPagoParcialEnTask(t, pago);
 }
 
 function guardarPagoParcialEnTask(t, pago){
