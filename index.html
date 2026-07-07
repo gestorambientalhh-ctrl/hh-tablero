@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="HH Tablero">
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://firebasestorage.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://script.google.com https://drive.google.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://script.google.com https://www.gstatic.com;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://firebasestorage.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://script.google.com https://drive.google.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://script.google.com https://www.gstatic.com https://cdnjs.cloudflare.com; worker-src 'self' blob: https://cdnjs.cloudflare.com;">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Gestor HH · Tasks</title>
 <style>
@@ -589,6 +589,108 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 .add-btn{background:none!important;border:1px dashed #d1cdc7!important;border-radius:8px!important;padding:8px 12px!important;margin-top:2px!important}
 
 </style>
+
+<style>
+  /* ═══════════ ESTILOS MÓDULO ACTAS ═══════════ */
+  :root {
+    --azul: #2d4a7a;
+    --gris-calido: #f7f6f3;
+    --borde: #e2ddd3;
+    --texto: #2c2b28;
+    --texto-suave: #6b6a65;
+    --verde-bg: #e6f4ea;
+    --verde-texto: #1e7a3c;
+    --rojo-bg: #fbe9e9;
+    --rojo-texto: #b3261e;
+    --amarillo-bg: #fdf3e2;
+    --amarillo-texto: #a3690a;
+  }
+  .actas-contenedor {
+    max-width: 1150px;
+    margin: 0 auto;
+    background: #ffffff;
+    border: 1px solid var(--borde);
+    border-radius: 12px;
+    padding: 24px;
+    color: var(--texto);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  .actas-encabezado {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .actas-encabezado h1 { font-size: 18px; font-weight: 600; margin: 0; color: var(--azul); }
+  .actas-encabezado p { font-size: 13px; color: var(--texto-suave); margin: 2px 0 0; }
+  .actas-zona-carga {
+    border: 1.5px dashed var(--borde);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    background: var(--gris-calido);
+  }
+  .actas-zona-carga .info { font-size: 13px; color: var(--texto-suave); }
+  .actas-btn {
+    background: var(--azul);
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    padding: 9px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .actas-btn:hover { opacity: 0.9; }
+  input[type="file"] { display: none; }
+  .actas-estado-carga {
+    font-size: 12.5px;
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    display: none;
+  }
+  .actas-estado-ok { background: var(--verde-bg); color: var(--verde-texto); }
+  .actas-estado-error { background: var(--rojo-bg); color: var(--rojo-texto); }
+  .actas-estado-cargando { background: var(--amarillo-bg); color: var(--amarillo-texto); }
+  .actas-leyenda { display: flex; gap: 14px; font-size: 12px; color: var(--texto-suave); align-items: center; flex-wrap: wrap; }
+  .actas-punto { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; }
+  .actas-punto-ok { background: var(--verde-texto); }
+  .actas-punto-pendiente { background: var(--rojo-texto); }
+  .actas-tabla-wrap { overflow-x: auto; }
+  .actas-contenedor table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  .actas-contenedor th, .actas-contenedor td { padding: 8px 6px; border-bottom: 1px solid var(--borde); text-align: center; white-space: nowrap; }
+  .actas-contenedor th { font-weight: 600; color: var(--texto-suave); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.02em; }
+  td.actas-nombre-material, th.actas-col-material { text-align: left; min-width: 190px; }
+  .actas-fila-acta td.actas-nombre-material { font-weight: 600; color: var(--azul); }
+  .actas-fila-grupo td { background: var(--gris-calido); font-size: 11px; font-weight: 600; color: var(--texto-suave); text-align: left; }
+  .actas-proveedor { font-size: 10.5px; color: var(--texto-suave); font-weight: 400; margin-top: 2px; }
+  .actas-badge { display: inline-block; padding: 3px 8px; border-radius: 5px; font-size: 11.5px; font-weight: 600; cursor: pointer; border: none; min-width: 70px; }
+  .actas-badge-ok { background: var(--verde-bg); color: var(--verde-texto); }
+  .actas-badge-pendiente { background: var(--rojo-bg); color: var(--rojo-texto); }
+  .actas-badge-amarillo { background: var(--amarillo-bg); color: var(--amarillo-texto); }
+  .actas-version-tag { font-size: 10px; color: var(--texto-suave); display: block; margin-top: 3px; cursor: pointer; text-decoration: underline dotted; }
+  .actas-dif-ok { color: var(--verde-texto); font-weight: 600; }
+  .actas-dif-mal { color: var(--rojo-texto); font-weight: 600; }
+  .actas-dif-vacio { color: var(--texto-suave); }
+  .actas-dif-sin-cert { color: var(--texto-suave); cursor: pointer; text-decoration: underline dotted; }
+  .actas-total { font-weight: 600; }
+  .actas-nota { font-size: 12px; color: var(--texto-suave); margin-top: 16px; }
+
+  .actas-fila-ensenar { padding:8px 10px; font-size:12.5px; border-bottom:1px solid var(--borde); cursor:pointer; }
+  .actas-fila-ensenar:hover { background: var(--gris-calido); }
+  .actas-token-chip { padding:5px 10px; border:1px solid var(--borde); border-radius:6px; font-size:12.5px; cursor:pointer; background:#fff; }
+  .actas-token-chip:hover { background: var(--azul); color:#fff; border-color: var(--azul); }
+  .actas-btn-enseñar { background: var(--amarillo-texto); color:#fff; border:none; border-radius:7px; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; margin-top:8px; }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
 
@@ -766,6 +868,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
         <button class="sec-tab act" id="sec-tablero" onclick="showSection('tablero')">Tablero</button>
         <button class="sec-tab" id="sec-reuniones" onclick="showSection('reuniones')">📋 Reuniones</button>
         <button class="sec-tab" id="sec-flujo" onclick="showSection('flujo')">💸 Flujo</button>
+        <button class="sec-tab" id="sec-actas" onclick="showSection('actas')">📑 Actas</button>
         <div style="width:1px;height:18px;background:var(--border);margin:0 4px"></div>
         <button onclick="toggleForm()" style="display:flex;align-items:center;gap:5px;height:28px;padding:0 12px;background:#2d4a7a;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -1510,6 +1613,140 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
       <div id="hitos-list"></div>
     </div>
   </div>
+  <!-- ═══════════ SECCIÓN ACTAS ═══════════ -->
+  <div id="section-actas" style="display:none;position:fixed;top:52px;left:0;right:0;bottom:0;flex-direction:column;overflow-y:auto;z-index:50;background:#f7f6f3;padding:16px">
+    <div style="max-width:1150px;margin:0 auto 12px;">
+      <button onclick="showSection('tablero')" style="display:flex;align-items:center;gap:5px;height:30px;padding:0 10px;font-size:12px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text2);cursor:pointer;font-family:inherit">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        Inicio
+      </button>
+    </div>
+<div class="actas-contenedor">
+
+  <div class="actas-encabezado">
+    <div>
+      <h1>Actas — Nestlé Purina</h1>
+      <p>Sábana anual 2026 — cada acta queda con su propio id y su historial de versiones</p>
+    </div>
+    <div style="display:flex; align-items:center; gap:16px;">
+      <div class="actas-leyenda">
+        <span><span class="actas-punto actas-punto-ok"></span>OK / cuadra</span>
+        <span><span class="actas-punto actas-punto-pendiente"></span>Pendiente / diferencia</span>
+      </div>
+      <button onclick="toggleConfiguracion()" style="background:none; border:1px solid var(--borde); border-radius:7px; padding:7px 12px; font-size:12.5px; cursor:pointer; white-space:nowrap;">⚙ Configuración</button>
+    </div>
+  </div>
+
+  <div id="panel-configuracion" style="display:none; border:1px solid var(--borde); border-radius:10px; padding:16px; margin-bottom:20px; background:var(--gris-calido);">
+    <p style="font-weight:600; font-size:14px; margin:0 0 12px; color:var(--azul);">Configuración</p>
+
+    <div style="margin-bottom:18px;">
+      <p style="font-size:13px; font-weight:600; margin:0 0 4px;">Enseñar formato nuevo</p>
+      <p style="font-size:12px; color:var(--texto-suave); margin:0 0 8px;">Sube cualquier PDF de ejemplo (aunque el sistema ya lo lea o no) para crear o revisar un formato.</p>
+      <label class="actas-btn" for="input-ensenar-config">Subir PDF de ejemplo</label>
+      <input type="file" id="input-ensenar-config" accept="application/pdf" onchange="abrirEnsenarDesdeArchivo(event)">
+      <div id="estado-ensenar-config" class="actas-estado-carga"></div>
+    </div>
+
+    <div style="margin-bottom:18px;">
+      <p style="font-size:13px; font-weight:600; margin:0 0 8px;">Proveedores conocidos</p>
+      <div id="lista-config-proveedores" style="font-size:12.5px;"></div>
+    </div>
+
+    <div>
+      <p style="font-size:13px; font-weight:600; margin:0 0 8px;">Formatos aprendidos</p>
+      <div id="lista-config-perfiles" style="font-size:12.5px;"></div>
+    </div>
+
+    <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--borde);">
+      <p style="font-size:13px; font-weight:600; margin:0 0 4px;">Reporte de ahorro para el cliente</p>
+      <p style="font-size:12px; color:var(--texto-suave); margin:0 0 8px;">Calcula agua, energía y CO2e evitados del mes (según cantidades del acta) y lo deja como Excel en Drive — sin fórmulas, solo los valores.</p>
+      <select id="select-mes-reporte" style="height:36px; border-radius:7px; border:1px solid var(--borde); font-size:13px; margin-right:8px;"></select>
+      <button onclick="generarReporteAhorroCliente()" class="actas-btn">Generar reporte (Excel)</button>
+      <div id="estado-reporte-ahorro" class="actas-estado-carga"></div>
+    </div>
+  </div>
+
+  <div class="actas-zona-carga">
+    <div class="info">
+      Sube el PDF del acta del mes. Si ya existía una acta para ese mes, la nueva queda como versión activa y la anterior se guarda como historial — no se pierde nada.
+    </div>
+    <div>
+      <label class="actas-btn" for="input-pdf">Adjuntar acta (PDF)</label>
+      <input type="file" id="input-pdf" accept="application/pdf" onchange="cargarPDF(event)">
+    </div>
+  </div>
+  <div class="actas-zona-carga">
+    <div class="info">
+      Sube el certificado del proveedor. El sistema busca el mes, compara los nombres de material contra la acta y llena el peso certificado solo.
+    </div>
+    <div>
+      <label class="actas-btn" for="input-cert">Adjuntar certificado (PDF)</label>
+      <input type="file" id="input-cert" accept="application/pdf" onchange="cargarCertificado(event)">
+    </div>
+  </div>
+  <div id="estado-carga-cert" class="actas-estado-carga"></div>
+
+  <div id="modal-proveedor" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:50; align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:12px; padding:20px; width:340px; max-width:90vw;">
+      <p style="font-weight:600; font-size:14px; margin:0 0 4px;">¿Proveedor de este certificado?</p>
+      <p style="font-size:12px; color:var(--texto-suave); margin:0 0 12px;">Escoge uno ya usado o agrega uno nuevo.</p>
+      <select id="select-proveedor" style="width:100%; height:36px; border-radius:7px; border:1px solid var(--borde); margin-bottom:8px; font-size:13px;"></select>
+      <input id="input-proveedor-nuevo" type="text" placeholder="Nombre del proveedor nuevo" style="width:100%; height:36px; border-radius:7px; border:1px solid var(--borde); margin-bottom:12px; padding:0 10px; font-size:13px; display:none; box-sizing:border-box;">
+      <div style="display:flex; justify-content:flex-end; gap:8px;">
+        <button onclick="resolverModalProveedor(null)" style="background:none; border:1px solid var(--borde); border-radius:7px; padding:8px 14px; font-size:13px; cursor:pointer;">Cancelar</button>
+        <button onclick="aceptarModalProveedor()" class="actas-btn">Aceptar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-ensenar" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:60; align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:12px; padding:20px; width:560px; max-width:92vw; max-height:85vh; overflow-y:auto;">
+      <p style="font-weight:600; font-size:15px; margin:0 0 4px;">Enseñar formato nuevo</p>
+      <div id="ensenar-paso-1">
+        <p style="font-size:12.5px; color:var(--texto-suave); margin:0 0 12px;">
+          No reconocí esta plantilla. Haz clic en la línea que tenga <b>un material con su peso</b> (por ejemplo: "Plástico 3.650 Kg").
+        </p>
+        <div id="ensenar-lista-filas" style="border:1px solid var(--borde); border-radius:8px; max-height:320px; overflow-y:auto;"></div>
+      </div>
+      <div id="ensenar-paso-2" style="display:none;">
+        <p style="font-size:12.5px; color:var(--texto-suave); margin:0 0 12px;">
+          Ahora haz clic en el <b>número que es el peso</b> dentro de esa línea. Todo lo demás lo tomo como el nombre del material.
+        </p>
+        <div id="ensenar-tokens-fila" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;"></div>
+        <button onclick="volverPaso1Ensenar()" style="background:none; border:1px solid var(--borde); border-radius:7px; padding:7px 12px; font-size:12.5px; cursor:pointer;">← Elegir otra línea</button>
+      </div>
+      <div style="display:flex; justify-content:flex-end; margin-top:16px;">
+        <button onclick="cerrarModalEnsenar()" style="background:none; border:1px solid var(--borde); border-radius:7px; padding:8px 14px; font-size:13px; cursor:pointer;">Cancelar</button>
+      </div>
+    </div>
+  </div>
+  <div id="estado-carga" class="actas-estado-carga"></div>
+
+  <div class="actas-tabla-wrap">
+    <table id="tabla-sabana"></table>
+  </div>
+
+  <p class="actas-nota">
+    Haz clic en el badge de "Acta de conciliación" para marcar OK/Pendiente a mano.
+    Si un mes tiene más de una versión, aparece "(v2 · ver historial)" — haz clic para ver las versiones anteriores.
+    Haz clic en el peso de un material para anotar el peso certificado por el proveedor.
+  </p>
+
+</div>
+
+  <div id="modal-entregas" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:55; align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:12px; padding:20px; width:460px; max-width:92vw; max-height:80vh; overflow-y:auto;">
+      <p id="entregas-titulo" style="font-weight:600; font-size:14px; margin:0 0 12px;"></p>
+      <div id="entregas-lista"></div>
+      <p id="entregas-total" style="font-size:13px; font-weight:600; margin:12px 0 0;"></p>
+      <div style="display:flex; justify-content:flex-end; margin-top:16px;">
+        <button onclick="document.getElementById('modal-entregas').style.display='none'" style="background:none; border:1px solid var(--borde); border-radius:7px; padding:8px 14px; font-size:13px; cursor:pointer;">Cerrar</button>
+      </div>
+    </div>
+  </div>
+  </div>
+
   <!-- INPUT OCULTO PARA SOPORTE -->
   <input type="file" id="soporte-file-input" accept="image/*,.pdf" multiple style="display:none" onchange="subirSoporte(this)">
 
@@ -1530,6 +1767,10 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
     <button class="mob-nav-btn" id="mobnav-checklist" onclick="showSection('checklist')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
       Checklist
+    </button>
+    <button class="mob-nav-btn" id="mobnav-actas" onclick="showSection('actas')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Actas
     </button>
     <button class="mob-nav-btn" id="mobnav-nueva" onclick="toggleForm()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -1650,13 +1891,13 @@ function showSection(s){
   curSection=s;
 
   // ── Tabs desktop
-  ['tablero','dashboard','reuniones','flujo'].forEach(sec=>{
+  ['tablero','dashboard','reuniones','flujo','actas'].forEach(sec=>{
     const el=document.getElementById('sec-'+sec);
     if(el) el.classList.toggle('act',sec===s);
   });
 
   // ── Tabs mobile
-  ['tablero','dashboard','reuniones','flujo','checklist'].forEach(sec=>{
+  ['tablero','dashboard','reuniones','flujo','checklist','actas'].forEach(sec=>{
     const el=document.getElementById('mobnav-'+sec);
     if(el) el.classList.toggle('act',sec===s);
   });
@@ -1665,9 +1906,11 @@ function showSection(s){
   const secTab=document.getElementById('section-tablero');
   const secReu=document.getElementById('section-reuniones');
   const secFl=document.getElementById('section-flujo');
+  const secAc=document.getElementById('section-actas');
   if(secTab) secTab.style.display=(s==='tablero'||s==='dashboard')?'flex':'none';
   if(secReu) secReu.style.display=s==='reuniones'?'flex':'none';
   if(secFl)  secFl.style.display=s==='flujo'?'flex':'none';
+  if(secAc)  secAc.style.display=s==='actas'?'flex':'none';
 
   // ── Buttons
   document.getElementById('btn-add').style.display=(s==='tablero'&&biz<3)?'flex':'none';
@@ -1687,6 +1930,8 @@ function showSection(s){
     renderChecklist();
   } else if(s==='flujo'){
     renderFlujo();
+  } else if(s==='actas'){
+    // el módulo de Actas maneja su propio render internamente
   } else {
     renderCurrent();
   }
@@ -6836,5 +7081,1206 @@ function closeBackupModal(){
       localStorage.setItem('hh-app-version', APP_VERSION);
     }
   </script>
+<!-- ═══════════ SCRIPT MÓDULO ACTAS ═══════════ -->
+<script>
+(function(){
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+  const MESES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+  const MESES_LARGOS = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  const AÑO_ACTUAL = 2026;
+
+  // Cada acta: { id, mesIndex, año, fechaCarga, activa }
+  let actas = [];
+  // Cada registro de material: { actaId, grupo, nombre, cantidadActa, unidadActa, entregas }
+  let registros = [];
+  // Estado manual de la fila "Acta de conciliación" por mes (ok/pendiente), independiente de si hay PDF cargado
+  const estadoManual = MESES.map(() => null);
+
+  function normalizar(txt) {
+    return txt.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  }
+
+  function actaActivaDeMes(mesIndex, año = AÑO_ACTUAL) {
+    return actas.find(a => a.mesIndex === mesIndex && a.año === año && a.activa) || null;
+  }
+
+  function versionesDeMes(mesIndex, año = AÑO_ACTUAL) {
+    return actas.filter(a => a.mesIndex === mesIndex && a.año === año).sort((a, b) => a.fechaCarga - b.fechaCarga);
+  }
+
+  function crearActaParaMes(mesIndex, año = AÑO_ACTUAL) {
+    // Archivar cualquier acta activa previa de ese mes y año
+    actas.forEach(a => { if (a.mesIndex === mesIndex && a.año === año && a.activa) a.activa = false; });
+    const nueva = {
+      id: 'acta-' + año + '-' + mesIndex + '-' + Date.now(),
+      mesIndex,
+      año,
+      fechaCarga: Date.now(),
+      activa: true
+    };
+    actas.push(nueva);
+    return nueva;
+  }
+
+  function agregarRegistro(actaId, grupo, nombre, cantidad, unidad) {
+    registros.push({ actaId, grupo, nombre, cantidadActa: cantidad, unidadActa: (unidad || 'Kg'), entregas: [] });
+  }
+
+  function totalEntregasKg(reg) {
+    return reg.entregas.reduce((s, e) => s + (e.pesoKg || 0), 0);
+  }
+
+  function totalEntregasUnidades(reg) {
+    return reg.entregas.reduce((s, e) => s + (e.unidades || 0), 0);
+  }
+
+  function nombresUnicosDeMateriales() {
+    const vistos = new Map();
+    registros.forEach(r => {
+      const key = r.grupo + '||' + normalizar(r.nombre);
+      if (!vistos.has(key)) vistos.set(key, { grupo: r.grupo, nombre: r.nombre });
+    });
+    return [...vistos.values()];
+  }
+
+  async function extraerPalabras(page) {
+    const content = await page.getTextContent();
+    const raw = content.items.map(it => ({
+      text: it.str, x: it.transform[4], y: it.transform[5], width: it.width
+    })).filter(it => it.text.trim().length > 0);
+
+    raw.sort((a, b) => (Math.abs(a.y - b.y) > 2 ? b.y - a.y : a.x - b.x));
+
+    const items = [];
+    let actual = null;
+    raw.forEach(it => {
+      if (actual && Math.abs(actual.y - it.y) <= 2 && (it.x - actual.endX) < 2.5) {
+        actual.text += it.text;
+        actual.endX = it.x + it.width;
+      } else {
+        if (actual) items.push(actual);
+        actual = { text: it.text, x: it.x, y: it.y, endX: it.x + it.width };
+      }
+    });
+    if (actual) items.push(actual);
+    items.forEach(it => { it.text = it.text.trim(); });
+    return items;
+  }
+
+  function detectarMes(items) {
+    const textoCompleto = items.map(it => it.text.toLowerCase()).join(' ');
+    for (let i = 0; i < MESES_LARGOS.length; i++) {
+      if (textoCompleto.includes(MESES_LARGOS[i])) return i;
+    }
+    return null;
+  }
+
+  async function cargarPDF(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const estadoDiv = document.getElementById('estado-carga');
+    estadoDiv.className = 'actas-estado-carga actas-estado-cargando';
+    estadoDiv.style.display = 'block';
+    estadoDiv.textContent = 'Leyendo el PDF...';
+
+    try {
+      const buffer = await file.arrayBuffer();
+      const doc = await pdfjsLib.getDocument({ data: buffer }).promise;
+
+      let mesDetectado = null;
+      let grupoActual = null;
+      const materialesExtraidos = [];
+
+      for (let p = 1; p <= doc.numPages; p++) {
+        const page = await doc.getPage(p);
+        const items = await extraerPalabras(page);
+
+        if (mesDetectado === null) mesDetectado = detectarMes(items);
+
+        const textoUpper = items.map(it => it.text.toUpperCase()).join(' ');
+        if (textoUpper.includes('APROVECHABLE')) grupoActual = 'Aprovechable';
+        if (textoUpper.includes('PARA DISPOSICI')) grupoActual = 'Disposición';
+
+        let startIdx = items.findIndex(it => it.text.toUpperCase() === 'UNIDAD');
+        if (startIdx === -1) continue;
+        let endIdx = items.findIndex((it, i) => i > startIdx && (
+          it.text.toLowerCase().includes('certificado') || it.text.toLowerCase() === 'firma:'
+        ));
+        if (endIdx === -1) endIdx = items.length;
+
+        const tabla = items.slice(startIdx + 1, endIdx);
+        const esNumero = t => /^\d{1,3}(\.\d{3})*$/.test(t) || /^\d+$/.test(t);
+        const esUnidad = t => /^(kg|und)$/i.test(t);
+
+        const cantidades = tabla.filter(it => esNumero(it.text));
+        const unidades = tabla.filter(it => esUnidad(it.text));
+
+        const filas = [];
+        cantidades.forEach(q => {
+          let mejor = null, mejorDist = Infinity;
+          unidades.forEach(u => {
+            const dist = Math.abs(u.y - q.y);
+            if (dist < 6 && u.x > q.x && dist < mejorDist) { mejor = u; mejorDist = dist; }
+          });
+          if (mejor) filas.push({ qx: q.x, qy: q.y, cantidadTexto: q.text, unidad: mejor.text });
+        });
+
+        const usados = new Set([...cantidades, ...unidades]);
+        const nombrePalabras = tabla.filter(it => !usados.has(it));
+        const LIMITE_DISTANCIA = 16;
+
+        filas.forEach(fila => {
+          const asignadas = nombrePalabras.filter(w => w.x < fila.qx - 10);
+          const propias = asignadas.filter(w => {
+            const distFila = Math.abs(w.y - fila.qy);
+            if (distFila > LIMITE_DISTANCIA) return false;
+            const otras = filas.filter(f => f !== fila).map(f => Math.abs(w.y - f.qy));
+            const mejorOtra = otras.length ? Math.min(...otras) : Infinity;
+            return distFila <= mejorOtra;
+          });
+          propias.sort((a, b) => b.y - a.y || a.x - b.x);
+          const nombre = propias.map(w => w.text).join(' ');
+          const cantidad = parseFloat(fila.cantidadTexto.replace(/\./g, ''));
+          if (nombre && grupoActual) materialesExtraidos.push({ grupo: grupoActual, nombre, cantidad, unidad: fila.unidad });
+        });
+      }
+
+      if (mesDetectado === null) {
+        estadoDiv.className = 'actas-estado-carga actas-estado-error';
+        estadoDiv.textContent = 'No pude identificar a qué mes corresponde el acta. Revisa que el PDF diga el mes en el título.';
+        return;
+      }
+
+      const eraCorreccion = actaActivaDeMes(mesDetectado) !== null;
+      const nuevaActa = crearActaParaMes(mesDetectado);
+      materialesExtraidos.forEach(m => agregarRegistro(nuevaActa.id, m.grupo, m.nombre, m.cantidad, m.unidad));
+
+      estadoDiv.className = 'actas-estado-carga actas-estado-ok';
+      estadoDiv.textContent = eraCorreccion
+        ? `Listo — se cargó una nueva versión de ${MESES[mesDetectado]} 2026 (${materialesExtraidos.length} materiales). La versión anterior queda guardada como historial.`
+        : `Listo — se cargaron ${materialesExtraidos.length} materiales de ${MESES[mesDetectado]} 2026 automáticamente.`;
+      render();
+      guardarMes(mesDetectado);
+
+      subirArchivoADrive(file, 'acta', mesDetectado).then(url => {
+        if (url) {
+          nuevaActa.urlDrive = url;
+          render();
+          guardarMes(mesDetectado);
+        }
+      });
+
+    } catch (err) {
+      estadoDiv.className = 'actas-estado-carga actas-estado-error';
+      estadoDiv.textContent = 'No pude leer este PDF. Puede que sea una imagen escaneada en vez de texto real.';
+      console.error(err);
+    }
+  }
+
+  function encontrarCorteColumnas(items) {
+    const xs = [...new Set(items.map(it => it.x))].sort((a, b) => a - b);
+    let corte = null, mejorGap = 0;
+    for (let i = 0; i < xs.length - 1; i++) {
+      const gap = xs[i + 1] - xs[i];
+      if (gap > mejorGap) { mejorGap = gap; corte = (xs[i] + xs[i + 1]) / 2; }
+    }
+    return corte;
+  }
+
+  function extraerFormatoDestruccion(items) {
+    const idxDescr = items.findIndex(it => it.text.includes('DESCRIPCIÓN'));
+    if (idxDescr === -1) return [];
+    const idxFooter = items.findIndex((it, i) => i > idxDescr && it.text.toLowerCase().includes('relacionado'));
+    const yHeader = items[idxDescr].y;
+    const yFooter = idxFooter !== -1 ? items[idxFooter].y : -Infinity;
+    const filas = items.filter(it => it.y < yHeader - 5 && it.y > yFooter + 5);
+    if (filas.length === 0) return [];
+    const corte = encontrarCorteColumnas(filas);
+    const columna = corte !== null ? filas.filter(it => it.x < corte) : filas;
+
+    const esPeso = t => /^\d+(\.\d+)?kg$/i.test(t);
+    const pesos = columna.filter(it => esPeso(it.text));
+    const resultado = [];
+    pesos.forEach(p => {
+      const nombreCercano = columna.filter(w => w !== p && !esPeso(w.text) && Math.abs(w.y - p.y) <= 20 && w.text.toUpperCase() !== 'MATERIAL');
+      nombreCercano.sort((a, b) => b.y - a.y || a.x - b.x);
+      const nombre = nombreCercano.map(w => w.text).join(' ');
+      const peso = parseFloat(p.text.replace(/kg$/i, ''));
+      if (nombre && !isNaN(peso)) resultado.push({ nombre, peso });
+    });
+    return resultado;
+  }
+
+  function resolverPeriodo(texto) {
+    const t = normalizar(texto);
+    let mesIndex = null;
+    for (let i = 0; i < MESES_LARGOS.length; i++) {
+      if (t.includes(MESES_LARGOS[i])) { mesIndex = i; break; }
+    }
+    const mAnio = texto.match(/(20\d{2})/);
+    const anio = mAnio ? parseInt(mAnio[1], 10) : null;
+    return { mesIndex, anio };
+  }
+
+  function extraerFormatoDeclarado(items) {
+    const idxNombreDecl = items.findIndex(it => it.text.toLowerCase().includes('declarado'));
+    const idxPeso = items.findIndex(it => /peso|cantidad/i.test(it.text));
+    if (idxNombreDecl === -1 || idxPeso === -1) return [];
+
+    const xPeriodoMax = items[idxNombreDecl].x - 20;
+    const xNombreMin = 140;
+    const xNombreMax = items[idxNombreDecl].x + 60;
+    const xPesoMin = items[idxPeso].x - 15;
+    const xPesoMax = items[idxPeso].x + 60;
+    const yCabecera = items[idxPeso].y;
+    const filasArea = items.filter(it => it.y < yCabecera - 5);
+
+    const columnaPeso = filasArea.filter(it => it.x >= xPesoMin && it.x <= xPesoMax);
+    const marcasConteo = columnaPeso.filter(it => /unidad|^und$/i.test(it.text));
+    const esPeso = t => /^\d+(\.\d+)?(kg)?$/i.test(t.replace(/,/g, ''));
+    const candidatosPeso = columnaPeso.filter(it =>
+      esPeso(it.text) && !marcasConteo.some(m => Math.abs(m.y - it.y) <= 3)
+    );
+
+    function unidadesCercanas(pesoY) {
+      const pegado = columnaPeso.find(it => Math.abs(it.y - pesoY) <= 14 && /^\d+(\.\d+)?und$/i.test(it.text));
+      if (pegado) return parseFloat(pegado.text.replace(/und$/i, ''));
+      const marca = marcasConteo.find(m => Math.abs(m.y - pesoY) <= 14);
+      if (!marca) return null;
+      const numCercano = columnaPeso.find(it => it !== marca && /^\d+(\.\d+)?$/.test(it.text) && Math.abs(it.y - marca.y) <= 3);
+      return numCercano ? parseFloat(numCercano.text) : null;
+    }
+
+    const LIMITE = 14;
+    const resultado = [];
+    candidatosPeso.forEach(pesoTok => {
+      const nombreCercano = filasArea.filter(it =>
+        it.x >= xNombreMin && it.x <= xNombreMax && Math.abs(it.y - pesoTok.y) <= LIMITE
+      );
+      nombreCercano.sort((a, b) => b.y - a.y || a.x - b.x);
+      const nombre = nombreCercano.map(w => w.text).join(' ');
+
+      const periodoCercano = filasArea.filter(it =>
+        it.x < xPeriodoMax && Math.abs(it.y - pesoTok.y) <= LIMITE
+      );
+      periodoCercano.sort((a, b) => b.y - a.y || a.x - b.x);
+      const periodoTexto = periodoCercano.map(w => w.text).join(' ');
+      const { mesIndex, anio } = resolverPeriodo(periodoTexto);
+      const unidades = unidadesCercanas(pesoTok.y);
+
+      const peso = parseFloat(pesoTok.text.replace(/kg$/i, ''));
+      if (nombre && !isNaN(peso)) resultado.push({ nombre, peso, unidades, mesIndex, anio });
+    });
+    return resultado;
+  }
+
+  function extraerFormatoMaterialCantidad(items) {
+    const idxMaterial = items.findIndex(it => it.text.toUpperCase() === 'MATERIAL');
+    const idxCantidad = items.findIndex(it => it.text.toUpperCase().includes('CANTIDAD'));
+    if (idxMaterial === -1 || idxCantidad === -1) return [];
+
+    const xMaterialMin = 60;
+    const xMaterialMax = items[idxCantidad].x - 20;
+    const xCantidadMin = items[idxCantidad].x - 15;
+    const xCantidadMax = items[idxCantidad].x + 80;
+    const yCabecera = items[idxCantidad].y;
+    const filasArea = items.filter(it => it.y < yCabecera - 5);
+
+    const esPeso = t => /^\d{1,3}(\.\d{3})*$/.test(t) || /^\d+$/.test(t);
+    const candidatosPeso = filasArea.filter(it => it.x >= xCantidadMin && it.x <= xCantidadMax && esPeso(it.text));
+
+    const LIMITE = 14;
+    const resultado = [];
+    candidatosPeso.forEach(pesoTok => {
+      const nombreCercano = filasArea.filter(it =>
+        it.x >= xMaterialMin && it.x <= xMaterialMax && Math.abs(it.y - pesoTok.y) <= LIMITE
+      );
+      nombreCercano.sort((a, b) => b.y - a.y || a.x - b.x);
+      const nombre = nombreCercano.map(w => w.text).join(' ');
+      const peso = parseFloat(pesoTok.text.replace(/\./g, ''));
+      if (nombre && !isNaN(peso)) resultado.push({ nombre, peso });
+    });
+    return resultado;
+  }
+
+  function detectarFormatoCertificado(textoCompleto) {
+    const t = textoCompleto.toLowerCase();
+    if (t.includes('descripción') && t.includes('tipo de manejo')) return 'destruccion';
+    if (t.includes('periodo') && t.includes('declarado')) return 'declarado';
+    if (t.includes('material') && t.includes('cantidad')) return 'material_cantidad';
+    return null;
+  }
+  const proveedoresConocidos = [];
+  const perfilesAprendidos = [];
+  let resolverModalProveedorFn = null;
+
+  function detectarPerfilAprendido(textoCompleto) {
+    const t = normalizar(textoCompleto);
+    return perfilesAprendidos.find(p => (p.nit && t.includes(normalizar(p.nit))) || t.includes(normalizar(p.nombre))) || null;
+  }
+
+  function parsearNumeroFlexible(texto) {
+    const limpio = texto.replace(/kg$/i, '');
+    if (/^\d{1,3}(\.\d{3})+$/.test(limpio)) return parseFloat(limpio.replace(/\./g, ''));
+    return parseFloat(limpio);
+  }
+
+  function extraerConPerfil(items, perfil) {
+    const columna = items.filter(it => it.x >= perfil.xPesoMin && it.x <= perfil.xPesoMax);
+    const esPeso = t => /^\d+(\.\d+)?(kg)?$/i.test(t.replace(/,/g, ''));
+    const candidatosPeso = columna.filter(it => esPeso(it.text));
+    const LIMITE = 14;
+    const resultado = [];
+    candidatosPeso.forEach(pesoTok => {
+      const nombreCercano = items.filter(it =>
+        it.x >= perfil.xNombreMin && it.x <= perfil.xNombreMax && Math.abs(it.y - pesoTok.y) <= LIMITE
+      );
+      nombreCercano.sort((a, b) => b.y - a.y || a.x - b.x);
+      const nombre = nombreCercano.map(w => w.text).join(' ');
+      const peso = parsearNumeroFlexible(pesoTok.text);
+      if (nombre && !isNaN(peso)) resultado.push({ nombre, peso });
+    });
+    return resultado;
+  }
+
+  function detectarProveedorConocido(textoCompleto) {
+    const t = normalizar(textoCompleto);
+    return proveedoresConocidos.find(p => t.includes(normalizar(p))) || null;
+  }
+
+  function pedirProveedor(sugerido) {
+    if (sugerido) return Promise.resolve(sugerido);
+    return new Promise(resolve => {
+      resolverModalProveedorFn = resolve;
+      const select = document.getElementById('select-proveedor');
+      const inputNuevo = document.getElementById('input-proveedor-nuevo');
+      select.innerHTML = proveedoresConocidos.map(p => `<option value="${p}">${p}</option>`).join('') +
+        '<option value="__nuevo__">Otro (escribir nuevo)</option>';
+      inputNuevo.style.display = proveedoresConocidos.length === 0 ? 'block' : 'none';
+      inputNuevo.value = '';
+      select.onchange = () => { inputNuevo.style.display = select.value === '__nuevo__' ? 'block' : 'none'; };
+      if (proveedoresConocidos.length === 0) select.value = '__nuevo__';
+      document.getElementById('modal-proveedor').style.display = 'flex';
+    });
+  }
+
+  function aceptarModalProveedor() {
+    const select = document.getElementById('select-proveedor');
+    const inputNuevo = document.getElementById('input-proveedor-nuevo');
+    const valor = select.value === '__nuevo__' ? inputNuevo.value.trim() : select.value;
+    resolverModalProveedor(valor || null);
+  }
+
+  function toggleConfiguracion() {
+    const panel = document.getElementById('panel-configuracion');
+    const abrir = panel.style.display === 'none';
+    panel.style.display = abrir ? 'block' : 'none';
+    if (abrir) renderConfiguracion();
+  }
+
+  function renderConfiguracion() {
+    const listaProv = document.getElementById('lista-config-proveedores');
+    listaProv.innerHTML = proveedoresConocidos.length === 0
+      ? '<span class="actas-dif-vacio">Todavía no hay ninguno</span>'
+      : proveedoresConocidos.map(p => `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid var(--borde);">
+          <span>${p}</span>
+          <button onclick="eliminarProveedor('${p.replace(/'/g, "\\'")}')" style="background:none; border:none; color:var(--rojo-texto); font-size:12px; cursor:pointer;">Eliminar</button>
+        </div>`).join('');
+
+    const listaPerf = document.getElementById('lista-config-perfiles');
+    listaPerf.innerHTML = perfilesAprendidos.length === 0
+      ? '<span class="actas-dif-vacio">Todavía no hay ninguno</span>'
+      : perfilesAprendidos.map(p => `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid var(--borde);">
+          <span>${p.nombre}${p.nit ? ` <span class="actas-dif-vacio">(NIT ${p.nit})</span>` : ''}</span>
+          <button onclick="eliminarPerfil('${p.id}')" style="background:none; border:none; color:var(--rojo-texto); font-size:12px; cursor:pointer;">Eliminar</button>
+        </div>`).join('');
+
+    const selectMes = document.getElementById('select-mes-reporte');
+    const mesesConActa = MESES.map((m, i) => i).filter(i => actaActivaDeMes(i));
+    selectMes.innerHTML = mesesConActa.length === 0
+      ? '<option value="">Sin actas cargadas aún</option>'
+      : mesesConActa.map(i => `<option value="${i}">${MESES[i]} ${AÑO_ACTUAL}</option>`).join('');
+  }
+
+  async function generarReporteAhorroBase(mesIndex, estadoDiv) {
+    if (isNaN(mesIndex)) {
+      estadoDiv.className = 'actas-estado-carga actas-estado-error';
+      estadoDiv.style.display = 'block';
+      estadoDiv.textContent = 'No hay ningun mes con acta cargada todavia.';
+      return;
+    }
+    if (!APPS_SCRIPT_DRIVE_URL || APPS_SCRIPT_DRIVE_URL.includes('PEGA_AQUI')) {
+      estadoDiv.className = 'actas-estado-carga actas-estado-error';
+      estadoDiv.style.display = 'block';
+      estadoDiv.textContent = 'Falta configurar la URL del Apps Script (APPS_SCRIPT_DRIVE_URL).';
+      return;
+    }
+
+    const acta = actaActivaDeMes(mesIndex);
+    if (!acta) {
+      estadoDiv.className = 'actas-estado-carga actas-estado-error';
+      estadoDiv.style.display = 'block';
+      estadoDiv.textContent = 'Ese mes todavia no tiene acta cargada.';
+      return;
+    }
+    const registrosDelMes = registros.filter(r => r.actaId === acta.id && r.unidadActa !== 'Und');
+    const materiales = registrosDelMes.map(r => ({ nombre: r.nombre, cantidadKg: r.cantidadActa }));
+
+    if (materiales.length === 0) {
+      estadoDiv.className = 'actas-estado-carga actas-estado-error';
+      estadoDiv.style.display = 'block';
+      estadoDiv.textContent = 'Ese mes no tiene materiales en kg para calcular ahorro.';
+      return;
+    }
+
+    estadoDiv.className = 'actas-estado-carga actas-estado-cargando';
+    estadoDiv.style.display = 'block';
+    estadoDiv.textContent = 'Generando el reporte de ' + MESES[mesIndex] + '...';
+
+    try {
+      const resp = await fetch(APPS_SCRIPT_DRIVE_URL, {
+        method: 'POST',
+        body: JSON.stringify({ accion: 'reporte_ahorro', anio: AÑO_ACTUAL, mes: MESES[mesIndex], materiales })
+      });
+      const data = await resp.json();
+
+      if (!data.ok) {
+        estadoDiv.className = 'actas-estado-carga actas-estado-error';
+        estadoDiv.textContent = 'No se pudo generar: ' + (data.error || 'error desconocido');
+        return;
+      }
+
+      estadoDiv.className = 'actas-estado-carga actas-estado-ok';
+      let msg = `Listo (${MESES[mesIndex]}) — ${Math.round(data.totalAgua).toLocaleString('es-CO')} L de agua, ${Math.round(data.totalEnergia).toLocaleString('es-CO')} kWh y ${Math.round(data.totalCO2e).toLocaleString('es-CO')} kg CO2e evitados. `;
+      msg += `<a href="${data.url}" target="_blank" rel="noopener" style="color:var(--azul); font-weight:600;">Abrir Excel en Drive</a>`;
+      if (data.sinMapeo && data.sinMapeo.length > 0) {
+        msg += `<br><span style="color:var(--amarillo-texto);">Sin factor definido (no se incluyeron): ${data.sinMapeo.join(', ')}</span>`;
+      }
+      estadoDiv.innerHTML = msg;
+
+    } catch (err) {
+      estadoDiv.className = 'actas-estado-carga actas-estado-error';
+      estadoDiv.textContent = 'Error de conexion al generar el reporte.';
+      console.error(err);
+    }
+  }
+
+  function generarReporteAhorroCliente() {
+    const mesIndex = parseInt(document.getElementById('select-mes-reporte').value, 10);
+    generarReporteAhorroBase(mesIndex, document.getElementById('estado-reporte-ahorro'));
+  }
+
+  function generarReporteAhorroMes(mesIndex) {
+    generarReporteAhorroBase(mesIndex, document.getElementById('estado-carga'));
+  }
+
+
+  function eliminarProveedor(nombre) {
+    const idx = proveedoresConocidos.indexOf(nombre);
+    if (idx !== -1) proveedoresConocidos.splice(idx, 1);
+    guardarProveedores();
+    renderConfiguracion();
+  }
+
+  function eliminarPerfil(id) {
+    const idx = perfilesAprendidos.findIndex(p => p.id === id);
+    if (idx !== -1) perfilesAprendidos.splice(idx, 1);
+    guardarPerfiles();
+    renderConfiguracion();
+  }
+
+  async function parsearDocumentoCompleto(doc) {
+    let mesGlobalDetectado = null;
+    let numeroCertificado = null;
+    let numeroManifiesto = null;
+    let textoDocumentoCompleto = '';
+    const todosLosItems = [];
+
+    for (let p = 1; p <= doc.numPages; p++) {
+      const page = await doc.getPage(p);
+      const items = await extraerPalabras(page);
+      todosLosItems.push(...items);
+      const textoCompleto = items.map(it => it.text).join(' ');
+      textoDocumentoCompleto += ' ' + textoCompleto;
+
+      if (mesGlobalDetectado === null) mesGlobalDetectado = detectarMes(items);
+      if (numeroCertificado === null) {
+        const m1 = textoCompleto.match(/CERTIFICADO\s+No\.?\s*(\d+)/i) || textoCompleto.match(/No\.?\s*0*(\d+)/i);
+        if (m1) numeroCertificado = m1[1];
+      }
+      if (numeroManifiesto === null) {
+        const m2 = textoCompleto.match(/manifiesto[\s\S]{0,25}?N[°º]\s*(\d+)/i) || textoCompleto.match(/N[°º]\s*(\d+)/i);
+        if (m2) numeroManifiesto = m2[1];
+      }
+    }
+
+    return { items: todosLosItems, textoDocumentoCompleto, numeroCertificado, numeroManifiesto, mesGlobalDetectado };
+  }
+
+  async function abrirEnsenarDesdeArchivo(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const estadoDiv = document.getElementById('estado-ensenar-config');
+    estadoDiv.className = 'actas-estado-carga actas-estado-cargando';
+    estadoDiv.style.display = 'block';
+    estadoDiv.textContent = 'Leyendo el PDF...';
+
+    try {
+      const buffer = await file.arrayBuffer();
+      const doc = await pdfjsLib.getDocument({ data: buffer }).promise;
+      ultimoIntentoFallido = await parsearDocumentoCompleto(doc);
+      ultimoIntentoFallido.file = file;
+      estadoDiv.style.display = 'none';
+      abrirModalEnsenar();
+    } catch (err) {
+      estadoDiv.className = 'actas-estado-carga actas-estado-error';
+      estadoDiv.textContent = 'No pude leer este PDF.';
+      console.error(err);
+    }
+  }
+
+  function resolverModalProveedor(valor) {
+    document.getElementById('modal-proveedor').style.display = 'none';
+    if (valor && !proveedoresConocidos.includes(valor)) proveedoresConocidos.push(valor);
+    if (resolverModalProveedorFn) resolverModalProveedorFn(valor);
+    resolverModalProveedorFn = null;
+  }
+
+  // ─── ENSEÑAR FORMATO NUEVO ────────────────────────────────
+  let filasEnsenar = [];
+  let filaElegidaEnsenar = null;
+
+  function reconstruirFilas(items) {
+    const ordenados = [...items].sort((a, b) => (Math.abs(a.y - b.y) > 4 ? b.y - a.y : a.x - b.x));
+    const filas = [];
+    let actual = null;
+    ordenados.forEach(it => {
+      if (actual && Math.abs(actual.y - it.y) <= 4) {
+        actual.tokens.push(it);
+      } else {
+        if (actual) filas.push(actual);
+        actual = { y: it.y, tokens: [it] };
+      }
+    });
+    if (actual) filas.push(actual);
+    return filas.filter(f => f.tokens.some(t => /\d/.test(t.text)));
+  }
+
+  function abrirModalEnsenar() {
+    if (!ultimoIntentoFallido) return;
+    filasEnsenar = reconstruirFilas(ultimoIntentoFallido.items);
+    const lista = document.getElementById('ensenar-lista-filas');
+    lista.innerHTML = filasEnsenar.map((f, i) =>
+      `<div class="actas-fila-ensenar" onclick="elegirFilaEnsenar(${i})">${f.tokens.map(t => t.text).join(' ')}</div>`
+    ).join('');
+    document.getElementById('ensenar-paso-1').style.display = 'block';
+    document.getElementById('ensenar-paso-2').style.display = 'none';
+    document.getElementById('modal-ensenar').style.display = 'flex';
+  }
+
+  function elegirFilaEnsenar(idx) {
+    filaElegidaEnsenar = filasEnsenar[idx];
+    const cont = document.getElementById('ensenar-tokens-fila');
+    cont.innerHTML = filaElegidaEnsenar.tokens.map((t, i) =>
+      `<span class="actas-token-chip" onclick="elegirPesoEnsenar(${i})">${t.text}</span>`
+    ).join('');
+    document.getElementById('ensenar-paso-1').style.display = 'none';
+    document.getElementById('ensenar-paso-2').style.display = 'block';
+  }
+
+  function volverPaso1Ensenar() {
+    document.getElementById('ensenar-paso-1').style.display = 'block';
+    document.getElementById('ensenar-paso-2').style.display = 'none';
+  }
+
+  async function elegirPesoEnsenar(idxToken) {
+    const pesoTok = filaElegidaEnsenar.tokens[idxToken];
+    if (!/\d/.test(pesoTok.text)) {
+      alert('Eso no parece un número — elige el que tenga el peso.');
+      return;
+    }
+    const nombreToks = filaElegidaEnsenar.tokens.filter((t, i) => i !== idxToken);
+    if (nombreToks.length === 0) {
+      alert('Esa línea solo tiene el número — elige una línea que también tenga el nombre del material.');
+      return;
+    }
+    const xsNombre = nombreToks.map(t => t.x);
+
+    const nombreProveedor = prompt('¿Nombre del proveedor de este formato nuevo?', '') || '';
+    if (!nombreProveedor) return;
+
+    const mNit = ultimoIntentoFallido.textoDocumentoCompleto.match(/NIT[:\s.]*([\d.\-]{5,})/i);
+
+    const perfil = {
+      id: 'perfil-' + Date.now(),
+      nombre: nombreProveedor,
+      nit: mNit ? mNit[1] : null,
+      xNombreMin: Math.min(...xsNombre) - 10,
+      xNombreMax: Math.max(...xsNombre) + 10,
+      xPesoMin: pesoTok.x - 15,
+      xPesoMax: pesoTok.x + 60
+    };
+    perfilesAprendidos.push(perfil);
+    guardarPerfiles();
+
+    cerrarModalEnsenar();
+
+    const estadoDiv = document.getElementById('estado-carga-cert');
+    estadoDiv.className = 'actas-estado-carga actas-estado-cargando';
+    estadoDiv.textContent = 'Aplicando el formato que acabas de enseñar...';
+
+    const materialesPerfil = extraerConPerfil(ultimoIntentoFallido.items, perfil)
+      .map(m => ({ ...m, mesIndex: ultimoIntentoFallido.mesGlobalDetectado, anio: 2026 }));
+
+    if (materialesPerfil.length === 0) {
+      estadoDiv.className = 'actas-estado-carga actas-estado-error';
+      estadoDiv.textContent = 'Guardé el formato, pero no encontré más materiales con ese patrón en este PDF. Prueba subirlo otra vez.';
+      return;
+    }
+
+    const urlDriveEnsenado = ultimoIntentoFallido.file
+      ? await subirArchivoADrive(ultimoIntentoFallido.file, 'certificado', ultimoIntentoFallido.mesGlobalDetectado || 0)
+      : null;
+
+    await procesarYCruzarMateriales(
+      materialesPerfil,
+      ultimoIntentoFallido.numeroCertificado,
+      ultimoIntentoFallido.numeroManifiesto,
+      ultimoIntentoFallido.textoDocumentoCompleto,
+      estadoDiv,
+      urlDriveEnsenado
+    );
+  }
+
+  function cerrarModalEnsenar() {
+    document.getElementById('modal-ensenar').style.display = 'none';
+  }
+
+  async function guardarPerfiles() {
+    if (!db) return;
+    try {
+      const { doc, setDoc } = firestoreFns;
+      await setDoc(doc(db, 'hh-actas-meta', 'formatos'), { lista: perfilesAprendidos });
+    } catch (err) {
+      console.error('Error guardando el formato aprendido:', err);
+    }
+  }
+  function normalizarPalabras(nombre) {
+    const stopwords = ['de', 'del', 'la', 'el', 'en', 'y', 'los', 'las'];
+    return normalizar(nombre).split(/\s+/).filter(w => w && !stopwords.includes(w));
+  }
+
+  function palabraSimilar(a, b) {
+    if (Math.min(a.length, b.length) < 3) return a === b;
+    return a.startsWith(b) || b.startsWith(a);
+  }
+
+  const ALIAS_MATERIALES = [
+    ['estibas de madera', 'estibas en buen estado']
+  ];
+
+  function coincidePorAlias(nombreCert, nombreActa) {
+    const nc = normalizar(nombreCert), na = normalizar(nombreActa);
+    return ALIAS_MATERIALES.some(([a, b]) =>
+      (nc.includes(a) && na.includes(b)) || (nc.includes(b) && na.includes(a))
+    );
+  }
+
+  function coincideNombre(nombreCert, nombreActa) {
+    if (coincidePorAlias(nombreCert, nombreActa)) return true;
+    const wc = normalizarPalabras(nombreCert);
+    const wa = normalizarPalabras(nombreActa);
+    if (wc.length === 0 || wa.length === 0) return false;
+    const certDentroDeActa = wc.every(w => wa.some(w2 => palabraSimilar(w, w2)));
+    const actaDentroDeCert = wa.every(w => wc.some(w2 => palabraSimilar(w, w2)));
+    return certDentroDeActa || actaDentroDeCert;
+  }
+
+  async function procesarYCruzarMateriales(materialesCert, numeroCertificado, numeroManifiesto, textoDocumentoCompleto, estadoDiv, urlDrive = null) {
+    const sugerido = detectarProveedorConocido(textoDocumentoCompleto);
+    const proveedor = await pedirProveedor(sugerido);
+    if (!proveedor) {
+      estadoDiv.className = 'actas-estado-carga actas-estado-error';
+      estadoDiv.textContent = 'Carga cancelada — falta indicar el proveedor.';
+      return;
+    }
+
+    let coincidencias = 0;
+    const sinCoincidencia = [];
+    const fueraDeAlcance = [];
+    const mesesUsados = new Set();
+
+    materialesCert.forEach(mc => {
+      if (mc.anio !== null && mc.anio !== 2026) {
+        fueraDeAlcance.push(`${mc.nombre} (${mc.anio})`);
+        return;
+      }
+      if (mc.mesIndex === null) {
+        sinCoincidencia.push(`${mc.nombre} (no identifiqué el mes)`);
+        return;
+      }
+      const acta = actaActivaDeMes(mc.mesIndex);
+      if (!acta) {
+        sinCoincidencia.push(`${mc.nombre} (falta subir el acta de ${MESES[mc.mesIndex]} 2026)`);
+        return;
+      }
+      const registrosDeActa = registros.filter(r => r.actaId === acta.id);
+      const reg = registrosDeActa.find(r => coincideNombre(mc.nombre, r.nombre));
+      if (reg) {
+        reg.entregas.push({ proveedor, numeroCertificado, numeroManifiesto, pesoKg: mc.peso, unidades: mc.unidades || null, urlDrive, fecha: Date.now() });
+        coincidencias++;
+        mesesUsados.add(mc.mesIndex);
+      } else {
+        sinCoincidencia.push(`${mc.nombre} (${MESES[mc.mesIndex]})`);
+      }
+    });
+
+    estadoDiv.className = 'actas-estado-carga actas-estado-ok';
+    const mesesTxt = [...mesesUsados].sort((a, b) => a - b).map(i => MESES[i]).join(', ');
+    let msg = `Listo — proveedor: ${proveedor}${sugerido ? ' (detectado solo)' : ''}. Se cruzaron ${coincidencias} de ${materialesCert.length} materiales del certificado${mesesTxt ? ` en ${mesesTxt} 2026` : ''}.`;
+    if (numeroManifiesto) msg += ` Manifiesto N°${numeroManifiesto}.`;
+    if (fueraDeAlcance.length > 0) msg += ` Fuera de 2026, no se cargaron: ${fueraDeAlcance.join(', ')}.`;
+    if (sinCoincidencia.length > 0) msg += ` Sin cruce: ${sinCoincidencia.join(', ')}.`;
+    estadoDiv.textContent = msg;
+    render();
+    mesesUsados.forEach(mi => guardarMes(mi));
+    guardarProveedores();
+  }
+
+  let ultimoIntentoFallido = null;
+
+  async function cargarCertificado(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const estadoDiv = document.getElementById('estado-carga-cert');
+    estadoDiv.className = 'actas-estado-carga actas-estado-cargando';
+    estadoDiv.style.display = 'block';
+    estadoDiv.textContent = 'Leyendo el certificado...';
+
+    try {
+      const buffer = await file.arrayBuffer();
+      const doc = await pdfjsLib.getDocument({ data: buffer }).promise;
+
+      let mesGlobalDetectado = null;
+      let numeroCertificado = null;
+      let numeroManifiesto = null;
+      let formato = null;
+      let textoDocumentoCompleto = '';
+      const materialesCert = [];
+      const todosLosItems = [];
+
+      for (let p = 1; p <= doc.numPages; p++) {
+        const page = await doc.getPage(p);
+        const items = await extraerPalabras(page);
+        todosLosItems.push(...items);
+        const textoCompleto = items.map(it => it.text).join(' ');
+        textoDocumentoCompleto += ' ' + textoCompleto;
+
+        if (mesGlobalDetectado === null) mesGlobalDetectado = detectarMes(items);
+        if (formato === null) formato = detectarFormatoCertificado(textoCompleto);
+
+        if (numeroCertificado === null) {
+          const m1 = textoCompleto.match(/CERTIFICADO\s+No\.?\s*(\d+)/i) || textoCompleto.match(/No\.?\s*0*(\d+)/i);
+          if (m1) numeroCertificado = m1[1];
+        }
+        if (numeroManifiesto === null) {
+          const m2 = textoCompleto.match(/manifiesto[\s\S]{0,25}?N[°º]\s*(\d+)/i) || textoCompleto.match(/N[°º]\s*(\d+)/i);
+          if (m2) numeroManifiesto = m2[1];
+        }
+
+        if (formato === 'destruccion') {
+          extraerFormatoDestruccion(items).forEach(m => materialesCert.push({ ...m, mesIndex: mesGlobalDetectado, anio: 2026 }));
+        } else if (formato === 'material_cantidad') {
+          extraerFormatoMaterialCantidad(items).forEach(m => materialesCert.push({ ...m, mesIndex: mesGlobalDetectado, anio: 2026 }));
+        } else if (formato === 'declarado') {
+          materialesCert.push(...extraerFormatoDeclarado(items));
+        }
+      }
+
+      if (formato === null || materialesCert.length === 0) {
+        const perfil = detectarPerfilAprendido(textoDocumentoCompleto);
+        if (perfil) {
+          const materialesPerfil = extraerConPerfil(todosLosItems, perfil).map(m => ({ ...m, mesIndex: mesGlobalDetectado, anio: 2026 }));
+          if (materialesPerfil.length > 0) {
+            const urlDrivePerfil = await subirArchivoADrive(file, 'certificado', mesGlobalDetectado || 0);
+            await procesarYCruzarMateriales(materialesPerfil, numeroCertificado, numeroManifiesto, textoDocumentoCompleto, estadoDiv, urlDrivePerfil);
+            return;
+          }
+        }
+
+        ultimoIntentoFallido = { items: todosLosItems, textoDocumentoCompleto, numeroCertificado, numeroManifiesto, mesGlobalDetectado, file };
+        estadoDiv.className = 'actas-estado-carga actas-estado-error';
+        estadoDiv.innerHTML = 'No reconocí el formato de este certificado. <button class="actas-btn-enseñar" onclick="abrirModalEnsenar()">Enseñar formato nuevo</button>';
+        return;
+      }
+
+      const urlDriveCert = await subirArchivoADrive(file, 'certificado', mesGlobalDetectado || 0);
+      await procesarYCruzarMateriales(materialesCert, numeroCertificado, numeroManifiesto, textoDocumentoCompleto, estadoDiv, urlDriveCert);
+
+    } catch (err) {
+      estadoDiv.className = 'actas-estado-carga actas-estado-error';
+      estadoDiv.textContent = 'No pude leer este certificado. Puede que sea una imagen escaneada en vez de texto real.';
+      console.error(err);
+    }
+  }
+
+  const ESTADOS_ACTA = {
+    faltante: { clase: 'actas-badge-pendiente', texto: 'Faltante' },
+    pendiente: { clase: 'actas-badge-amarillo', texto: 'Pendiente' },
+    ok: { clase: 'actas-badge-ok', texto: 'Generada' }
+  };
+
+  function estadoEfectivoActa(i) {
+    if (estadoManual[i]) return estadoManual[i];
+    return actaActivaDeMes(i) ? 'ok' : 'faltante';
+  }
+
+  function toggleManual(i) {
+    const actual = estadoEfectivoActa(i);
+    const siguiente = actual === 'faltante' ? 'pendiente' : (actual === 'pendiente' ? 'ok' : 'faltante');
+    estadoManual[i] = siguiente;
+    render();
+    guardarMes(i);
+  }
+
+  function verHistorial(mesIndex) {
+    const versiones = versionesDeMes(mesIndex);
+    if (versiones.length < 2) return;
+    const lineas = versiones.map((a, i) => {
+      const fecha = new Date(a.fechaCarga).toLocaleString('es-CO');
+      const n = registros.filter(r => r.actaId === a.id).length;
+      return `Versión ${i + 1}${a.activa ? ' (activa)' : ''} — subida ${fecha} — ${n} materiales`;
+    });
+    alert(`Historial de ${MESES[mesIndex]} 2026:\n\n` + lineas.join('\n'));
+  }
+
+  function editarCertificado(nombreMat, actaId) {
+    const reg = registros.find(r => r.actaId === actaId && r.nombre === nombreMat);
+    if (!reg) return;
+    const valorKg = prompt(`Peso certificado a anotar a mano para "${reg.nombre}" (kg) — deja vacío si no aplica:`, '');
+    if (valorKg === null) return;
+    let unidades = null;
+    if (reg.unidadActa === 'Und') {
+      const valorUnd = prompt(`Cantidad de unidades para "${reg.nombre}" — deja vacío si no aplica:`, '');
+      if (valorUnd !== null && valorUnd !== '') {
+        const numUnd = parseFloat(valorUnd.replace(',', '.'));
+        if (!isNaN(numUnd)) unidades = numUnd;
+      }
+    }
+    const numKg = valorKg === '' ? null : parseFloat(valorKg.replace(',', '.'));
+    if ((numKg === null || isNaN(numKg)) && unidades === null) return;
+    reg.entregas.push({ proveedor: 'Manual', numeroCertificado: null, numeroManifiesto: null, pesoKg: isNaN(numKg) ? null : numKg, unidades, fecha: Date.now() });
+    render();
+    const actaDelReg = actas.find(a => a.id === reg.actaId);
+    if (actaDelReg) guardarMes(actaDelReg.mesIndex, actaDelReg.año);
+  }
+
+  function verEntregas(nombreMat, actaId) {
+    const reg = registros.find(r => r.actaId === actaId && r.nombre === nombreMat);
+    if (!reg || reg.entregas.length === 0) return;
+
+    document.getElementById('entregas-titulo').textContent = 'Entregas de "' + reg.nombre + '"';
+
+    const lista = document.getElementById('entregas-lista');
+    lista.innerHTML = reg.entregas.map((e, i) => {
+      const fecha = new Date(e.fecha).toLocaleDateString('es-CO');
+      const cert = e.numeroCertificado ? `certificado N°${e.numeroCertificado}` : 'sin N° certificado';
+      const manif = e.numeroManifiesto ? ` · manifiesto N°${e.numeroManifiesto}` : '';
+      const partes = [];
+      if (e.pesoKg !== null && e.pesoKg !== undefined) partes.push(`${e.pesoKg.toLocaleString('es-CO')} kg`);
+      if (e.unidades !== null && e.unidades !== undefined) partes.push(`${e.unidades.toLocaleString('es-CO')} und`);
+      const link = e.urlDrive ? `<a href="${e.urlDrive}" target="_blank" rel="noopener" style="color:var(--azul);">ver PDF en Drive</a>` : '<span class="actas-dif-vacio">sin PDF guardado</span>';
+      return `<div style="padding:8px 0; border-bottom:1px solid var(--borde); font-size:12.5px;">
+        <div>${i + 1}. ${e.proveedor || 'Sin proveedor'} — ${cert}${manif}</div>
+        <div style="color:var(--texto-suave);">${partes.join(' · ')} — ${fecha}</div>
+        <div style="margin-top:3px;">${link}</div>
+      </div>`;
+    }).join('');
+
+    const totalKg = totalEntregasKg(reg);
+    const totalUnd = totalEntregasUnidades(reg);
+    const totalesTxt = [totalKg ? `${totalKg.toLocaleString('es-CO')} kg` : null, totalUnd ? `${totalUnd.toLocaleString('es-CO')} und` : null].filter(Boolean).join(' · ');
+    document.getElementById('entregas-total').textContent = 'Total certificado: ' + totalesTxt;
+
+    document.getElementById('modal-entregas').style.display = 'flex';
+  }
+
+  function celdaActa(i) {
+    const versiones = versionesDeMes(i);
+    const estado = estadoEfectivoActa(i);
+    const { clase, texto } = ESTADOS_ACTA[estado];
+    const acta = actaActivaDeMes(i);
+
+    let html = `<td><button class="actas-badge ${clase}" onclick="toggleManual(${i})">${texto}</button>`;
+    if (acta && acta.urlDrive) {
+      html += `<a href="${acta.urlDrive}" target="_blank" rel="noopener" style="display:block; font-size:10.5px; color:var(--azul); margin-top:3px;">ver PDF</a>`;
+    }
+    if (acta) {
+      html += `<button onclick="generarReporteAhorroMes(${i})" style="display:block; width:100%; font-size:12px; font-weight:600; color:#fff; margin-top:5px; background:var(--verde-texto); border:none; border-radius:6px; cursor:pointer; padding:6px 8px;">💰 Reporte ahorro</button>`;
+    }
+    if (versiones.length > 1) {
+      html += `<span class="actas-version-tag" onclick="verHistorial(${i})">v${versiones.length} · ver historial</span>`;
+    }
+    html += '</td>';
+    return html;
+  }
+
+  function celdaMaterial(mat, mesIndex) {
+    const acta = actaActivaDeMes(mesIndex);
+    if (!acta) return '<td><span class="actas-dif-vacio">—</span></td>';
+    const reg = registros.find(r => r.actaId === acta.id && r.nombre === mat.nombre && r.grupo === mat.grupo);
+    if (!reg) return '<td><span class="actas-dif-vacio">—</span></td>';
+
+    const nombreEsc = reg.nombre.replace(/'/g, "\\'");
+    const esUnidades = reg.unidadActa === 'Und';
+    const sufijoActa = esUnidades ? 'und' : 'kg';
+
+    if (reg.entregas.length === 0) {
+      return `<td><span class="actas-dif-sin-cert" onclick="editarCertificado('${nombreEsc}', '${reg.actaId}')">${reg.cantidadActa.toLocaleString('es-CO')} ${sufijoActa}</span></td>`;
+    }
+
+    const totalKg = totalEntregasKg(reg);
+    const totalUnd = totalEntregasUnidades(reg);
+    const base = esUnidades ? totalUnd : totalKg;
+    const dif = reg.cantidadActa - base;
+    const clase = dif === 0 ? 'actas-dif-ok' : 'actas-dif-mal';
+    let texto = dif === 0 ? 'OK' : `${dif > 0 ? '+' : ''}${dif.toLocaleString('es-CO')} ${sufijoActa}`;
+    const extra = esUnidades ? (totalKg ? ` · ${totalKg.toLocaleString('es-CO')} kg` : '') : (totalUnd ? ` · ${totalUnd.toLocaleString('es-CO')} und` : '');
+
+    let html = `<td><span class="${clase}" onclick="editarCertificado('${nombreEsc}', '${reg.actaId}')" style="cursor:pointer;">${texto}</span>`;
+    if (extra) html += `<div style="font-size:10.5px; color:var(--texto-suave);">${extra}</div>`;
+    const numerosCert = [...new Set(reg.entregas.map(e => e.numeroCertificado).filter(Boolean))];
+    const etiquetaEntregas = numerosCert.length > 0
+      ? 'N°' + numerosCert.join(', N°') + ' · ver'
+      : `${reg.entregas.length} entrega${reg.entregas.length > 1 ? 's' : ''} · ver`;
+    html += `<span class="actas-version-tag" onclick="verEntregas('${nombreEsc}', '${reg.actaId}')">${etiquetaEntregas}</span>`;
+    html += '</td>';
+    return html;
+  }
+
+  function render() {
+    const tabla = document.getElementById('tabla-sabana');
+    let html = '<thead><tr><th class="actas-col-material">Concepto</th>';
+    MESES.forEach(m => html += `<th>${m}</th>`);
+    html += '<th>Total</th></tr></thead><tbody>';
+
+    html += '<tr class="actas-fila-acta"><td class="actas-nombre-material">Acta de conciliación</td>';
+    for (let i = 0; i < MESES.length; i++) html += celdaActa(i);
+    const estadosDelAño = MESES.map((m, i) => estadoEfectivoActa(i));
+    const faltantes = estadosDelAño.filter(e => e === 'faltante').length;
+    const pendientes = estadosDelAño.filter(e => e === 'pendiente').length;
+    let resumenTexto;
+    if (faltantes > 0) resumenTexto = `<span class="actas-dif-mal">${faltantes} faltante${faltantes > 1 ? 's' : ''}</span>`;
+    else if (pendientes > 0) resumenTexto = `<span class="actas-badge-amarillo" style="padding:2px 6px; border-radius:5px;">${pendientes} pendiente${pendientes > 1 ? 's' : ''}</span>`;
+    else resumenTexto = '<span class="actas-dif-ok">al día</span>';
+    html += `<td class="actas-total">${resumenTexto}</td>`;
+    html += '</tr>';
+
+    let grupoActual = "";
+    const orden = { "Aprovechable": 0, "Disposición": 1 };
+    const materialesOrdenados = nombresUnicosDeMateriales().sort((a, b) => (orden[a.grupo] ?? 2) - (orden[b.grupo] ?? 2));
+
+    materialesOrdenados.forEach(mat => {
+      if (mat.grupo !== grupoActual) {
+        grupoActual = mat.grupo;
+        html += `<tr class="actas-fila-grupo"><td colspan="${MESES.length + 2}">${grupoActual}</td></tr>`;
+      }
+      html += `<tr><td class="actas-nombre-material">${mat.nombre}${(() => {
+        const conEntrega = registros.find(r => r.nombre === mat.nombre && r.grupo === mat.grupo && r.entregas.length > 0);
+        const proveedores = conEntrega ? [...new Set(conEntrega.entregas.map(e => e.proveedor).filter(Boolean))] : [];
+        return proveedores.length ? `<div class="actas-proveedor">${proveedores.join(', ')}</div>` : '';
+      })()}</td>`;
+      let total = 0, conCert = false, sufijoTotal = 'kg';
+      for (let i = 0; i < MESES.length; i++) {
+        html += celdaMaterial(mat, i);
+        const acta = actaActivaDeMes(i);
+        if (acta) {
+          const reg = registros.find(r => r.actaId === acta.id && r.nombre === mat.nombre && r.grupo === mat.grupo);
+          if (reg && reg.entregas.length > 0) {
+            const esUnidades = reg.unidadActa === 'Und';
+            sufijoTotal = esUnidades ? 'und' : 'kg';
+            total += reg.cantidadActa - (esUnidades ? totalEntregasUnidades(reg) : totalEntregasKg(reg));
+            conCert = true;
+          }
+        }
+      }
+      html += `<td class="actas-total">${conCert ? `<span class="${total === 0 ? 'actas-dif-ok' : 'actas-dif-mal'}">${total.toLocaleString('es-CO')} ${sufijoTotal}</span>` : '<span class="actas-dif-vacio">—</span>'}</td>`;
+      html += '</tr>';
+    });
+
+    if (materialesOrdenados.length === 0) {
+      html += `<tr><td colspan="${MESES.length + 2}" style="text-align:center; padding:24px; color:var(--texto-suave);">Sube el primer PDF de acta para empezar a llenar la tabla</td></tr>`;
+    }
+
+    html += '</tbody>';
+    tabla.innerHTML = html;
+  }
+
+  // ─── GOOGLE DRIVE (Apps Script) ───────────────────────────
+  // Pega aquí la URL de deploy del Apps Script ACTAS_DRIVE_v1
+  const APPS_SCRIPT_DRIVE_URL = "PEGA_AQUI_TU_URL_DE_DEPLOY";
+
+  async function subirArchivoADrive(file, tipo, mesIndex, año = AÑO_ACTUAL, proveedor = '') {
+    if (!APPS_SCRIPT_DRIVE_URL || APPS_SCRIPT_DRIVE_URL.includes('PEGA_AQUI')) return null;
+    try {
+      const buffer = await file.arrayBuffer();
+      let binario = '';
+      const bytes = new Uint8Array(buffer);
+      const CHUNK = 8192;
+      for (let i = 0; i < bytes.length; i += CHUNK) {
+        binario += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+      }
+      const base64 = btoa(binario);
+      const resp = await fetch(APPS_SCRIPT_DRIVE_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          nombreArchivo: file.name,
+          contenidoBase64: base64,
+          tipo,
+          anio: año,
+          mes: MESES[mesIndex],
+          proveedor
+        })
+      });
+      const data = await resp.json();
+      return data.ok ? data.url : null;
+    } catch (err) {
+      console.error('Error subiendo a Drive:', err);
+      return null;
+    }
+  }
+
+  // ─── FIREBASE ─────────────────────────────────────────────
+  // Pega aquí la MISMA config que ya usa tu index.html del Tablero
+  // (Proyecto Firebase → Configuración del proyecto → tus apps → SDK setup and configuration)
+  const firebaseConfig = {
+    apiKey: "AIzaSyCxhnHG97zE_VY2yBcnlDv7wwjtdmVhQS0",
+    authDomain: "tablero-socios.firebaseapp.com",
+    projectId: "tablero-socios",
+    storageBucket: "tablero-socios.firebasestorage.app",
+    messagingSenderId: "48250300185",
+    appId: "1:48250300185:web:83a8e111c7b487a00fc788"
+  };
+
+  let db = null;
+  let firestoreFns = null;
+
+  function idDocumentoMes(mesIndex, año = AÑO_ACTUAL) {
+    return año + '-' + String(mesIndex + 1).padStart(2, '0');
+  }
+
+  function serializarMes(mesIndex, año = AÑO_ACTUAL) {
+    const actasDelMes = actas.filter(a => a.mesIndex === mesIndex && a.año === año);
+    const idsActas = new Set(actasDelMes.map(a => a.id));
+    const materialesDelMes = registros.filter(r => idsActas.has(r.actaId));
+    return {
+      año, mes: mesIndex,
+      estadoManual: estadoManual[mesIndex] || null,
+      actas: actasDelMes,
+      materiales: materialesDelMes
+    };
+  }
+
+  async function guardarMes(mesIndex, año = AÑO_ACTUAL) {
+    if (!db) return;
+    try {
+      const { doc, setDoc } = firestoreFns;
+      await setDoc(doc(db, 'hh-actas', idDocumentoMes(mesIndex, año)), serializarMes(mesIndex, año));
+    } catch (err) {
+      console.error('Error guardando en Firebase:', err);
+    }
+  }
+
+  async function guardarProveedores() {
+    if (!db) return;
+    try {
+      const { doc, setDoc } = firestoreFns;
+      await setDoc(doc(db, 'hh-actas-meta', 'proveedores'), { lista: proveedoresConocidos });
+    } catch (err) {
+      console.error('Error guardando proveedores:', err);
+    }
+  }
+
+  async function cargarTodoDesdeFirebase() {
+    const { doc, getDoc, collection, getDocs } = firestoreFns;
+
+    const snap = await getDocs(collection(db, 'hh-actas'));
+    snap.forEach(docSnap => {
+      const data = docSnap.data();
+      if (!data || !Array.isArray(data.actas)) return;
+      actas.push(...data.actas);
+      registros.push(...(data.materiales || []));
+      if (data.mes !== undefined && data.estadoManual) estadoManual[data.mes] = data.estadoManual;
+    });
+
+    try {
+      const provDoc = await getDoc(doc(db, 'hh-actas-meta', 'proveedores'));
+      if (provDoc.exists() && Array.isArray(provDoc.data().lista)) {
+        proveedoresConocidos.push(...provDoc.data().lista);
+      }
+    } catch (err) { /* sin proveedores guardados aún */ }
+
+    try {
+      const formDoc = await getDoc(doc(db, 'hh-actas-meta', 'formatos'));
+      if (formDoc.exists() && Array.isArray(formDoc.data().lista)) {
+        perfilesAprendidos.push(...formDoc.data().lista);
+      }
+    } catch (err) { /* sin formatos aprendidos aún */ }
+  }
+
+  async function iniciar() {
+    const estadoDiv = document.getElementById('estado-carga');
+    try {
+      const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
+      const firestoreMod = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+      firestoreFns = firestoreMod;
+      const app = initializeApp(firebaseConfig, 'actas-app');
+      db = firestoreMod.getFirestore(app);
+
+      estadoDiv.className = 'actas-estado-carga actas-estado-cargando';
+      estadoDiv.style.display = 'block';
+      estadoDiv.textContent = 'Cargando datos guardados...';
+
+      await cargarTodoDesdeFirebase();
+
+      estadoDiv.style.display = 'none';
+    } catch (err) {
+      console.error('No se pudo conectar a Firebase:', err);
+      estadoDiv.className = 'actas-estado-carga actas-estado-error';
+      estadoDiv.style.display = 'block';
+      estadoDiv.textContent = 'No se pudo conectar a Firebase — revisa la configuración. Trabajando solo en memoria por ahora.';
+    }
+    render();
+  }
+
+  iniciar();
+
+  // Exponer a window solo lo que se llama desde botones (onclick/onchange) del HTML
+  window.abrirModalEnsenar = abrirModalEnsenar;
+  window.aceptarModalProveedor = aceptarModalProveedor;
+  window.cerrarModalEnsenar = cerrarModalEnsenar;
+  window.editarCertificado = editarCertificado;
+  window.elegirFilaEnsenar = elegirFilaEnsenar;
+  window.elegirPesoEnsenar = elegirPesoEnsenar;
+  window.eliminarPerfil = eliminarPerfil;
+  window.eliminarProveedor = eliminarProveedor;
+  window.resolverModalProveedor = resolverModalProveedor;
+  window.toggleConfiguracion = toggleConfiguracion;
+  window.generarReporteAhorroCliente = generarReporteAhorroCliente;
+  window.generarReporteAhorroMes = generarReporteAhorroMes;
+  window.toggleManual = toggleManual;
+  window.verEntregas = verEntregas;
+  window.verHistorial = verHistorial;
+  window.volverPaso1Ensenar = volverPaso1Ensenar;
+  window.abrirEnsenarDesdeArchivo = abrirEnsenarDesdeArchivo;
+  window.cargarCertificado = cargarCertificado;
+  window.cargarPDF = cargarPDF;
+})();
+</script>
 </body>
 </html>
