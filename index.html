@@ -1676,6 +1676,13 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
     </div>
 
     <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--borde);">
+      <p style="font-size:13px; font-weight:600; margin:0 0 4px;">Orden de compra (Disposición)</p>
+      <p style="font-size:12px; color:var(--texto-suave); margin:0 0 8px;">Arma la orden de compra del mes con tu membrete y firma ya puestos, y la deja como PDF en Drive.</p>
+      <button onclick="generarOrdenCompraCliente()" class="actas-btn">Generar orden de compra (PDF)</button>
+      <div id="estado-orden-compra" class="actas-estado-carga"></div>
+    </div>
+
+    <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--borde);">
       <p style="font-size:13px; font-weight:600; margin:0 0 4px; color:var(--rojo-texto);">Borrar todo y empezar de cero</p>
       <p style="font-size:12px; color:var(--texto-suave); margin:0 0 8px;">Borra todas las actas, materiales y entregas del año — útil para pruebas. Los proveedores y formatos aprendidos NO se borran.</p>
       <button onclick="borrarTodoConfirmando()" style="background:var(--rojo-bg); color:var(--rojo-texto); border:none; border-radius:7px; padding:8px 14px; font-size:12.5px; font-weight:600; cursor:pointer;">Borrar todos los datos</button>
@@ -7718,6 +7725,81 @@ function closeBackupModal(){
     generarReporteAhorroBase(mesIndex, document.getElementById('estado-carga'));
   }
 
+  async function generarOrdenCompraBase(mesIndex, estadoDiv) {
+    if (isNaN(mesIndex)) {
+      estadoDiv.className = 'actas-estado-carga actas-estado-error';
+      estadoDiv.style.display = 'block';
+      estadoDiv.textContent = 'No hay ningún mes con acta cargada todavía.';
+      return;
+    }
+    if (!APPS_SCRIPT_DRIVE_URL || APPS_SCRIPT_DRIVE_URL.includes('PEGA_AQUI')) {
+      estadoDiv.className = 'actas-estado-carga actas-estado-error';
+      estadoDiv.style.display = 'block';
+      estadoDiv.textContent = 'Falta configurar la URL del Apps Script (APPS_SCRIPT_DRIVE_URL).';
+      return;
+    }
+
+    const acta = actaActivaDeMes(mesIndex);
+    if (!acta) {
+      estadoDiv.className = 'actas-estado-carga actas-estado-error';
+      estadoDiv.style.display = 'block';
+      estadoDiv.textContent = 'Ese mes todavía no tiene acta cargada.';
+      return;
+    }
+
+    const registrosDelMes = registros.filter(r => r.actaId === acta.id &&
+      (r.grupo === 'Disposición' || normalizar(r.nombre).includes('transporte'))
+    );
+    const materiales = registrosDelMes.map(r => ({ nombre: r.nombre, cantidad: r.cantidadActa }));
+
+    if (materiales.length === 0) {
+      estadoDiv.className = 'actas-estado-carga actas-estado-error';
+      estadoDiv.style.display = 'block';
+      estadoDiv.textContent = 'Ese mes no tiene materiales de Disposición para armar la orden de compra.';
+      return;
+    }
+
+    estadoDiv.className = 'actas-estado-carga actas-estado-cargando';
+    estadoDiv.style.display = 'block';
+    estadoDiv.textContent = 'Generando la orden de compra de ' + MESES[mesIndex] + '...';
+
+    try {
+      const resp = await fetch(APPS_SCRIPT_DRIVE_URL, {
+        method: 'POST',
+        body: JSON.stringify({ accion: 'orden_compra', anio: AÑO_ACTUAL, mes: MESES_LARGOS[mesIndex].charAt(0).toUpperCase() + MESES_LARGOS[mesIndex].slice(1), materiales })
+      });
+      const data = await resp.json();
+
+      if (!data.ok) {
+        estadoDiv.className = 'actas-estado-carga actas-estado-error';
+        estadoDiv.textContent = 'No se pudo generar: ' + (data.error || 'error desconocido');
+        return;
+      }
+
+      estadoDiv.className = 'actas-estado-carga actas-estado-ok';
+      let msg = `Listo (${MESES[mesIndex]}) — Total: $${Math.round(data.total).toLocaleString('es-CO')}. `;
+      msg += `<a href="${data.url}" target="_blank" rel="noopener" style="color:var(--azul); font-weight:600;">Abrir PDF en Drive</a>`;
+      if (data.sinPrecioDefinido && data.sinPrecioDefinido.length > 0) {
+        msg += `<br><span style="color:var(--amarillo-texto);">Sin precio propio (se usó $920 por defecto): ${data.sinPrecioDefinido.join(', ')}</span>`;
+      }
+      estadoDiv.innerHTML = msg;
+
+    } catch (err) {
+      estadoDiv.className = 'actas-estado-carga actas-estado-error';
+      estadoDiv.textContent = 'Error de conexión al generar la orden de compra.';
+      console.error(err);
+    }
+  }
+
+  function generarOrdenCompraCliente() {
+    const mesIndex = parseInt(document.getElementById('select-mes-reporte').value, 10);
+    generarOrdenCompraBase(mesIndex, document.getElementById('estado-orden-compra'));
+  }
+
+  function generarOrdenCompraMes(mesIndex) {
+    generarOrdenCompraBase(mesIndex, document.getElementById('estado-carga'));
+  }
+
 
   function eliminarProveedor(nombre) {
     const idx = proveedoresConocidos.indexOf(nombre);
@@ -8236,6 +8318,7 @@ function closeBackupModal(){
     }
     if (acta) {
       html += `<button onclick="generarReporteAhorroMes(${i})" style="display:block; width:100%; font-size:12px; font-weight:600; color:#fff; margin-top:5px; background:var(--verde-texto); border:none; border-radius:6px; cursor:pointer; padding:6px 8px;">💰 Reporte ahorro</button>`;
+      html += `<button onclick="generarOrdenCompraMes(${i})" style="display:block; width:100%; font-size:12px; font-weight:600; color:#fff; margin-top:5px; background:var(--azul); border:none; border-radius:6px; cursor:pointer; padding:6px 8px;">🧾 Orden de compra</button>`;
     }
     if (versiones.length > 1) {
       html += `<span class="actas-version-tag" onclick="verHistorial(${i})">v${versiones.length} · ver historial</span>`;
@@ -8497,6 +8580,8 @@ function closeBackupModal(){
   window.toggleConfiguracion = toggleConfiguracion;
   window.generarReporteAhorroCliente = generarReporteAhorroCliente;
   window.generarReporteAhorroMes = generarReporteAhorroMes;
+  window.generarOrdenCompraCliente = generarOrdenCompraCliente;
+  window.generarOrdenCompraMes = generarOrdenCompraMes;
   window.borrarTodoConfirmando = borrarTodoConfirmando;
   window.toggleManual = toggleManual;
   window.verEntregas = verEntregas;
