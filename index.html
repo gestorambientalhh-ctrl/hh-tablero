@@ -7766,7 +7766,11 @@ function closeBackupModal(){
     try {
       const resp = await fetch(APPS_SCRIPT_DRIVE_URL, {
         method: 'POST',
-        body: JSON.stringify({ accion: 'orden_compra', anio: AÑO_ACTUAL, mes: MESES_LARGOS[mesIndex].charAt(0).toUpperCase() + MESES_LARGOS[mesIndex].slice(1), materiales })
+        body: JSON.stringify({
+          accion: 'orden_compra', anio: AÑO_ACTUAL, mes: MESES[mesIndex],
+          mesLargo: MESES_LARGOS[mesIndex].charAt(0).toUpperCase() + MESES_LARGOS[mesIndex].slice(1),
+          materiales
+        })
       });
       const data = await resp.json();
 
