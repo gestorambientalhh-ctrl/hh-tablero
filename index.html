@@ -676,6 +676,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
   .actas-badge-ok { background: var(--verde-bg); color: var(--verde-texto); }
   .actas-badge-pendiente { background: var(--rojo-bg); color: var(--rojo-texto); }
   .actas-badge-amarillo { background: var(--amarillo-bg); color: var(--amarillo-texto); }
+  .actas-badge-azul { background: #e6edf5; color: var(--azul); }
   .actas-version-tag { font-size: 10px; color: var(--texto-suave); display: block; margin-top: 3px; cursor: pointer; text-decoration: underline dotted; }
   .actas-dif-ok { color: var(--verde-texto); font-weight: 600; }
   .actas-dif-mal { color: var(--rojo-texto); font-weight: 600; }
@@ -1659,6 +1660,11 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
     <div>
       <p style="font-size:13px; font-weight:600; margin:0 0 8px;">Formatos aprendidos</p>
       <div id="lista-config-perfiles" style="font-size:12.5px;"></div>
+    </div>
+
+    <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--borde);">
+      <p style="font-size:13px; font-weight:600; margin:0 0 8px;">Manifiestos sin certificado</p>
+      <div id="lista-manifiestos-pendientes" style="font-size:12.5px;"></div>
     </div>
 
     <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--borde);">
@@ -7176,7 +7182,15 @@ function closeBackupModal(){
     for (let i = 0; i < MESES_LARGOS.length; i++) {
       if (textoCompleto.includes(MESES_LARGOS[i])) return i;
     }
+    const mFecha = textoCompleto.match(/20\d{2}-(\d{1,2})-\d{1,2}/);
+    if (mFecha) return parseInt(mFecha[1], 10) - 1;
     return null;
+  }
+
+  function detectarAnioDeFecha(items) {
+    const textoCompleto = items.map(it => it.text).join(' ');
+    const mFecha = textoCompleto.match(/(20\d{2})-\d{1,2}-\d{1,2}/);
+    return mFecha ? parseInt(mFecha[1], 10) : null;
   }
 
   async function cargarPDF(event) {
@@ -7410,11 +7424,79 @@ function closeBackupModal(){
 
   function detectarFormatoCertificado(textoCompleto) {
     const t = textoCompleto.toLowerCase();
+    if (t.includes('tratamiento de residuos') && t.includes('cantidad') && t.includes('clase')) return 'tratamiento_residuos';
+    if (t.includes('manifiesto') && t.includes('disposicion') && t.includes('cant')) return 'manifiesto';
     if (t.includes('descripción') && t.includes('tipo de manejo')) return 'destruccion';
     if (t.includes('periodo') && t.includes('declarado')) return 'declarado';
     if (t.includes('material') && t.includes('cantidad')) return 'material_cantidad';
     return null;
   }
+
+  function extraerFormatoManifiesto(items) {
+    const idxNombre = items.findIndex(it => it.text.toUpperCase() === 'NOMBRE');
+    const idxEstado = items.findIndex(it => it.text.toUpperCase() === 'ESTADO');
+    const idxCant = items.findIndex(it => it.text.toUpperCase() === 'CANT');
+    if (idxNombre === -1 || idxCant === -1) return [];
+
+    const xNombreMin = 40;
+    const xNombreMax = (idxEstado !== -1 ? items[idxEstado].x : items[idxCant].x - 100) - 10;
+    const xCantMin = items[idxCant].x - 25;
+    const xCantMax = items[idxCant].x + 45;
+    const yCabecera = items[idxCant].y;
+    const filasArea = items.filter(it => it.y < yCabecera - 5);
+
+    const esCant = t => /^\d+(\.\d+)?$/.test(t);
+    const candidatosCant = filasArea.filter(it => it.x >= xCantMin && it.x <= xCantMax && esCant(it.text));
+
+    const LIMITE = 14;
+    const resultado = [];
+    candidatosCant.forEach(cantTok => {
+      const nombreCercano = filasArea.filter(it =>
+        it.x >= xNombreMin && it.x <= xNombreMax && Math.abs(it.y - cantTok.y) <= LIMITE
+      );
+      nombreCercano.sort((a, b) => b.y - a.y || a.x - b.x);
+      const nombre = nombreCercano.map(w => w.text).join(' ');
+      const peso = parseFloat(cantTok.text);
+      if (nombre && !isNaN(peso)) resultado.push({ nombre, peso });
+    });
+    return resultado;
+  }
+
+  function extraerFormatoTratamientoResiduos(items) {
+    const idxResiduo = items.findIndex(it => it.text.toUpperCase() === 'RESIDUO');
+    const idxClase = items.findIndex(it => it.text.toUpperCase() === 'CLASE');
+    const idxCantidad = items.findIndex(it => it.text.toUpperCase() === 'CANTIDAD');
+    if (idxResiduo === -1 || idxCantidad === -1) return [];
+
+    const xResiduoMin = 140;
+    const xResiduoMax = (idxClase !== -1 ? items[idxClase].x : items[idxCantidad].x - 50) - 10;
+    const xCantMin = items[idxCantidad].x - 20;
+    const xCantMax = items[idxCantidad].x + 60;
+    const yCabecera = items[idxCantidad].y;
+    const filasArea = items.filter(it => it.y < yCabecera - 5);
+
+    const esCant = t => /^\d+(\.\d+)?$/.test(t);
+    const candidatosCant = filasArea.filter(it => it.x >= xCantMin && it.x <= xCantMax && esCant(it.text));
+
+    const LIMITE = 6;
+    const resultado = [];
+    candidatosCant.forEach(cantTok => {
+      const nombreCercano = filasArea.filter(it =>
+        it.x >= xResiduoMin && it.x <= xResiduoMax && Math.abs(it.y - cantTok.y) <= LIMITE
+      );
+      nombreCercano.sort((a, b) => b.y - a.y || a.x - b.x);
+      const nombre = nombreCercano.map(w => w.text).join(' ');
+      const peso = parseFloat(cantTok.text);
+      if (nombre && !isNaN(peso)) resultado.push({ nombre, peso });
+    });
+    return resultado;
+  }
+
+  function extraerNumeroMF(items) {
+    const candidato = items.find(it => it.x < 70 && /^\d{4,6}$/.test(it.text));
+    return candidato ? candidato.text : null;
+  }
+
   const proveedoresConocidos = [];
   const perfilesAprendidos = [];
   let resolverModalProveedorFn = null;
@@ -7507,6 +7589,46 @@ function closeBackupModal(){
     selectMes.innerHTML = mesesConActa.length === 0
       ? '<option value="">Sin actas cargadas aún</option>'
       : mesesConActa.map(i => `<option value="${i}">${MESES[i]} ${AÑO_ACTUAL}</option>`).join('');
+
+    renderManifiestosPendientes();
+  }
+
+  function renderManifiestosPendientes() {
+    const lista = document.getElementById('lista-manifiestos-pendientes');
+    if (!lista) return;
+
+    const pendientes = [];
+    registros.forEach(reg => {
+      reg.entregas.forEach(e => {
+        if (e.provisional && e.numeroManifiesto) {
+          const acta = actas.find(a => a.id === reg.actaId);
+          pendientes.push({
+            numeroManifiesto: e.numeroManifiesto,
+            material: reg.nombre,
+            proveedor: e.proveedor,
+            fecha: e.fecha,
+            mes: acta ? MESES[acta.mesIndex] : '?'
+          });
+        }
+      });
+    });
+
+    if (pendientes.length === 0) {
+      lista.innerHTML = '<span class="actas-dif-vacio">No hay manifiestos esperando certificado</span>';
+      return;
+    }
+
+    pendientes.sort((a, b) => a.fecha - b.fecha);
+    const DIAS_MS = 1000 * 60 * 60 * 24;
+
+    lista.innerHTML = pendientes.map(p => {
+      const dias = Math.floor((Date.now() - p.fecha) / DIAS_MS);
+      const urgente = dias >= 30;
+      return `<div style="display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid var(--borde);">
+        <span>M°${p.numeroManifiesto} — ${p.material} (${p.mes}) — ${p.proveedor || 'sin proveedor'}</span>
+        <span style="color:${urgente ? 'var(--rojo-texto)' : 'var(--texto-suave)'}; font-weight:${urgente ? '600' : '400'};">${dias} día${dias !== 1 ? 's' : ''}</span>
+      </div>`;
+    }).join('');
   }
 
   async function generarReporteAhorroBase(mesIndex, estadoDiv) {
@@ -7803,7 +7925,7 @@ function closeBackupModal(){
     return certDentroDeActa || actaDentroDeCert;
   }
 
-  async function procesarYCruzarMateriales(materialesCert, numeroCertificado, numeroManifiesto, textoDocumentoCompleto, estadoDiv, urlDrive = null) {
+  async function procesarYCruzarMateriales(materialesCert, numeroCertificado, numeroManifiesto, textoDocumentoCompleto, estadoDiv, urlDrive = null, esProvisional = false) {
     const sugerido = detectarProveedorConocido(textoDocumentoCompleto);
     const proveedor = await pedirProveedor(sugerido);
     if (!proveedor) {
@@ -7834,7 +7956,16 @@ function closeBackupModal(){
       const registrosDeActa = registros.filter(r => r.actaId === acta.id);
       const reg = registrosDeActa.find(r => coincideNombre(mc.nombre, r.nombre));
       if (reg) {
-        reg.entregas.push({ proveedor, numeroCertificado, numeroManifiesto, pesoKg: mc.peso, unidades: mc.unidades || null, urlDrive, fecha: Date.now() });
+        // Si llega un certificado confirmado que ya tenía un manifiesto provisional pendiente,
+        // se quita el provisional para no contar el peso dos veces.
+        if (!esProvisional && numeroManifiesto) {
+          reg.entregas = reg.entregas.filter(e => !(e.provisional && e.numeroManifiesto === numeroManifiesto));
+        }
+        reg.entregas.push({
+          proveedor, numeroCertificado, numeroManifiesto,
+          pesoKg: mc.peso, unidades: mc.unidades || null,
+          urlDrive, provisional: esProvisional, fecha: Date.now()
+        });
         coincidencias++;
         mesesUsados.add(mc.mesIndex);
       } else {
@@ -7845,7 +7976,7 @@ function closeBackupModal(){
     estadoDiv.className = 'actas-estado-carga actas-estado-ok';
     const mesesTxt = [...mesesUsados].sort((a, b) => a - b).map(i => MESES[i]).join(', ');
     let msg = `Listo — proveedor: ${proveedor}${sugerido ? ' (detectado solo)' : ''}. Se cruzaron ${coincidencias} de ${materialesCert.length} materiales del certificado${mesesTxt ? ` en ${mesesTxt} 2026` : ''}.`;
-    if (numeroManifiesto) msg += ` Manifiesto N°${numeroManifiesto}.`;
+    if (numeroManifiesto) msg += ` Manifiesto N°${numeroManifiesto}${esProvisional ? ' (provisional, sin certificado todavía)' : ''}.`;
     if (fueraDeAlcance.length > 0) msg += ` Fuera de 2026, no se cargaron: ${fueraDeAlcance.join(', ')}.`;
     if (sinCoincidencia.length > 0) msg += ` Sin cruce: ${sinCoincidencia.join(', ')}.`;
     estadoDiv.textContent = msg;
@@ -7875,6 +8006,7 @@ function closeBackupModal(){
       let formato = null;
       let textoDocumentoCompleto = '';
       const materialesCert = [];
+      const materialesManifiestoRaw = [];
       const todosLosItems = [];
 
       for (let p = 1; p <= doc.numPages; p++) {
@@ -7892,8 +8024,11 @@ function closeBackupModal(){
           if (m1) numeroCertificado = m1[1];
         }
         if (numeroManifiesto === null) {
-          const m2 = textoCompleto.match(/manifiesto[\s\S]{0,25}?N[°º]\s*(\d+)/i) || textoCompleto.match(/N[°º]\s*(\d+)/i);
+          const m2 = textoCompleto.match(/manifiesto[\s\S]{0,25}?N[°º]\s*(\d+)/i)
+            || textoCompleto.match(/MANIFIESTO\s+DE\s+CARGA[\s\S]{0,20}No\.?\s*(\d+)/i)
+            || textoCompleto.match(/N[°º]\s*(\d+)/i);
           if (m2) numeroManifiesto = m2[1];
+          else if (formato === 'tratamiento_residuos') numeroManifiesto = extraerNumeroMF(items);
         }
 
         if (formato === 'destruccion') {
@@ -7902,6 +8037,24 @@ function closeBackupModal(){
           extraerFormatoMaterialCantidad(items).forEach(m => materialesCert.push({ ...m, mesIndex: mesGlobalDetectado, anio: 2026 }));
         } else if (formato === 'declarado') {
           materialesCert.push(...extraerFormatoDeclarado(items));
+        } else if (formato === 'tratamiento_residuos') {
+          extraerFormatoTratamientoResiduos(items).forEach(m => materialesCert.push({ ...m, mesIndex: mesGlobalDetectado, anio: 2026 }));
+        } else if (formato === 'manifiesto') {
+          materialesManifiestoRaw.push(...extraerFormatoManifiesto(items));
+        }
+      }
+
+      if (formato === 'manifiesto' && materialesManifiestoRaw.length > 0) {
+        const noPeligrosos = materialesManifiestoRaw.filter(m => normalizar(m.nombre).includes('no peligroso'));
+        const peligrosos = materialesManifiestoRaw.filter(m => !normalizar(m.nombre).includes('no peligroso'));
+
+        if (noPeligrosos.length > 0) {
+          const total = noPeligrosos.reduce((s, m) => s + m.peso, 0);
+          materialesCert.push({ nombre: 'Cafetería y Sanitarios', peso: Math.round(total * 100) / 100, mesIndex: mesGlobalDetectado, anio: 2026 });
+        }
+        if (peligrosos.length > 0) {
+          const total = peligrosos.reduce((s, m) => s + m.peso, 0);
+          materialesCert.push({ nombre: 'Biosanitarios y Cortopunzante', peso: Math.round(total * 100) / 100, mesIndex: mesGlobalDetectado, anio: 2026 });
         }
       }
 
@@ -7923,7 +8076,7 @@ function closeBackupModal(){
       }
 
       const urlDriveCert = await subirArchivoADrive(file, 'certificado', mesGlobalDetectado || 0);
-      await procesarYCruzarMateriales(materialesCert, numeroCertificado, numeroManifiesto, textoDocumentoCompleto, estadoDiv, urlDriveCert);
+      await procesarYCruzarMateriales(materialesCert, numeroCertificado, numeroManifiesto, textoDocumentoCompleto, estadoDiv, urlDriveCert, formato === 'manifiesto');
 
     } catch (err) {
       estadoDiv.className = 'actas-estado-carga actas-estado-error';
@@ -7994,12 +8147,13 @@ function closeBackupModal(){
       const fecha = new Date(e.fecha).toLocaleDateString('es-CO');
       const cert = e.numeroCertificado ? `certificado N°${e.numeroCertificado}` : 'sin N° certificado';
       const manif = e.numeroManifiesto ? ` · manifiesto N°${e.numeroManifiesto}` : '';
+      const etiquetaProvisional = e.provisional ? ' <span style="color:var(--azul); font-weight:600;">· provisional</span>' : '';
       const partes = [];
       if (e.pesoKg !== null && e.pesoKg !== undefined) partes.push(`${e.pesoKg.toLocaleString('es-CO')} kg`);
       if (e.unidades !== null && e.unidades !== undefined) partes.push(`${e.unidades.toLocaleString('es-CO')} und`);
       const link = e.urlDrive ? `<a href="${e.urlDrive}" target="_blank" rel="noopener" style="color:var(--azul);">ver PDF en Drive</a>` : '<span class="actas-dif-vacio">sin PDF guardado</span>';
       return `<div style="padding:8px 0; border-bottom:1px solid var(--borde); font-size:12.5px;">
-        <div>${i + 1}. ${e.proveedor || 'Sin proveedor'} — ${cert}${manif}</div>
+        <div>${i + 1}. ${e.proveedor || 'Sin proveedor'} — ${cert}${manif}${etiquetaProvisional}</div>
         <div style="color:var(--texto-suave);">${partes.join(' · ')} — ${fecha}</div>
         <div style="margin-top:3px;">${link}</div>
       </div>`;
@@ -8047,6 +8201,14 @@ function closeBackupModal(){
     if (reg.entregas.length === 0) {
       const texto = `${reg.cantidadActa.toLocaleString('es-CO')} ${sufijoActa}`;
       return `<td><button class="actas-badge actas-badge-amarillo" onclick="editarCertificado('${nombreEsc}', '${reg.actaId}')" title="Sin certificado aún — clic para anotar a mano">${texto}</button></td>`;
+    }
+
+    // Solo hay manifiesto(s) sin certificar todavía — azul
+    const hayConfirmadas = reg.entregas.some(e => !e.provisional);
+    if (!hayConfirmadas) {
+      const manifiestos = [...new Set(reg.entregas.map(e => e.numeroManifiesto).filter(Boolean))];
+      const texto = manifiestos.length === 1 ? 'M°' + manifiestos[0] : (manifiestos.length > 1 ? 'Varios' : `${reg.entregas.length} manifiesto${reg.entregas.length > 1 ? 's' : ''}`);
+      return `<td><button class="actas-badge actas-badge-azul" onclick="verEntregas('${nombreEsc}', '${reg.actaId}')" title="Manifiesto recibido, esperando el certificado de destrucción">${texto}</button></td>`;
     }
 
     const totalKg = totalEntregasKg(reg);
