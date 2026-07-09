@@ -1674,6 +1674,13 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
       <button onclick="generarReporteAhorroCliente()" class="actas-btn">Generar reporte (Excel)</button>
       <div id="estado-reporte-ahorro" class="actas-estado-carga"></div>
     </div>
+
+    <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--borde);">
+      <p style="font-size:13px; font-weight:600; margin:0 0 4px; color:var(--rojo-texto);">Borrar todo y empezar de cero</p>
+      <p style="font-size:12px; color:var(--texto-suave); margin:0 0 8px;">Borra todas las actas, materiales y entregas del año — útil para pruebas. Los proveedores y formatos aprendidos NO se borran.</p>
+      <button onclick="borrarTodoConfirmando()" style="background:var(--rojo-bg); color:var(--rojo-texto); border:none; border-radius:7px; padding:8px 14px; font-size:12.5px; font-weight:600; cursor:pointer;">Borrar todos los datos</button>
+      <div id="estado-borrado" class="actas-estado-carga"></div>
+    </div>
   </div>
 
   <div class="actas-zona-carga">
@@ -7271,6 +7278,14 @@ function closeBackupModal(){
       }
 
       const eraCorreccion = actaActivaDeMes(mesDetectado) !== null;
+      if (eraCorreccion) {
+        const confirmar = confirm(`Ya existe una acta cargada para ${MESES[mesDetectado]} 2026.\n\n¿Quieres reemplazarla con esta nueva? La versión anterior queda guardada en el historial, no se pierde.`);
+        if (!confirmar) {
+          estadoDiv.className = 'actas-estado-carga actas-estado-error';
+          estadoDiv.textContent = 'Carga cancelada — se mantuvo la acta que ya tenías.';
+          return;
+        }
+      }
       const nuevaActa = crearActaParaMes(mesDetectado);
       materialesExtraidos.forEach(m => agregarRegistro(nuevaActa.id, m.grupo, m.nombre, m.cantidad, m.unidad));
 
@@ -7894,6 +7909,47 @@ function closeBackupModal(){
       console.error('Error guardando el formato aprendido:', err);
     }
   }
+
+  async function borrarTodoConfirmando() {
+    const estadoDiv = document.getElementById('estado-borrado');
+    const escrito = prompt('Esto va a borrar TODAS las actas, materiales y entregas del año — no se puede deshacer.\n\nEscribe BORRAR (en mayúsculas) para confirmar:');
+    if (escrito !== 'BORRAR') {
+      estadoDiv.className = 'actas-estado-carga actas-estado-error';
+      estadoDiv.style.display = 'block';
+      estadoDiv.textContent = 'Cancelado — no se borró nada.';
+      return;
+    }
+
+    estadoDiv.className = 'actas-estado-carga actas-estado-cargando';
+    estadoDiv.style.display = 'block';
+    estadoDiv.textContent = 'Borrando...';
+
+    actas = [];
+    registros = [];
+    estadoManual.fill(null);
+
+    if (db) {
+      try {
+        const { doc, collection, getDocs, deleteDoc } = firestoreFns;
+        const snap = await getDocs(collection(db, 'hh-actas'));
+        for (const docSnap of snap.docs) {
+          await deleteDoc(doc(db, 'hh-actas', docSnap.id));
+        }
+      } catch (err) {
+        console.error('Error borrando en Firebase:', err);
+        estadoDiv.className = 'actas-estado-carga actas-estado-error';
+        estadoDiv.textContent = 'Se borró en esta pantalla, pero hubo un error borrando en Firebase — revisa la consola.';
+        render();
+        renderConfiguracion();
+        return;
+      }
+    }
+
+    estadoDiv.className = 'actas-estado-carga actas-estado-ok';
+    estadoDiv.textContent = 'Listo — todo borrado. Los proveedores y formatos aprendidos se mantuvieron.';
+    render();
+    renderConfiguracion();
+  }
   function normalizarPalabras(nombre) {
     const stopwords = ['de', 'del', 'la', 'el', 'en', 'y', 'los', 'las'];
     return normalizar(nombre).split(/\s+/).filter(w => w && !stopwords.includes(w));
@@ -7954,7 +8010,8 @@ function closeBackupModal(){
         return;
       }
       const registrosDeActa = registros.filter(r => r.actaId === acta.id);
-      const reg = registrosDeActa.find(r => coincideNombre(mc.nombre, r.nombre));
+      const candidatos = registrosDeActa.filter(r => coincideNombre(mc.nombre, r.nombre));
+      const reg = candidatos.find(r => r.unidadActa !== 'Und') || candidatos[0];
       if (reg) {
         // Si llega un certificado confirmado que ya tenía un manifiesto provisional pendiente,
         // se quita el provisional para no contar el peso dos veces.
@@ -8440,6 +8497,7 @@ function closeBackupModal(){
   window.toggleConfiguracion = toggleConfiguracion;
   window.generarReporteAhorroCliente = generarReporteAhorroCliente;
   window.generarReporteAhorroMes = generarReporteAhorroMes;
+  window.borrarTodoConfirmando = borrarTodoConfirmando;
   window.toggleManual = toggleManual;
   window.verEntregas = verEntregas;
   window.verHistorial = verHistorial;
