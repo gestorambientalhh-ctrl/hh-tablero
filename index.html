@@ -1629,12 +1629,15 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
       <p>Sábana anual 2026 — cada acta queda con su propio id y su historial de versiones</p>
     </div>
     <div style="display:flex; align-items:center; gap:16px;">
-      <div class="actas-leyenda">
-        <span><span class="actas-punto actas-punto-ok"></span>OK / cuadra</span>
-        <span><span class="actas-punto actas-punto-pendiente"></span>Pendiente / diferencia</span>
-      </div>
       <button onclick="toggleConfiguracion()" style="background:none; border:1px solid var(--borde); border-radius:7px; padding:7px 12px; font-size:12.5px; cursor:pointer; white-space:nowrap;">⚙ Configuración</button>
     </div>
+  </div>
+
+  <div style="display:flex; gap:18px; flex-wrap:wrap; align-items:center; font-size:12px; color:var(--texto-suave); margin:-8px 0 16px;">
+    <span style="font-weight:600; color:var(--texto);">Materiales:</span>
+    <span><span class="actas-punto actas-punto-ok"></span>número de certificado — cuadra con el acta</span>
+    <span><span class="actas-punto actas-punto-pendiente"></span>diferencia en kg — no cuadra con el acta</span>
+    <span><span class="actas-punto" style="background:var(--amarillo-texto);"></span>peso del acta — sin certificado todavía</span>
   </div>
 
   <div id="panel-configuracion" style="display:none; border:1px solid var(--borde); border-radius:10px; padding:16px; margin-bottom:20px; background:var(--gris-calido);">
@@ -8040,27 +8043,27 @@ function closeBackupModal(){
     const esUnidades = reg.unidadActa === 'Und';
     const sufijoActa = esUnidades ? 'und' : 'kg';
 
+    // Sin certificado todavía — amarillo, muestra el peso del acta
     if (reg.entregas.length === 0) {
-      return `<td><span class="actas-dif-sin-cert" onclick="editarCertificado('${nombreEsc}', '${reg.actaId}')">${reg.cantidadActa.toLocaleString('es-CO')} ${sufijoActa}</span></td>`;
+      const texto = `${reg.cantidadActa.toLocaleString('es-CO')} ${sufijoActa}`;
+      return `<td><button class="actas-badge actas-badge-amarillo" onclick="editarCertificado('${nombreEsc}', '${reg.actaId}')" title="Sin certificado aún — clic para anotar a mano">${texto}</button></td>`;
     }
 
     const totalKg = totalEntregasKg(reg);
     const totalUnd = totalEntregasUnidades(reg);
     const base = esUnidades ? totalUnd : totalKg;
     const dif = reg.cantidadActa - base;
-    const clase = dif === 0 ? 'actas-dif-ok' : 'actas-dif-mal';
-    let texto = dif === 0 ? 'OK' : `${dif > 0 ? '+' : ''}${dif.toLocaleString('es-CO')} ${sufijoActa}`;
-    const extra = esUnidades ? (totalKg ? ` · ${totalKg.toLocaleString('es-CO')} kg` : '') : (totalUnd ? ` · ${totalUnd.toLocaleString('es-CO')} und` : '');
 
-    let html = `<td><span class="${clase}" onclick="editarCertificado('${nombreEsc}', '${reg.actaId}')" style="cursor:pointer;">${texto}</span>`;
-    if (extra) html += `<div style="font-size:10.5px; color:var(--texto-suave);">${extra}</div>`;
+    // No cuadra con el acta — rojo, muestra la diferencia
+    if (dif !== 0) {
+      const texto = `${dif > 0 ? '+' : ''}${dif.toLocaleString('es-CO')} ${sufijoActa}`;
+      return `<td><button class="actas-badge actas-badge-pendiente" onclick="verEntregas('${nombreEsc}', '${reg.actaId}')" title="No cuadra con el acta — clic para ver el detalle">${texto}</button></td>`;
+    }
+
+    // Cuadra — verde, muestra el número de certificado
     const numerosCert = [...new Set(reg.entregas.map(e => e.numeroCertificado).filter(Boolean))];
-    const etiquetaEntregas = numerosCert.length > 0
-      ? 'N°' + numerosCert.join(', N°') + ' · ver'
-      : `${reg.entregas.length} entrega${reg.entregas.length > 1 ? 's' : ''} · ver`;
-    html += `<span class="actas-version-tag" onclick="verEntregas('${nombreEsc}', '${reg.actaId}')">${etiquetaEntregas}</span>`;
-    html += '</td>';
-    return html;
+    const texto = numerosCert.length > 0 ? 'N°' + numerosCert.join(', N°') : `${reg.entregas.length} entrega${reg.entregas.length > 1 ? 's' : ''}`;
+    return `<td><button class="actas-badge actas-badge-ok" onclick="verEntregas('${nombreEsc}', '${reg.actaId}')" title="Cuadra con el acta — clic para ver el detalle">${texto}</button></td>`;
   }
 
   function render() {
