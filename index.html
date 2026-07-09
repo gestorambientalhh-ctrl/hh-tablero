@@ -8062,7 +8062,9 @@ function closeBackupModal(){
 
     // Cuadra — verde, muestra el número de certificado
     const numerosCert = [...new Set(reg.entregas.map(e => e.numeroCertificado).filter(Boolean))];
-    const texto = numerosCert.length > 0 ? 'N°' + numerosCert.join(', N°') : `${reg.entregas.length} entrega${reg.entregas.length > 1 ? 's' : ''}`;
+    const texto = numerosCert.length === 1
+      ? 'N°' + numerosCert[0]
+      : (numerosCert.length > 1 ? 'Varias' : `${reg.entregas.length} entrega${reg.entregas.length > 1 ? 's' : ''}`);
     return `<td><button class="actas-badge actas-badge-ok" onclick="verEntregas('${nombreEsc}', '${reg.actaId}')" title="Cuadra con el acta — clic para ver el detalle">${texto}</button></td>`;
   }
 
