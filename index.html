@@ -1629,7 +1629,8 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
       <h1>Actas — Nestlé Purina</h1>
       <p>Sábana anual 2026 — cada acta queda con su propio id y su historial de versiones</p>
     </div>
-    <div style="display:flex; align-items:center; gap:16px;">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <button onclick="toggleCrearActa()" style="background:var(--azul); color:#fff; border:none; border-radius:7px; padding:7px 12px; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap;">📝 Crear acta</button>
       <button onclick="toggleConfiguracion()" style="background:none; border:1px solid var(--borde); border-radius:7px; padding:7px 12px; font-size:12.5px; cursor:pointer; white-space:nowrap;">⚙ Configuración</button>
     </div>
   </div>
@@ -1683,26 +1684,6 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
     </div>
 
     <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--borde);">
-      <p style="font-size:13px; font-weight:600; margin:0 0 4px;">Crear acta a mano</p>
-      <p style="font-size:12px; color:var(--texto-suave); margin:0 0 10px;">Escribe los materiales del mes y genera el acta — queda guardada en la sábana y en Drive con tu firma, igual que si hubieras subido el PDF.</p>
-
-      <select id="select-mes-acta-manual" style="height:36px; border-radius:7px; border:1px solid var(--borde); font-size:13px; margin-bottom:10px;"></select>
-
-      <p style="font-size:12.5px; font-weight:600; margin:8px 0 6px;">Material Aprovechable</p>
-      <div id="filas-aprovechable"></div>
-      <button onclick="agregarFilaMaterial('aprovechable')" style="background:none; border:1px solid var(--borde); border-radius:7px; padding:5px 10px; font-size:12px; cursor:pointer; margin-bottom:10px;">+ agregar material</button>
-
-      <p style="font-size:12.5px; font-weight:600; margin:8px 0 6px;">Material para Disposición</p>
-      <div id="filas-disposicion"></div>
-      <button onclick="agregarFilaMaterial('disposicion')" style="background:none; border:1px solid var(--borde); border-radius:7px; padding:5px 10px; font-size:12px; cursor:pointer; margin-bottom:10px;">+ agregar material</button>
-
-      <div>
-        <button onclick="generarActaManualCliente()" class="actas-btn">Generar acta (PDF)</button>
-      </div>
-      <div id="estado-acta-manual" class="actas-estado-carga"></div>
-    </div>
-
-    <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--borde);">
       <p style="font-size:13px; font-weight:600; margin:0 0 4px;">Reporte de ahorro para el cliente</p>
       <p style="font-size:12px; color:var(--texto-suave); margin:0 0 8px;">Calcula agua, energía y CO2e evitados del mes (según cantidades del acta) y lo deja como Excel en Drive — sin fórmulas, solo los valores.</p>
       <select id="select-mes-reporte" style="height:36px; border-radius:7px; border:1px solid var(--borde); font-size:13px; margin-right:8px;"></select>
@@ -1723,6 +1704,26 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
       <button onclick="borrarTodoConfirmando()" style="background:var(--rojo-bg); color:var(--rojo-texto); border:none; border-radius:7px; padding:8px 14px; font-size:12.5px; font-weight:600; cursor:pointer;">Borrar todos los datos</button>
       <div id="estado-borrado" class="actas-estado-carga"></div>
     </div>
+  </div>
+
+  <div id="panel-crear-acta" style="display:none; border:1px solid var(--borde); border-radius:10px; padding:16px; margin-bottom:20px; background:var(--gris-calido);">
+    <p style="font-size:13px; font-weight:600; margin:0 0 4px;">Crear acta a mano</p>
+    <p style="font-size:12px; color:var(--texto-suave); margin:0 0 10px;">Escribe los materiales del mes y genera el acta — queda guardada en la sábana y en Drive con tu firma, igual que si hubieras subido el PDF.</p>
+
+    <select id="select-mes-acta-manual" style="height:36px; border-radius:7px; border:1px solid var(--borde); font-size:13px; margin-bottom:10px;"></select>
+
+    <p style="font-size:12.5px; font-weight:600; margin:8px 0 6px;">Material Aprovechable</p>
+    <div id="filas-aprovechable"></div>
+    <button onclick="agregarFilaMaterial('aprovechable')" style="background:none; border:1px solid var(--borde); border-radius:7px; padding:5px 10px; font-size:12px; cursor:pointer; margin-bottom:10px;">+ agregar material</button>
+
+    <p style="font-size:12.5px; font-weight:600; margin:8px 0 6px;">Material para Disposición</p>
+    <div id="filas-disposicion"></div>
+    <button onclick="agregarFilaMaterial('disposicion')" style="background:none; border:1px solid var(--borde); border-radius:7px; padding:5px 10px; font-size:12px; cursor:pointer; margin-bottom:10px;">+ agregar material</button>
+
+    <div>
+      <button onclick="generarActaManualCliente()" class="actas-btn">Generar acta (PDF)</button>
+    </div>
+    <div id="estado-acta-manual" class="actas-estado-carga"></div>
   </div>
 
   <div class="actas-zona-carga">
@@ -7628,6 +7629,13 @@ function closeBackupModal(){
     if (abrir) renderConfiguracion();
   }
 
+  function toggleCrearActa() {
+    const panel = document.getElementById('panel-crear-acta');
+    const abrir = panel.style.display === 'none';
+    panel.style.display = abrir ? 'block' : 'none';
+    if (abrir) { poblarSelectMesActaManual(); renderFilasActaManual(); }
+  }
+
   function renderConfiguracion() {
     const listaProv = document.getElementById('lista-config-proveedores');
     listaProv.innerHTML = proveedoresConocidos.length === 0
@@ -8599,7 +8607,18 @@ function closeBackupModal(){
 
   function celdaMaterial(mat, mesIndex) {
     const acta = actaActivaDeMes(mesIndex);
-    if (!acta) return '<td><span class="actas-dif-vacio">—</span></td>';
+    if (!acta) {
+      const pendientes = materialesSinActa.filter(m => m.mesIndex === mesIndex && coincideNombre(mat.nombre, m.nombre));
+      if (pendientes.length > 0) {
+        const totalKg = pendientes.reduce((s, m) => s + (m.pesoKg || 0), 0);
+        const totalUnd = pendientes.reduce((s, m) => s + (m.unidades || 0), 0);
+        const texto = totalKg > 0
+          ? `${pendientes.length} manif. · ${totalKg.toLocaleString('es-CO')} kg`
+          : `${pendientes.length} manif. · ${totalUnd.toLocaleString('es-CO')} und`;
+        return `<td><span class="actas-badge actas-badge-azul" title="Sin acta todavía — ${pendientes.length} manifiesto(s) esperando a que subas el acta de ${MESES[mesIndex]}">${texto}</span></td>`;
+      }
+      return '<td><span class="actas-dif-vacio">—</span></td>';
+    }
     const reg = registros.find(r => r.actaId === acta.id && r.nombre === mat.nombre && r.grupo === mat.grupo);
     if (!reg) return '<td><span class="actas-dif-vacio">—</span></td>';
 
@@ -8882,6 +8901,7 @@ function closeBackupModal(){
   window.eliminarProveedor = eliminarProveedor;
   window.resolverModalProveedor = resolverModalProveedor;
   window.toggleConfiguracion = toggleConfiguracion;
+  window.toggleCrearActa = toggleCrearActa;
   window.generarReporteAhorroCliente = generarReporteAhorroCliente;
   window.generarReporteAhorroMes = generarReporteAhorroMes;
   window.generarOrdenCompraCliente = generarOrdenCompraCliente;
