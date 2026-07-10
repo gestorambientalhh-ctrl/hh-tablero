@@ -1657,6 +1657,15 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
       <div id="lista-config-proveedores" style="font-size:12.5px;"></div>
     </div>
 
+    <div style="margin-bottom:18px;">
+      <p style="font-size:13px; font-weight:600; margin:0 0 8px;">Materiales conocidos</p>
+      <div style="display:flex; gap:6px; margin-bottom:8px;">
+        <input type="text" id="input-nuevo-material" placeholder="Nombre del material" style="flex:1; height:32px; border-radius:6px; border:1px solid var(--borde); padding:0 8px; font-size:12.5px;">
+        <button onclick="agregarMaterialConocido()" class="actas-btn">Agregar</button>
+      </div>
+      <div id="lista-config-materiales" style="font-size:12.5px;"></div>
+    </div>
+
     <div>
       <p style="font-size:13px; font-weight:600; margin:0 0 8px;">Formatos aprendidos</p>
       <div id="lista-config-perfiles" style="font-size:12.5px;"></div>
@@ -7294,7 +7303,10 @@ function closeBackupModal(){
           propias.sort((a, b) => b.y - a.y || a.x - b.x);
           const nombre = propias.map(w => w.text).join(' ');
           const cantidad = parseFloat(fila.cantidadTexto.replace(/\./g, ''));
-          if (nombre && grupoActual) materialesExtraidos.push({ grupo: grupoActual, nombre, cantidad, unidad: fila.unidad });
+          if (nombre && grupoActual) {
+            const grupoFinal = normalizar(nombre).includes('transporte') ? 'Disposición' : grupoActual;
+            materialesExtraidos.push({ grupo: grupoFinal, nombre, cantidad, unidad: fila.unidad });
+          }
         });
       }
 
@@ -7541,6 +7553,7 @@ function closeBackupModal(){
 
   const proveedoresConocidos = [];
   const perfilesAprendidos = [];
+  const materialesConocidos = [];
   let resolverModalProveedorFn = null;
 
   function detectarPerfilAprendido(textoCompleto) {
@@ -7617,6 +7630,16 @@ function closeBackupModal(){
           <button onclick="eliminarProveedor('${p.replace(/'/g, "\\'")}')" style="background:none; border:none; color:var(--rojo-texto); font-size:12px; cursor:pointer;">Eliminar</button>
         </div>`).join('');
 
+    const listaMat = document.getElementById('lista-config-materiales');
+    listaMat.innerHTML = materialesConocidos.length === 0
+      ? '<span class="actas-dif-vacio">Todavía no hay ninguno</span>'
+      : materialesConocidos.map(m => `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid var(--borde);">
+          <span>${m}</span>
+          <button onclick="eliminarMaterialConocido('${m.replace(/'/g, "\\'")}')" style="background:none; border:none; color:var(--rojo-texto); font-size:12px; cursor:pointer;">Eliminar</button>
+        </div>`).join('');
+    renderFilasActaManual();
+
     const listaPerf = document.getElementById('lista-config-perfiles');
     listaPerf.innerHTML = perfilesAprendidos.length === 0
       ? '<span class="actas-dif-vacio">Todavía no hay ninguno</span>'
@@ -7685,7 +7708,7 @@ function closeBackupModal(){
   }
 
   function agregarFilaMaterial(grupo) {
-    filasActaManual[grupo].push({ nombre: '', cantidad: '', unidad: 'Kg' });
+    filasActaManual[grupo].push({ nombre: '', cantidad: '', unidad: 'Kg', mostrarOtro: false });
     renderFilasActaManual();
   }
 
@@ -7699,13 +7722,19 @@ function closeBackupModal(){
   }
 
   function renderFilasActaManual() {
+    const opcionesMateriales = materialesConocidos.map(m => `<option value="${m}">${m}</option>`).join('');
     ['aprovechable', 'disposicion'].forEach(grupo => {
       const cont = document.getElementById('filas-' + grupo);
       if (!cont) return;
       cont.innerHTML = filasActaManual[grupo].map((f, i) => `
-        <div style="display:flex; gap:6px; margin-bottom:6px;">
-          <input type="text" placeholder="Nombre del material" value="${f.nombre}" oninput="actualizarFilaMaterial('${grupo}', ${i}, 'nombre', this.value)" style="flex:2; height:32px; border-radius:6px; border:1px solid var(--borde); padding:0 8px; font-size:12.5px;">
-          <input type="number" placeholder="Cantidad" value="${f.cantidad}" oninput="actualizarFilaMaterial('${grupo}', ${i}, 'cantidad', this.value)" style="flex:1; height:32px; border-radius:6px; border:1px solid var(--borde); padding:0 8px; font-size:12.5px;">
+        <div style="display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
+          <select onchange="actualizarNombreDesdeSelect('${grupo}', ${i}, this.value)" style="flex:2; min-width:140px; height:32px; border-radius:6px; border:1px solid var(--borde); font-size:12.5px;">
+            <option value="">-- elegir material --</option>
+            ${opcionesMateriales}
+            <option value="__otro__" ${f.mostrarOtro ? 'selected' : ''}>Otro (escribir nuevo)</option>
+          </select>
+          ${f.mostrarOtro ? `<input type="text" placeholder="Nombre del material nuevo" value="${f.nombre}" oninput="actualizarFilaMaterial('${grupo}', ${i}, 'nombre', this.value)" style="flex:2; height:32px; border-radius:6px; border:1px solid var(--borde); padding:0 8px; font-size:12.5px;">` : ''}
+          <input type="number" placeholder="Cantidad" value="${f.cantidad}" oninput="actualizarFilaMaterial('${grupo}', ${i}, 'cantidad', this.value)" style="flex:1; min-width:80px; height:32px; border-radius:6px; border:1px solid var(--borde); padding:0 8px; font-size:12.5px;">
           <select onchange="actualizarFilaMaterial('${grupo}', ${i}, 'unidad', this.value)" style="width:70px; height:32px; border-radius:6px; border:1px solid var(--borde); font-size:12.5px;">
             <option value="Kg" ${f.unidad === 'Kg' ? 'selected' : ''}>Kg</option>
             <option value="Und" ${f.unidad === 'Und' ? 'selected' : ''}>Und</option>
@@ -7713,6 +7742,17 @@ function closeBackupModal(){
           <button onclick="eliminarFilaMaterial('${grupo}', ${i})" style="background:none; border:none; color:var(--rojo-texto); cursor:pointer; font-size:16px; padding:0 6px;">✕</button>
         </div>`).join('');
     });
+  }
+
+  function actualizarNombreDesdeSelect(grupo, i, valor) {
+    if (valor === '__otro__') {
+      filasActaManual[grupo][i].mostrarOtro = true;
+      filasActaManual[grupo][i].nombre = '';
+    } else {
+      filasActaManual[grupo][i].mostrarOtro = false;
+      filasActaManual[grupo][i].nombre = valor;
+    }
+    renderFilasActaManual();
   }
 
   async function generarActaManualCliente() {
@@ -7738,6 +7778,11 @@ function closeBackupModal(){
       const confirmar = confirm(`Ya existe una acta cargada para ${MESES[mesIndex]} 2026.\n\n¿Quieres reemplazarla con esta nueva (escrita a mano)? La anterior queda guardada en el historial.`);
       if (!confirmar) return;
     }
+
+    [...aprovechable, ...disposicion].forEach(f => {
+      if (f.nombre && !materialesConocidos.includes(f.nombre)) materialesConocidos.push(f.nombre);
+    });
+    guardarMaterialesConocidos();
 
     const nuevaActa = crearActaParaMes(mesIndex);
     aprovechable.forEach(f => agregarRegistro(nuevaActa.id, 'Aprovechable', f.nombre, Number(f.cantidad), f.unidad));
@@ -7949,6 +7994,23 @@ function closeBackupModal(){
     const idx = proveedoresConocidos.indexOf(nombre);
     if (idx !== -1) proveedoresConocidos.splice(idx, 1);
     guardarProveedores();
+    renderConfiguracion();
+  }
+
+  function agregarMaterialConocido() {
+    const input = document.getElementById('input-nuevo-material');
+    const nombre = input.value.trim();
+    if (!nombre) return;
+    if (!materialesConocidos.includes(nombre)) materialesConocidos.push(nombre);
+    input.value = '';
+    guardarMaterialesConocidos();
+    renderConfiguracion();
+  }
+
+  function eliminarMaterialConocido(nombre) {
+    const idx = materialesConocidos.indexOf(nombre);
+    if (idx !== -1) materialesConocidos.splice(idx, 1);
+    guardarMaterialesConocidos();
     renderConfiguracion();
   }
 
@@ -8657,6 +8719,16 @@ function closeBackupModal(){
     }
   }
 
+  async function guardarMaterialesConocidos() {
+    if (!db) return;
+    try {
+      const { doc, setDoc } = firestoreFns;
+      await setDoc(doc(db, 'hh-actas-meta', 'materiales'), { lista: materialesConocidos });
+    } catch (err) {
+      console.error('Error guardando materiales conocidos:', err);
+    }
+  }
+
   async function cargarTodoDesdeFirebase() {
     const { doc, getDoc, collection, getDocs } = firestoreFns;
 
@@ -8682,6 +8754,13 @@ function closeBackupModal(){
         perfilesAprendidos.push(...formDoc.data().lista);
       }
     } catch (err) { /* sin formatos aprendidos aún */ }
+
+    try {
+      const matDoc = await getDoc(doc(db, 'hh-actas-meta', 'materiales'));
+      if (matDoc.exists() && Array.isArray(matDoc.data().lista)) {
+        materialesConocidos.push(...matDoc.data().lista);
+      }
+    } catch (err) { /* sin materiales conocidos guardados aún */ }
   }
 
   async function iniciar() {
@@ -8731,6 +8810,9 @@ function closeBackupModal(){
   window.eliminarFilaMaterial = eliminarFilaMaterial;
   window.actualizarFilaMaterial = actualizarFilaMaterial;
   window.generarActaManualCliente = generarActaManualCliente;
+  window.agregarMaterialConocido = agregarMaterialConocido;
+  window.eliminarMaterialConocido = eliminarMaterialConocido;
+  window.actualizarNombreDesdeSelect = actualizarNombreDesdeSelect;
   window.toggleManual = toggleManual;
   window.verEntregas = verEntregas;
   window.verHistorial = verHistorial;
