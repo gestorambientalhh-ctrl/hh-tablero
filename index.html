@@ -7242,6 +7242,14 @@ function closeBackupModal(){
     return mFecha ? parseInt(mFecha[1], 10) : null;
   }
 
+  function detectarFechaDocumento(items) {
+    const textoCompleto = items.map(it => it.text).join(' ');
+    const m = textoCompleto.match(/(20\d{2})-(\d{1,2})-(\d{1,2})/);
+    if (!m) return null;
+    const fecha = new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
+    return isNaN(fecha.getTime()) ? null : fecha.getTime();
+  }
+
   async function cargarPDF(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -8287,7 +8295,9 @@ function closeBackupModal(){
       ultimoIntentoFallido.numeroManifiesto,
       ultimoIntentoFallido.textoDocumentoCompleto,
       estadoDiv,
-      urlDriveEnsenado
+      urlDriveEnsenado,
+      false,
+      ultimoIntentoFallido.fechaDocumento
     );
   }
 
@@ -8376,7 +8386,7 @@ function closeBackupModal(){
     return certDentroDeActa || actaDentroDeCert;
   }
 
-  async function procesarYCruzarMateriales(materialesCert, numeroCertificado, numeroManifiesto, textoDocumentoCompleto, estadoDiv, urlDrive = null, esProvisional = false) {
+  async function procesarYCruzarMateriales(materialesCert, numeroCertificado, numeroManifiesto, textoDocumentoCompleto, estadoDiv, urlDrive = null, esProvisional = false, fechaDocumento = null) {
     const sugerido = detectarProveedorConocido(textoDocumentoCompleto);
     const proveedor = await pedirProveedor(sugerido);
     if (!proveedor) {
@@ -8405,7 +8415,7 @@ function closeBackupModal(){
           mesIndex: mc.mesIndex, anio: 2026, nombre: mc.nombre,
           pesoKg: mc.peso, unidades: mc.unidades || null,
           proveedor, numeroCertificado, numeroManifiesto,
-          urlDrive, provisional: esProvisional, fecha: Date.now()
+          urlDrive, provisional: esProvisional, fecha: fechaDocumento || Date.now()
         });
         sinCoincidencia.push(`${mc.nombre} (falta subir el acta de ${MESES[mc.mesIndex]} 2026 — quedó guardado, se conecta solo cuando subas el acta)`);
         return;
@@ -8422,7 +8432,7 @@ function closeBackupModal(){
         reg.entregas.push({
           proveedor, numeroCertificado, numeroManifiesto,
           pesoKg: mc.peso, unidades: mc.unidades || null,
-          urlDrive, provisional: esProvisional, fecha: Date.now()
+          urlDrive, provisional: esProvisional, fecha: fechaDocumento || Date.now()
         });
         coincidencias++;
         mesesUsados.add(mc.mesIndex);
@@ -8462,6 +8472,7 @@ function closeBackupModal(){
       let mesGlobalDetectado = null;
       let numeroCertificado = null;
       let numeroManifiesto = null;
+      let fechaDocumento = null;
       let formato = null;
       let textoDocumentoCompleto = '';
       const materialesCert = [];
@@ -8477,6 +8488,7 @@ function closeBackupModal(){
 
         if (mesGlobalDetectado === null) mesGlobalDetectado = detectarMes(items);
         if (formato === null) formato = detectarFormatoCertificado(textoCompleto);
+        if (fechaDocumento === null) fechaDocumento = detectarFechaDocumento(items);
 
         if (numeroCertificado === null) {
           const m1 = textoCompleto.match(/CERTIFICADO\s+No\.?\s*(\d+)/i) || textoCompleto.match(/No\.?\s*0*(\d+)/i);
@@ -8523,19 +8535,19 @@ function closeBackupModal(){
           const materialesPerfil = extraerConPerfil(todosLosItems, perfil).map(m => ({ ...m, mesIndex: mesGlobalDetectado, anio: 2026 }));
           if (materialesPerfil.length > 0) {
             const urlDrivePerfil = await subirArchivoADrive(file, 'certificado', mesGlobalDetectado || 0);
-            await procesarYCruzarMateriales(materialesPerfil, numeroCertificado, numeroManifiesto, textoDocumentoCompleto, estadoDiv, urlDrivePerfil);
+            await procesarYCruzarMateriales(materialesPerfil, numeroCertificado, numeroManifiesto, textoDocumentoCompleto, estadoDiv, urlDrivePerfil, false, fechaDocumento);
             return;
           }
         }
 
-        ultimoIntentoFallido = { items: todosLosItems, textoDocumentoCompleto, numeroCertificado, numeroManifiesto, mesGlobalDetectado, file };
+        ultimoIntentoFallido = { items: todosLosItems, textoDocumentoCompleto, numeroCertificado, numeroManifiesto, mesGlobalDetectado, fechaDocumento, file };
         estadoDiv.className = 'actas-estado-carga actas-estado-error';
         estadoDiv.innerHTML = 'No reconocí el formato de este certificado. <button class="actas-btn-enseñar" onclick="abrirModalEnsenar()">Enseñar formato nuevo</button>';
         return;
       }
 
       const urlDriveCert = await subirArchivoADrive(file, 'certificado', mesGlobalDetectado || 0);
-      await procesarYCruzarMateriales(materialesCert, numeroCertificado, numeroManifiesto, textoDocumentoCompleto, estadoDiv, urlDriveCert, formato === 'manifiesto');
+      await procesarYCruzarMateriales(materialesCert, numeroCertificado, numeroManifiesto, textoDocumentoCompleto, estadoDiv, urlDriveCert, formato === 'manifiesto', fechaDocumento);
 
     } catch (err) {
       estadoDiv.className = 'actas-estado-carga actas-estado-error';
