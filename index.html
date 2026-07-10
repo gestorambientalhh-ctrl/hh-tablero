@@ -1672,6 +1672,12 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
     </div>
 
     <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--borde);">
+      <p style="font-size:13px; font-weight:600; margin:0 0 4px;">Materiales sin acta todavía</p>
+      <p style="font-size:12px; color:var(--texto-suave); margin:0 0 8px;">Manifiestos o certificados que subiste antes de que existiera la acta de ese mes — se conectan solos apenas subas o generes esa acta.</p>
+      <div id="lista-materiales-sin-acta" style="font-size:12.5px;"></div>
+    </div>
+
+    <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--borde);">
       <p style="font-size:13px; font-weight:600; margin:0 0 8px;">Manifiestos sin certificado</p>
       <div id="lista-manifiestos-pendientes" style="font-size:12.5px;"></div>
     </div>
@@ -7327,6 +7333,7 @@ function closeBackupModal(){
       }
       const nuevaActa = crearActaParaMes(mesDetectado);
       materialesExtraidos.forEach(m => agregarRegistro(nuevaActa.id, m.grupo, m.nombre, m.cantidad, m.unidad));
+      reconciliarMaterialesSinActa(mesDetectado);
 
       estadoDiv.className = 'actas-estado-carga actas-estado-ok';
       estadoDiv.textContent = eraCorreccion
@@ -7554,6 +7561,7 @@ function closeBackupModal(){
   const proveedoresConocidos = [];
   const perfilesAprendidos = [];
   const materialesConocidos = [];
+  let materialesSinActa = [];
   let resolverModalProveedorFn = null;
 
   function detectarPerfilAprendido(textoCompleto) {
@@ -7656,8 +7664,56 @@ function closeBackupModal(){
       : mesesConActa.map(i => `<option value="${i}">${MESES[i]} ${AÑO_ACTUAL}</option>`).join('');
 
     renderManifiestosPendientes();
+    renderMaterialesSinActa();
     poblarSelectMesActaManual();
     renderFilasActaManual();
+  }
+
+  function renderMaterialesSinActa() {
+    const lista = document.getElementById('lista-materiales-sin-acta');
+    if (!lista) return;
+
+    if (materialesSinActa.length === 0) {
+      lista.innerHTML = '<span class="actas-dif-vacio">No hay ninguno pendiente</span>';
+      return;
+    }
+
+    const ordenados = [...materialesSinActa].sort((a, b) => a.fecha - b.fecha);
+    lista.innerHTML = ordenados.map(m => {
+      const partes = [];
+      if (m.pesoKg) partes.push(`${m.pesoKg.toLocaleString('es-CO')} kg`);
+      if (m.unidades) partes.push(`${m.unidades.toLocaleString('es-CO')} und`);
+      const numero = m.numeroCertificado ? `N°${m.numeroCertificado}` : (m.numeroManifiesto ? `M°${m.numeroManifiesto}` : 'sin número');
+      return `<div style="display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid var(--borde);">
+        <span>${m.nombre} — ${partes.join(' · ')} — ${MESES[m.mesIndex]} ${m.anio} — ${numero} — ${m.proveedor || 'sin proveedor'}</span>
+      </div>`;
+    }).join('');
+  }
+
+  function reconciliarMaterialesSinActa(mesIndex, anio = AÑO_ACTUAL) {
+    const acta = actaActivaDeMes(mesIndex, anio);
+    if (!acta) return;
+    const registrosDeActa = registros.filter(r => r.actaId === acta.id);
+    const pendientesDeEsteMes = materialesSinActa.filter(m => m.mesIndex === mesIndex && m.anio === anio);
+
+    pendientesDeEsteMes.forEach(m => {
+      const candidatos = registrosDeActa.filter(r => coincideNombre(m.nombre, r.nombre));
+      const reg = candidatos.find(r => r.unidadActa !== 'Und') || candidatos[0];
+      if (reg) {
+        if (!m.provisional && m.numeroManifiesto) {
+          reg.entregas = reg.entregas.filter(e => !(e.provisional && e.numeroManifiesto === m.numeroManifiesto));
+        }
+        reg.entregas.push({
+          proveedor: m.proveedor, numeroCertificado: m.numeroCertificado, numeroManifiesto: m.numeroManifiesto,
+          pesoKg: m.pesoKg, unidades: m.unidades, urlDrive: m.urlDrive, provisional: m.provisional, fecha: m.fecha
+        });
+        const idx = materialesSinActa.indexOf(m);
+        if (idx !== -1) materialesSinActa.splice(idx, 1);
+      }
+    });
+
+    guardarMaterialesSinActa();
+    guardarMes(mesIndex, anio);
   }
 
   function renderManifiestosPendientes() {
@@ -7787,6 +7843,7 @@ function closeBackupModal(){
     const nuevaActa = crearActaParaMes(mesIndex);
     aprovechable.forEach(f => agregarRegistro(nuevaActa.id, 'Aprovechable', f.nombre, Number(f.cantidad), f.unidad));
     disposicion.forEach(f => agregarRegistro(nuevaActa.id, 'Disposición', f.nombre, Number(f.cantidad), f.unidad));
+    reconciliarMaterialesSinActa(mesIndex);
     render();
     guardarMes(mesIndex);
 
@@ -8294,7 +8351,13 @@ function closeBackupModal(){
       }
       const acta = actaActivaDeMes(mc.mesIndex);
       if (!acta) {
-        sinCoincidencia.push(`${mc.nombre} (falta subir el acta de ${MESES[mc.mesIndex]} 2026)`);
+        materialesSinActa.push({
+          mesIndex: mc.mesIndex, anio: 2026, nombre: mc.nombre,
+          pesoKg: mc.peso, unidades: mc.unidades || null,
+          proveedor, numeroCertificado, numeroManifiesto,
+          urlDrive, provisional: esProvisional, fecha: Date.now()
+        });
+        sinCoincidencia.push(`${mc.nombre} (falta subir el acta de ${MESES[mc.mesIndex]} 2026 — quedó guardado, se conecta solo cuando subas el acta)`);
         return;
       }
       const registrosDeActa = registros.filter(r => r.actaId === acta.id);
@@ -8328,6 +8391,7 @@ function closeBackupModal(){
     render();
     mesesUsados.forEach(mi => guardarMes(mi));
     guardarProveedores();
+    guardarMaterialesSinActa();
   }
 
   let ultimoIntentoFallido = null;
@@ -8729,6 +8793,16 @@ function closeBackupModal(){
     }
   }
 
+  async function guardarMaterialesSinActa() {
+    if (!db) return;
+    try {
+      const { doc, setDoc } = firestoreFns;
+      await setDoc(doc(db, 'hh-actas-meta', 'sin_acta'), { lista: materialesSinActa });
+    } catch (err) {
+      console.error('Error guardando materiales sin acta:', err);
+    }
+  }
+
   async function cargarTodoDesdeFirebase() {
     const { doc, getDoc, collection, getDocs } = firestoreFns;
 
@@ -8761,6 +8835,13 @@ function closeBackupModal(){
         materialesConocidos.push(...matDoc.data().lista);
       }
     } catch (err) { /* sin materiales conocidos guardados aún */ }
+
+    try {
+      const sinActaDoc = await getDoc(doc(db, 'hh-actas-meta', 'sin_acta'));
+      if (sinActaDoc.exists() && Array.isArray(sinActaDoc.data().lista)) {
+        materialesSinActa.push(...sinActaDoc.data().lista);
+      }
+    } catch (err) { /* sin materiales pendientes guardados aún */ }
   }
 
   async function iniciar() {
