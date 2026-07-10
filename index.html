@@ -8595,6 +8595,35 @@ function closeBackupModal(){
     if (actaDelReg) guardarMes(actaDelReg.mesIndex, actaDelReg.año);
   }
 
+  function verMaterialesSinActa(nombreMat, mesIndex) {
+    const pendientes = materialesSinActa.filter(m => m.mesIndex === mesIndex && coincideNombre(nombreMat, m.nombre));
+    if (pendientes.length === 0) return;
+
+    document.getElementById('entregas-titulo').textContent = 'Manifiestos de "' + nombreMat + '" — ' + MESES[mesIndex] + ' (sin acta todavía)';
+
+    const lista = document.getElementById('entregas-lista');
+    lista.innerHTML = pendientes.map((m, i) => {
+      const fecha = new Date(m.fecha).toLocaleDateString('es-CO');
+      const numero = m.numeroCertificado ? `certificado N°${m.numeroCertificado}` : (m.numeroManifiesto ? `manifiesto N°${m.numeroManifiesto}` : 'sin número');
+      const partes = [];
+      if (m.pesoKg) partes.push(`${m.pesoKg.toLocaleString('es-CO')} kg`);
+      if (m.unidades) partes.push(`${m.unidades.toLocaleString('es-CO')} und`);
+      const link = m.urlDrive ? `<a href="${m.urlDrive}" target="_blank" rel="noopener" style="color:var(--azul);">ver PDF en Drive</a>` : '<span class="actas-dif-vacio">sin PDF guardado</span>';
+      return `<div style="padding:8px 0; border-bottom:1px solid var(--borde); font-size:12.5px;">
+        <div>${i + 1}. ${m.proveedor || 'Sin proveedor'} — ${numero} <span style="color:var(--azul); font-weight:600;">· sin acta todavía</span></div>
+        <div style="color:var(--texto-suave);">${partes.join(' · ')} — ${fecha}</div>
+        <div style="margin-top:3px;">${link}</div>
+      </div>`;
+    }).join('');
+
+    const totalKg = pendientes.reduce((s, m) => s + (m.pesoKg || 0), 0);
+    const totalUnd = pendientes.reduce((s, m) => s + (m.unidades || 0), 0);
+    const totalesTxt = [totalKg ? `${totalKg.toLocaleString('es-CO')} kg` : null, totalUnd ? `${totalUnd.toLocaleString('es-CO')} und` : null].filter(Boolean).join(' · ');
+    document.getElementById('entregas-total').textContent = 'Total (provisional, sin acta): ' + totalesTxt;
+
+    document.getElementById('modal-entregas').style.display = 'flex';
+  }
+
   function verEntregas(nombreMat, actaId) {
     const reg = registros.find(r => r.actaId === actaId && r.nombre === nombreMat);
     if (!reg || reg.entregas.length === 0) return;
@@ -8657,7 +8686,8 @@ function closeBackupModal(){
         const texto = totalKg > 0
           ? `${pendientes.length} manif. · ${totalKg.toLocaleString('es-CO')} kg`
           : `${pendientes.length} manif. · ${totalUnd.toLocaleString('es-CO')} und`;
-        return `<td><span class="actas-badge actas-badge-azul" title="Sin acta todavía — ${pendientes.length} manifiesto(s) esperando a que subas el acta de ${MESES[mesIndex]}">${texto}</span></td>`;
+        const nombreEsc = mat.nombre.replace(/'/g, "\\'");
+        return `<td><button class="actas-badge actas-badge-azul" onclick="verMaterialesSinActa('${nombreEsc}', ${mesIndex})" title="Sin acta todavía — clic para ver el detalle de cada manifiesto">${texto}</button></td>`;
       }
       return '<td><span class="actas-dif-vacio">—</span></td>';
     }
@@ -8958,6 +8988,7 @@ function closeBackupModal(){
   window.actualizarNombreDesdeSelect = actualizarNombreDesdeSelect;
   window.toggleManual = toggleManual;
   window.verEntregas = verEntregas;
+  window.verMaterialesSinActa = verMaterialesSinActa;
   window.verHistorial = verHistorial;
   window.volverPaso1Ensenar = volverPaso1Ensenar;
   window.abrirEnsenarDesdeArchivo = abrirEnsenarDesdeArchivo;
