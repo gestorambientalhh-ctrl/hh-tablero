@@ -7629,11 +7629,25 @@ function closeBackupModal(){
     if (abrir) renderConfiguracion();
   }
 
+  const MATERIALES_APROVECHABLE_DEFAULT = [
+    'Producto Tipo 1 Seco', 'Producto Tipo 2 Húmedo', 'Grasas', 'Plegadiza', 'Plástico',
+    'Latas', 'Estibas en Buen Estado', 'Empaque', 'Cartón', 'Chatarra', 'Cobre encauchetado', 'Vidrio'
+  ];
+
   function toggleCrearActa() {
     const panel = document.getElementById('panel-crear-acta');
     const abrir = panel.style.display === 'none';
     panel.style.display = abrir ? 'block' : 'none';
-    if (abrir) { poblarSelectMesActaManual(); renderFilasActaManual(); }
+    if (abrir) {
+      MATERIALES_APROVECHABLE_DEFAULT.forEach(n => { if (!materialesConocidos.includes(n)) materialesConocidos.push(n); });
+      if (filasActaManual.aprovechable.length === 0) {
+        filasActaManual.aprovechable = MATERIALES_APROVECHABLE_DEFAULT.map(nombre => ({
+          nombre, cantidad: '', unidad: nombre === 'Estibas en Buen Estado' ? 'Und' : 'Kg', mostrarOtro: false
+        }));
+      }
+      poblarSelectMesActaManual();
+      renderFilasActaManual();
+    }
   }
 
   function renderConfiguracion() {
@@ -7786,14 +7800,15 @@ function closeBackupModal(){
   }
 
   function renderFilasActaManual() {
-    const opcionesMateriales = materialesConocidos.map(m => `<option value="${m}">${m}</option>`).join('');
     ['aprovechable', 'disposicion'].forEach(grupo => {
       const cont = document.getElementById('filas-' + grupo);
       if (!cont) return;
-      cont.innerHTML = filasActaManual[grupo].map((f, i) => `
+      cont.innerHTML = filasActaManual[grupo].map((f, i) => {
+        const opcionesMateriales = materialesConocidos.map(m => `<option value="${m}" ${f.nombre === m ? 'selected' : ''}>${m}</option>`).join('');
+        return `
         <div style="display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
           <select onchange="actualizarNombreDesdeSelect('${grupo}', ${i}, this.value)" style="flex:2; min-width:140px; height:32px; border-radius:6px; border:1px solid var(--borde); font-size:12.5px;">
-            <option value="">-- elegir material --</option>
+            <option value="" ${!f.nombre && !f.mostrarOtro ? 'selected' : ''}>-- elegir material --</option>
             ${opcionesMateriales}
             <option value="__otro__" ${f.mostrarOtro ? 'selected' : ''}>Otro (escribir nuevo)</option>
           </select>
@@ -7804,7 +7819,8 @@ function closeBackupModal(){
             <option value="Und" ${f.unidad === 'Und' ? 'selected' : ''}>Und</option>
           </select>
           <button onclick="eliminarFilaMaterial('${grupo}', ${i})" style="background:none; border:none; color:var(--rojo-texto); cursor:pointer; font-size:16px; padding:0 6px;">✕</button>
-        </div>`).join('');
+        </div>`;
+      }).join('');
     });
   }
 
