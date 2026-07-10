@@ -1718,7 +1718,6 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 
     <p style="font-size:12.5px; font-weight:600; margin:8px 0 6px;">Material para Disposición</p>
     <div id="filas-disposicion"></div>
-    <button onclick="agregarFilaMaterial('disposicion')" style="background:none; border:1px solid var(--borde); border-radius:7px; padding:5px 10px; font-size:12px; cursor:pointer; margin-bottom:10px;">+ agregar material</button>
 
     <div>
       <button onclick="generarActaManualCliente()" class="actas-btn">Generar acta (PDF)</button>
@@ -7633,6 +7632,11 @@ function closeBackupModal(){
     'Producto Tipo 1 Seco', 'Producto Tipo 2 Húmedo', 'Grasas', 'Plegadiza', 'Plástico',
     'Latas', 'Estibas en Buen Estado', 'Empaque', 'Cartón', 'Chatarra', 'Cobre encauchetado', 'Vidrio'
   ];
+  const MATERIALES_DISPOSICION_DEFAULT = [
+    'Cafetería y Sanitarios', 'Madera', 'Retal de Madera', 'Disposición Latas', 'Bolsas Lad',
+    'Orgánicos', 'Lonas en mal estado', 'Material Peligroso', 'Biosanitarios y Cortopunzante',
+    'Transporte Cafetería y sanitarios'
+  ];
 
   function toggleCrearActa() {
     const panel = document.getElementById('panel-crear-acta');
@@ -7640,9 +7644,15 @@ function closeBackupModal(){
     panel.style.display = abrir ? 'block' : 'none';
     if (abrir) {
       MATERIALES_APROVECHABLE_DEFAULT.forEach(n => { if (!materialesConocidos.includes(n)) materialesConocidos.push(n); });
+      MATERIALES_DISPOSICION_DEFAULT.forEach(n => { if (!materialesConocidos.includes(n)) materialesConocidos.push(n); });
       if (filasActaManual.aprovechable.length === 0) {
         filasActaManual.aprovechable = MATERIALES_APROVECHABLE_DEFAULT.map(nombre => ({
           nombre, cantidad: '', unidad: nombre === 'Estibas en Buen Estado' ? 'Und' : 'Kg', mostrarOtro: false
+        }));
+      }
+      if (filasActaManual.disposicion.length === 0) {
+        filasActaManual.disposicion = MATERIALES_DISPOSICION_DEFAULT.map(nombre => ({
+          nombre, cantidad: '', unidad: nombre === 'Transporte Cafetería y sanitarios' ? 'Und' : 'Kg', mostrarOtro: false
         }));
       }
       poblarSelectMesActaManual();
@@ -7800,28 +7810,44 @@ function closeBackupModal(){
   }
 
   function renderFilasActaManual() {
-    ['aprovechable', 'disposicion'].forEach(grupo => {
-      const cont = document.getElementById('filas-' + grupo);
-      if (!cont) return;
-      cont.innerHTML = filasActaManual[grupo].map((f, i) => {
+    // Aprovechable: filas completas con desplegable de material (permite agregar filas nuevas)
+    const contAprov = document.getElementById('filas-aprovechable');
+    if (contAprov) {
+      contAprov.innerHTML = filasActaManual.aprovechable.map((f, i) => {
         const opcionesMateriales = materialesConocidos.map(m => `<option value="${m}" ${f.nombre === m ? 'selected' : ''}>${m}</option>`).join('');
         return `
         <div style="display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
-          <select onchange="actualizarNombreDesdeSelect('${grupo}', ${i}, this.value)" style="flex:2; min-width:140px; height:32px; border-radius:6px; border:1px solid var(--borde); font-size:12.5px;">
+          <select onchange="actualizarNombreDesdeSelect('aprovechable', ${i}, this.value)" style="flex:2; min-width:140px; height:32px; border-radius:6px; border:1px solid var(--borde); font-size:12.5px;">
             <option value="" ${!f.nombre && !f.mostrarOtro ? 'selected' : ''}>-- elegir material --</option>
             ${opcionesMateriales}
             <option value="__otro__" ${f.mostrarOtro ? 'selected' : ''}>Otro (escribir nuevo)</option>
           </select>
-          ${f.mostrarOtro ? `<input type="text" placeholder="Nombre del material nuevo" value="${f.nombre}" oninput="actualizarFilaMaterial('${grupo}', ${i}, 'nombre', this.value)" style="flex:2; height:32px; border-radius:6px; border:1px solid var(--borde); padding:0 8px; font-size:12.5px;">` : ''}
-          <input type="number" placeholder="Cantidad" value="${f.cantidad}" oninput="actualizarFilaMaterial('${grupo}', ${i}, 'cantidad', this.value)" style="flex:1; min-width:80px; height:32px; border-radius:6px; border:1px solid var(--borde); padding:0 8px; font-size:12.5px;">
-          <select onchange="actualizarFilaMaterial('${grupo}', ${i}, 'unidad', this.value)" style="width:70px; height:32px; border-radius:6px; border:1px solid var(--borde); font-size:12.5px;">
+          ${f.mostrarOtro ? `<input type="text" placeholder="Nombre del material nuevo" value="${f.nombre}" oninput="actualizarFilaMaterial('aprovechable', ${i}, 'nombre', this.value)" style="flex:2; height:32px; border-radius:6px; border:1px solid var(--borde); padding:0 8px; font-size:12.5px;">` : ''}
+          <input type="number" placeholder="Cantidad" value="${f.cantidad}" oninput="actualizarFilaMaterial('aprovechable', ${i}, 'cantidad', this.value)" style="flex:1; min-width:80px; height:32px; border-radius:6px; border:1px solid var(--borde); padding:0 8px; font-size:12.5px;">
+          <select onchange="actualizarFilaMaterial('aprovechable', ${i}, 'unidad', this.value)" style="width:70px; height:32px; border-radius:6px; border:1px solid var(--borde); font-size:12.5px;">
             <option value="Kg" ${f.unidad === 'Kg' ? 'selected' : ''}>Kg</option>
             <option value="Und" ${f.unidad === 'Und' ? 'selected' : ''}>Und</option>
           </select>
-          <button onclick="eliminarFilaMaterial('${grupo}', ${i})" style="background:none; border:none; color:var(--rojo-texto); cursor:pointer; font-size:16px; padding:0 6px;">✕</button>
+          <button onclick="eliminarFilaMaterial('aprovechable', ${i})" style="background:none; border:none; color:var(--rojo-texto); cursor:pointer; font-size:16px; padding:0 6px;">✕</button>
         </div>`;
       }).join('');
-    });
+    }
+
+    // Disposición: grilla compacta de 2 columnas, nombre fijo + cantidad (deja vacío lo que no aplique ese mes)
+    const contDisp = document.getElementById('filas-disposicion');
+    if (contDisp) {
+      contDisp.innerHTML = '<div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 12px;">' +
+        filasActaManual.disposicion.map((f, i) => `
+          <div style="display:flex; align-items:center; gap:6px;">
+            ${f.nombre
+              ? `<span style="flex:1.4; font-size:12px; color:var(--texto);">${f.nombre}</span>`
+              : `<input type="text" placeholder="Nombre del material" value="${f.nombre}" oninput="actualizarFilaMaterial('disposicion', ${i}, 'nombre', this.value)" style="flex:1.4; height:30px; border-radius:6px; border:1px solid var(--borde); padding:0 6px; font-size:12px;">`}
+            <input type="number" placeholder="Cantidad" value="${f.cantidad}" oninput="actualizarFilaMaterial('disposicion', ${i}, 'cantidad', this.value)" style="width:80px; height:30px; border-radius:6px; border:1px solid var(--borde); padding:0 6px; font-size:12px;">
+            <span style="font-size:11px; color:var(--texto-suave); width:26px;">${f.unidad}</span>
+          </div>`).join('') +
+        '</div>' +
+        '<button onclick="agregarFilaMaterial(\'disposicion\')" style="background:none; border:1px solid var(--borde); border-radius:7px; padding:5px 10px; font-size:12px; cursor:pointer; margin-top:8px;">+ otro material de Disposición</button>';
+    }
   }
 
   function actualizarNombreDesdeSelect(grupo, i, valor) {
