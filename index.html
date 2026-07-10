@@ -1668,6 +1668,26 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
     </div>
 
     <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--borde);">
+      <p style="font-size:13px; font-weight:600; margin:0 0 4px;">Crear acta a mano</p>
+      <p style="font-size:12px; color:var(--texto-suave); margin:0 0 10px;">Escribe los materiales del mes y genera el acta — queda guardada en la sábana y en Drive con tu firma, igual que si hubieras subido el PDF.</p>
+
+      <select id="select-mes-acta-manual" style="height:36px; border-radius:7px; border:1px solid var(--borde); font-size:13px; margin-bottom:10px;"></select>
+
+      <p style="font-size:12.5px; font-weight:600; margin:8px 0 6px;">Material Aprovechable</p>
+      <div id="filas-aprovechable"></div>
+      <button onclick="agregarFilaMaterial('aprovechable')" style="background:none; border:1px solid var(--borde); border-radius:7px; padding:5px 10px; font-size:12px; cursor:pointer; margin-bottom:10px;">+ agregar material</button>
+
+      <p style="font-size:12.5px; font-weight:600; margin:8px 0 6px;">Material para Disposición</p>
+      <div id="filas-disposicion"></div>
+      <button onclick="agregarFilaMaterial('disposicion')" style="background:none; border:1px solid var(--borde); border-radius:7px; padding:5px 10px; font-size:12px; cursor:pointer; margin-bottom:10px;">+ agregar material</button>
+
+      <div>
+        <button onclick="generarActaManualCliente()" class="actas-btn">Generar acta (PDF)</button>
+      </div>
+      <div id="estado-acta-manual" class="actas-estado-carga"></div>
+    </div>
+
+    <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--borde);">
       <p style="font-size:13px; font-weight:600; margin:0 0 4px;">Reporte de ahorro para el cliente</p>
       <p style="font-size:12px; color:var(--texto-suave); margin:0 0 8px;">Calcula agua, energía y CO2e evitados del mes (según cantidades del acta) y lo deja como Excel en Drive — sin fórmulas, solo los valores.</p>
       <select id="select-mes-reporte" style="height:36px; border-radius:7px; border:1px solid var(--borde); font-size:13px; margin-right:8px;"></select>
@@ -7613,6 +7633,8 @@ function closeBackupModal(){
       : mesesConActa.map(i => `<option value="${i}">${MESES[i]} ${AÑO_ACTUAL}</option>`).join('');
 
     renderManifiestosPendientes();
+    poblarSelectMesActaManual();
+    renderFilasActaManual();
   }
 
   function renderManifiestosPendientes() {
@@ -7651,6 +7673,114 @@ function closeBackupModal(){
         <span style="color:${urgente ? 'var(--rojo-texto)' : 'var(--texto-suave)'}; font-weight:${urgente ? '600' : '400'};">${dias} día${dias !== 1 ? 's' : ''}</span>
       </div>`;
     }).join('');
+  }
+
+  // ─── CREAR ACTA A MANO ────────────────────────────────────
+  let filasActaManual = { aprovechable: [], disposicion: [] };
+
+  function poblarSelectMesActaManual() {
+    const select = document.getElementById('select-mes-acta-manual');
+    if (!select) return;
+    select.innerHTML = MESES.map((m, i) => `<option value="${i}">${m} ${AÑO_ACTUAL}</option>`).join('');
+  }
+
+  function agregarFilaMaterial(grupo) {
+    filasActaManual[grupo].push({ nombre: '', cantidad: '', unidad: 'Kg' });
+    renderFilasActaManual();
+  }
+
+  function eliminarFilaMaterial(grupo, i) {
+    filasActaManual[grupo].splice(i, 1);
+    renderFilasActaManual();
+  }
+
+  function actualizarFilaMaterial(grupo, i, campo, valor) {
+    filasActaManual[grupo][i][campo] = valor;
+  }
+
+  function renderFilasActaManual() {
+    ['aprovechable', 'disposicion'].forEach(grupo => {
+      const cont = document.getElementById('filas-' + grupo);
+      if (!cont) return;
+      cont.innerHTML = filasActaManual[grupo].map((f, i) => `
+        <div style="display:flex; gap:6px; margin-bottom:6px;">
+          <input type="text" placeholder="Nombre del material" value="${f.nombre}" oninput="actualizarFilaMaterial('${grupo}', ${i}, 'nombre', this.value)" style="flex:2; height:32px; border-radius:6px; border:1px solid var(--borde); padding:0 8px; font-size:12.5px;">
+          <input type="number" placeholder="Cantidad" value="${f.cantidad}" oninput="actualizarFilaMaterial('${grupo}', ${i}, 'cantidad', this.value)" style="flex:1; height:32px; border-radius:6px; border:1px solid var(--borde); padding:0 8px; font-size:12.5px;">
+          <select onchange="actualizarFilaMaterial('${grupo}', ${i}, 'unidad', this.value)" style="width:70px; height:32px; border-radius:6px; border:1px solid var(--borde); font-size:12.5px;">
+            <option value="Kg" ${f.unidad === 'Kg' ? 'selected' : ''}>Kg</option>
+            <option value="Und" ${f.unidad === 'Und' ? 'selected' : ''}>Und</option>
+          </select>
+          <button onclick="eliminarFilaMaterial('${grupo}', ${i})" style="background:none; border:none; color:var(--rojo-texto); cursor:pointer; font-size:16px; padding:0 6px;">✕</button>
+        </div>`).join('');
+    });
+  }
+
+  async function generarActaManualCliente() {
+    const estadoDiv = document.getElementById('estado-acta-manual');
+    const mesIndex = parseInt(document.getElementById('select-mes-acta-manual').value, 10);
+    const aprovechable = filasActaManual.aprovechable.filter(f => f.nombre && f.cantidad !== '');
+    const disposicion = filasActaManual.disposicion.filter(f => f.nombre && f.cantidad !== '');
+
+    if (isNaN(mesIndex) || (aprovechable.length === 0 && disposicion.length === 0)) {
+      estadoDiv.className = 'actas-estado-carga actas-estado-error';
+      estadoDiv.style.display = 'block';
+      estadoDiv.textContent = 'Escoge el mes y agrega al menos un material con su cantidad.';
+      return;
+    }
+    if (!APPS_SCRIPT_DRIVE_URL || APPS_SCRIPT_DRIVE_URL.includes('PEGA_AQUI')) {
+      estadoDiv.className = 'actas-estado-carga actas-estado-error';
+      estadoDiv.style.display = 'block';
+      estadoDiv.textContent = 'Falta configurar la URL del Apps Script (APPS_SCRIPT_DRIVE_URL).';
+      return;
+    }
+
+    if (actaActivaDeMes(mesIndex) !== null) {
+      const confirmar = confirm(`Ya existe una acta cargada para ${MESES[mesIndex]} 2026.\n\n¿Quieres reemplazarla con esta nueva (escrita a mano)? La anterior queda guardada en el historial.`);
+      if (!confirmar) return;
+    }
+
+    const nuevaActa = crearActaParaMes(mesIndex);
+    aprovechable.forEach(f => agregarRegistro(nuevaActa.id, 'Aprovechable', f.nombre, Number(f.cantidad), f.unidad));
+    disposicion.forEach(f => agregarRegistro(nuevaActa.id, 'Disposición', f.nombre, Number(f.cantidad), f.unidad));
+    render();
+    guardarMes(mesIndex);
+
+    estadoDiv.className = 'actas-estado-carga actas-estado-cargando';
+    estadoDiv.style.display = 'block';
+    estadoDiv.textContent = 'Acta guardada en la sábana — generando el PDF...';
+
+    try {
+      const resp = await fetch(APPS_SCRIPT_DRIVE_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          accion: 'generar_acta', anio: AÑO_ACTUAL, mes: MESES[mesIndex],
+          mesLargo: MESES_LARGOS[mesIndex].charAt(0).toUpperCase() + MESES_LARGOS[mesIndex].slice(1),
+          aprovechable: aprovechable.map(f => ({ nombre: f.nombre, cantidad: f.cantidad, unidad: f.unidad })),
+          disposicion: disposicion.map(f => ({ nombre: f.nombre, cantidad: f.cantidad, unidad: f.unidad }))
+        })
+      });
+      const data = await resp.json();
+
+      if (!data.ok) {
+        estadoDiv.className = 'actas-estado-carga actas-estado-error';
+        estadoDiv.textContent = 'El acta ya quedó guardada en la sábana, pero no se pudo generar el PDF: ' + (data.error || 'error desconocido');
+        return;
+      }
+
+      nuevaActa.urlDrive = data.url;
+      render();
+      guardarMes(mesIndex);
+
+      estadoDiv.className = 'actas-estado-carga actas-estado-ok';
+      estadoDiv.innerHTML = `Listo — acta de ${MESES[mesIndex]} guardada y PDF generado. <a href="${data.url}" target="_blank" rel="noopener" style="color:var(--azul); font-weight:600;">Abrir PDF en Drive</a>`;
+      filasActaManual = { aprovechable: [], disposicion: [] };
+      renderFilasActaManual();
+
+    } catch (err) {
+      estadoDiv.className = 'actas-estado-carga actas-estado-error';
+      estadoDiv.textContent = 'El acta quedó guardada en la sábana, pero hubo un error de conexión generando el PDF.';
+      console.error(err);
+    }
   }
 
   async function generarReporteAhorroBase(mesIndex, estadoDiv) {
@@ -8597,6 +8727,10 @@ function closeBackupModal(){
   window.generarOrdenCompraCliente = generarOrdenCompraCliente;
   window.generarOrdenCompraMes = generarOrdenCompraMes;
   window.borrarTodoConfirmando = borrarTodoConfirmando;
+  window.agregarFilaMaterial = agregarFilaMaterial;
+  window.eliminarFilaMaterial = eliminarFilaMaterial;
+  window.actualizarFilaMaterial = actualizarFilaMaterial;
+  window.generarActaManualCliente = generarActaManualCliente;
   window.toggleManual = toggleManual;
   window.verEntregas = verEntregas;
   window.verHistorial = verHistorial;
