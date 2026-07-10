@@ -8368,7 +8368,7 @@ function closeBackupModal(){
     registros = [];
     estadoManual.fill(null);
     materialesSinActa = [];
-    guardarMaterialesSinActa();
+    await guardarMaterialesSinActa();
 
     if (db) {
       try {
@@ -9099,7 +9099,7 @@ function closeBackupModal(){
   window.toggleManual = toggleManual;
   window.verEntregas = verEntregas;
   window.verMaterialesSinActa = verMaterialesSinActa;
-  window._debugMaterialesSinActa = materialesSinActa;
+  window._debugMaterialesSinActa = () => materialesSinActa;
   window.verHistorial = verHistorial;
   window.volverPaso1Ensenar = volverPaso1Ensenar;
   window.abrirEnsenarDesdeArchivo = abrirEnsenarDesdeArchivo;
