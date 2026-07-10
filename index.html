@@ -7748,9 +7748,19 @@ function closeBackupModal(){
     }
 
     const registrosDelMes = registros.filter(r => r.actaId === acta.id &&
-      (r.grupo === 'Disposición' || normalizar(r.nombre).includes('transporte'))
+      r.grupo === 'Disposición' && !normalizar(r.nombre).includes('transporte')
     );
     const materiales = registrosDelMes.map(r => ({ nombre: r.nombre, cantidad: r.cantidadActa }));
+
+    // Transporte Cafetería y sanitarios: 1 unidad por cada manifiesto/certificado de
+    // Cafetería y Sanitarios con menos de 800 kg (formula acordada) — no sale de la acta.
+    const regCafeteria = registros.find(r => r.actaId === acta.id && coincideNombre('Cafetería y Sanitarios', r.nombre));
+    if (regCafeteria) {
+      const viajesTransporte = regCafeteria.entregas.filter(e => (e.pesoKg || 0) < 800 && (e.pesoKg || 0) > 0).length;
+      if (viajesTransporte > 0) {
+        materiales.push({ nombre: 'Transporte Cafetería y sanitarios', cantidad: viajesTransporte });
+      }
+    }
 
     if (materiales.length === 0) {
       estadoDiv.className = 'actas-estado-carga actas-estado-error';
