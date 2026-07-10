@@ -7743,6 +7743,10 @@ function closeBackupModal(){
         if (!m.provisional && m.numeroManifiesto) {
           reg.entregas = reg.entregas.filter(e => !(e.provisional && e.numeroManifiesto === m.numeroManifiesto));
         }
+        const identificador = m.numeroCertificado || m.numeroManifiesto;
+        if (identificador) {
+          reg.entregas = reg.entregas.filter(e => (e.numeroCertificado || e.numeroManifiesto) !== identificador);
+        }
         reg.entregas.push({
           proveedor: m.proveedor, numeroCertificado: m.numeroCertificado, numeroManifiesto: m.numeroManifiesto,
           pesoKg: m.pesoKg, unidades: m.unidades, urlDrive: m.urlDrive, provisional: m.provisional, fecha: m.fecha
@@ -8410,7 +8414,13 @@ function closeBackupModal(){
         return;
       }
       const acta = actaActivaDeMes(mc.mesIndex);
+      const identificador = numeroCertificado || numeroManifiesto;
       if (!acta) {
+        if (identificador) {
+          materialesSinActa = materialesSinActa.filter(m =>
+            !(m.mesIndex === mc.mesIndex && m.nombre === mc.nombre && (m.numeroCertificado || m.numeroManifiesto) === identificador)
+          );
+        }
         materialesSinActa.push({
           mesIndex: mc.mesIndex, anio: 2026, nombre: mc.nombre,
           pesoKg: mc.peso, unidades: mc.unidades || null,
@@ -8428,6 +8438,10 @@ function closeBackupModal(){
         // se quita el provisional para no contar el peso dos veces.
         if (!esProvisional && numeroManifiesto) {
           reg.entregas = reg.entregas.filter(e => !(e.provisional && e.numeroManifiesto === numeroManifiesto));
+        }
+        // Si ya existe una entrega con el mismo número (mismo manifiesto/certificado subido otra vez), se reemplaza en vez de duplicar
+        if (identificador) {
+          reg.entregas = reg.entregas.filter(e => (e.numeroCertificado || e.numeroManifiesto) !== identificador);
         }
         reg.entregas.push({
           proveedor, numeroCertificado, numeroManifiesto,
