@@ -8696,12 +8696,31 @@ function closeBackupModal(){
     document.getElementById('modal-entregas').style.display = 'flex';
   }
 
-  function eliminarActaDeMes(mesIndex) {
+  function extraerFileIdDeUrl(url) {
+    if (!url) return null;
+    const m = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    return m ? m[1] : null;
+  }
+
+  async function eliminarActaDeMes(mesIndex) {
     const todasLasActasDelMes = actas.filter(a => a.mesIndex === mesIndex && a.año === AÑO_ACTUAL);
     if (todasLasActasDelMes.length === 0) return;
 
     const confirmar = confirm(`Esto va a borrar el acta de ${MESES[mesIndex]} 2026 por completo — incluyendo su historial de versiones y todos los materiales/entregas asociados.\n\nNo se puede deshacer. ¿Seguro que quieres continuar?`);
     if (!confirmar) return;
+
+    const tambienEnDrive = confirm('¿Quieres que también mueva el PDF del acta a la papelera de Google Drive? (queda recuperable ahí por un tiempo, no se borra para siempre)');
+
+    if (tambienEnDrive && APPS_SCRIPT_DRIVE_URL && !APPS_SCRIPT_DRIVE_URL.includes('PEGA_AQUI')) {
+      const fileIds = todasLasActasDelMes.map(a => extraerFileIdDeUrl(a.urlDrive)).filter(Boolean);
+      for (const fileId of fileIds) {
+        try {
+          await fetch(APPS_SCRIPT_DRIVE_URL, { method: 'POST', body: JSON.stringify({ accion: 'eliminar_archivo', fileId }) });
+        } catch (err) {
+          console.error('No se pudo borrar en Drive el archivo', fileId, err);
+        }
+      }
+    }
 
     const idsActa = todasLasActasDelMes.map(a => a.id);
     actas = actas.filter(a => !idsActa.includes(a.id));
