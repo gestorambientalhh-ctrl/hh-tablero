@@ -8404,6 +8404,21 @@ function closeBackupModal(){
     const fueraDeAlcance = [];
     const mesesUsados = new Set();
 
+    const identificadorGlobal = numeroCertificado || numeroManifiesto;
+    if (identificadorGlobal) {
+      const yaExiste = registros.some(r => r.entregas.some(e => (e.numeroCertificado || e.numeroManifiesto) === identificadorGlobal))
+        || materialesSinActa.some(m => (m.numeroCertificado || m.numeroManifiesto) === identificadorGlobal);
+      if (yaExiste) {
+        const tipoTexto = numeroCertificado ? 'certificado' : 'manifiesto';
+        const confirmarReemplazo = confirm(`El ${tipoTexto} N°${identificadorGlobal} ya está cargado en el sistema.\n\n¿Quieres subirlo de nuevo y reemplazar lo que ya tenías?`);
+        if (!confirmarReemplazo) {
+          estadoDiv.className = 'actas-estado-carga actas-estado-error';
+          estadoDiv.textContent = `Carga cancelada — se mantuvo el ${tipoTexto} N°${identificadorGlobal} que ya tenías.`;
+          return;
+        }
+      }
+    }
+
     materialesCert.forEach(mc => {
       if (mc.anio !== null && mc.anio !== 2026) {
         fueraDeAlcance.push(`${mc.nombre} (${mc.anio})`);
@@ -8681,6 +8696,21 @@ function closeBackupModal(){
     document.getElementById('modal-entregas').style.display = 'flex';
   }
 
+  function eliminarActaDeMes(mesIndex) {
+    const todasLasActasDelMes = actas.filter(a => a.mesIndex === mesIndex && a.año === AÑO_ACTUAL);
+    if (todasLasActasDelMes.length === 0) return;
+
+    const confirmar = confirm(`Esto va a borrar el acta de ${MESES[mesIndex]} 2026 por completo — incluyendo su historial de versiones y todos los materiales/entregas asociados.\n\nNo se puede deshacer. ¿Seguro que quieres continuar?`);
+    if (!confirmar) return;
+
+    const idsActa = todasLasActasDelMes.map(a => a.id);
+    actas = actas.filter(a => !idsActa.includes(a.id));
+    registros = registros.filter(r => !idsActa.includes(r.actaId));
+
+    render();
+    guardarMes(mesIndex);
+  }
+
   function celdaActa(i) {
     const versiones = versionesDeMes(i);
     const estado = estadoEfectivoActa(i);
@@ -8694,6 +8724,7 @@ function closeBackupModal(){
     if (acta) {
       html += `<button onclick="generarReporteAhorroMes(${i})" style="display:block; width:100%; font-size:12px; font-weight:600; color:#fff; margin-top:5px; background:var(--verde-texto); border:none; border-radius:6px; cursor:pointer; padding:6px 8px;">💰 Reporte ahorro</button>`;
       html += `<button onclick="generarOrdenCompraMes(${i})" style="display:block; width:100%; font-size:12px; font-weight:600; color:#fff; margin-top:5px; background:var(--azul); border:none; border-radius:6px; cursor:pointer; padding:6px 8px;">🧾 Orden de compra</button>`;
+      html += `<button onclick="eliminarActaDeMes(${i})" style="display:block; width:100%; font-size:11px; color:var(--rojo-texto); margin-top:5px; background:none; border:1px solid var(--rojo-texto); border-radius:6px; cursor:pointer; padding:4px 8px;">🗑️ eliminar acta</button>`;
     }
     if (versiones.length > 1) {
       html += `<span class="actas-version-tag" onclick="verHistorial(${i})">v${versiones.length} · ver historial</span>`;
@@ -9005,6 +9036,7 @@ function closeBackupModal(){
   window.generarOrdenCompraCliente = generarOrdenCompraCliente;
   window.generarOrdenCompraMes = generarOrdenCompraMes;
   window.borrarTodoConfirmando = borrarTodoConfirmando;
+  window.eliminarActaDeMes = eliminarActaDeMes;
   window.agregarFilaMaterial = agregarFilaMaterial;
   window.eliminarFilaMaterial = eliminarFilaMaterial;
   window.actualizarFilaMaterial = actualizarFilaMaterial;
