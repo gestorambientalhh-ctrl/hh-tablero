@@ -1673,6 +1673,12 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
     </div>
 
     <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--borde);">
+      <p style="font-size:13px; font-weight:600; margin:0 0 4px;">Faltantes</p>
+      <p style="font-size:12px; color:var(--texto-suave); margin:0 0 8px;">Materiales que ya tienen acta pero todavía no tienen ningún certificado subido.</p>
+      <div id="lista-faltantes" style="font-size:12.5px;"></div>
+    </div>
+
+    <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--borde);">
       <p style="font-size:13px; font-weight:600; margin:0 0 4px;">Materiales sin acta todavía</p>
       <p style="font-size:12px; color:var(--texto-suave); margin:0 0 8px;">Manifiestos o certificados que subiste antes de que existiera la acta de ese mes — se conectan solos apenas subas o generes esa acta.</p>
       <div id="lista-materiales-sin-acta" style="font-size:12.5px;"></div>
@@ -7705,8 +7711,33 @@ function closeBackupModal(){
 
     renderManifiestosPendientes();
     renderMaterialesSinActa();
+    renderFaltantes();
     poblarSelectMesActaManual();
     renderFilasActaManual();
+  }
+
+  function renderFaltantes() {
+    const lista = document.getElementById('lista-faltantes');
+    if (!lista) return;
+
+    const faltantes = registros.filter(r => r.entregas.length === 0);
+    if (faltantes.length === 0) {
+      lista.innerHTML = '<span class="actas-dif-vacio">No hay ninguno pendiente</span>';
+      return;
+    }
+
+    const conMes = faltantes.map(r => {
+      const acta = actas.find(a => a.id === r.actaId);
+      return { r, mesIndex: acta ? acta.mesIndex : -1 };
+    }).sort((a, b) => a.mesIndex - b.mesIndex);
+
+    lista.innerHTML = conMes.map(({ r, mesIndex }) => {
+      const mes = mesIndex >= 0 ? MESES[mesIndex] : '?';
+      const sufijo = r.unidadActa === 'Und' ? 'und' : 'kg';
+      return `<div style="display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid var(--borde);">
+        <span>${r.nombre} — ${mes} 2026 — ${r.cantidadActa.toLocaleString('es-CO')} ${sufijo}</span>
+      </div>`;
+    }).join('');
   }
 
   function renderMaterialesSinActa() {
@@ -8336,6 +8367,8 @@ function closeBackupModal(){
     actas = [];
     registros = [];
     estadoManual.fill(null);
+    materialesSinActa = [];
+    guardarMaterialesSinActa();
 
     if (db) {
       try {
