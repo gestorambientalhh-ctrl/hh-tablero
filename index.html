@@ -8538,6 +8538,12 @@ function closeBackupModal(){
       const buffer = await file.arrayBuffer();
       const doc = await pdfjsLib.getDocument({ data: buffer }).promise;
 
+      // ── OCR: si el certificado es un escaneo (imagen sin texto), leerlo con OCR ──
+      const _probeCert = await extraerPalabras(await doc.getPage(1));
+      if (_probeCert.length < 4) {
+        return await procesarActaOCR(file, doc, estadoDiv);
+      }
+
       let mesGlobalDetectado = null;
       let numeroCertificado = null;
       let numeroManifiesto = null;
