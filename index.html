@@ -9251,6 +9251,13 @@ function closeBackupModal(){
     if (mesDetectado !== null && mesDetectado !== undefined) selMes.value = String(mesDetectado);
     const cont = modal.querySelector('#ocr-filas');
     cont.innerHTML = '';
+    // datalist de materiales conocidos para autocompletar nombres mal leídos por el OCR
+    let dl = modal.querySelector('#ocr-materiales');
+    if (!dl) { dl = document.createElement('datalist'); dl.id = 'ocr-materiales'; modal.appendChild(dl); }
+    dl.innerHTML = materialesConocidos
+      .map(mc => typeof mc === 'string' ? mc : (mc && mc.nombre) || '')
+      .filter(Boolean)
+      .map(n => '<option value="' + _escAttr(n) + '"></option>').join('');
     if (!materiales.length) _ocrFilaHTML(cont, { grupo: 'Aprovechable', nombre: '', cantidad: '' });
     else materiales.forEach(m => _ocrFilaHTML(cont, m));
     const esCert = _ocrModo === 'certificado';
@@ -9271,7 +9278,7 @@ function closeBackupModal(){
         '<option value="Aprovechable">Aprovechable</option>' +
         '<option value="Disposición">Disposición</option>' +
       '</select>' +
-      '<input class="ocr-nombre" type="text" placeholder="Producto / material" value="' + _escAttr(m.nombre || '') + '" style="flex:2;min-width:120px;height:32px;border-radius:6px;border:1px solid var(--borde);padding:0 8px;font-size:13px;">' +
+      '<input class="ocr-nombre" list="ocr-materiales" type="text" placeholder="Producto / material" value="' + _escAttr(m.nombre || '') + '" style="flex:2;min-width:120px;height:32px;border-radius:6px;border:1px solid var(--borde);padding:0 8px;font-size:13px;">' +
       '<input class="ocr-cant" type="text" placeholder="kg" value="' + (m.cantidad !== '' && m.cantidad != null ? _escAttr(m.cantidad) : '') + '" style="width:90px;height:32px;border-radius:6px;border:1px solid var(--borde);padding:0 8px;font-size:13px;">' +
       '<button class="ocr-del" style="background:none;border:1px solid var(--borde);border-radius:6px;width:30px;height:32px;cursor:pointer;">×</button>';
     row.querySelector('.ocr-grupo').value = m.grupo || 'Aprovechable';
