@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="HH Tablero">
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://firebasestorage.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://script.google.com https://drive.google.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://script.google.com https://script.googleusercontent.com https://www.gstatic.com https://cdnjs.cloudflare.com; worker-src 'self' blob: https://cdnjs.cloudflare.com;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://firebasestorage.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://script.google.com https://drive.google.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://script.google.com https://script.googleusercontent.com https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://tessdata.projectnaptha.com; worker-src 'self' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net;">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Gestor HH · Tasks</title>
 <style>
@@ -692,6 +692,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
   .actas-btn-enseñar { background: var(--amarillo-texto); color:#fff; border:none; border-radius:7px; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; margin-top:8px; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
 </head>
 <body>
 
@@ -7269,6 +7270,12 @@ function closeBackupModal(){
       const buffer = await file.arrayBuffer();
       const doc = await pdfjsLib.getDocument({ data: buffer }).promise;
 
+      // ── OCR: si el PDF es un escaneo (imagen sin texto), leerlo con OCR ──
+      const _probe = await extraerPalabras(await doc.getPage(1));
+      if (_probe.length < 4) {
+        return await procesarActaOCR(file, doc, estadoDiv);
+      }
+
       let mesDetectado = null;
       let grupoActual = null;
       const materialesExtraidos = [];
@@ -9070,6 +9077,195 @@ function closeBackupModal(){
   }
 
   iniciar();
+
+  // ── OCR: leer actas escaneadas (imágenes sin texto) ───────────
+  function _distanciaTexto(a, b) {
+    a = normalizar(a); b = normalizar(b);
+    const m = a.length, n = b.length;
+    const d = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
+    for (let j = 0; j <= n; j++) d[0][j] = j;
+    for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) {
+      const c = a[i - 1] === b[j - 1] ? 0 : 1;
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + c);
+    }
+    return d[m][n];
+  }
+
+  function _snapMaterialConocido(nombre) {
+    if (!materialesConocidos.length) return nombre;
+    let mejor = null, mejorRatio = 0;
+    materialesConocidos.forEach(mc => {
+      const nombreMc = typeof mc === 'string' ? mc : (mc && mc.nombre) || '';
+      if (!nombreMc) return;
+      const dist = _distanciaTexto(nombre, nombreMc);
+      const ratio = 1 - dist / Math.max(nombre.length, nombreMc.length, 1);
+      if (ratio > mejorRatio) { mejorRatio = ratio; mejor = nombreMc; }
+    });
+    return mejorRatio >= 0.62 ? mejor : nombre;
+  }
+
+  function _parseCantidadOCR(txt) {
+    let t = String(txt).trim().replace(/\s/g, '');
+    if (/,/.test(t)) t = t.replace(/\./g, '').replace(',', '.');
+    else t = t.replace(/\./g, '');
+    const n = parseFloat(t);
+    return isNaN(n) ? null : n;
+  }
+
+  function _escAttr(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function extraerMaterialesOCR(texto) {
+    const lineas = texto.split('\n').map(l => l.trim()).filter(Boolean);
+    const reNum = /(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?|\d+(?:[.,]\d+)?)\s*(kg|kilos?|kgs)?\.?$/i;
+    const out = [];
+    for (const l of lineas) {
+      const m = l.match(reNum);
+      if (!m) continue;
+      const cant = _parseCantidadOCR(m[1]);
+      if (cant === null || cant <= 0 || cant > 10000000) continue;
+      let nombre = l.slice(0, m.index).replace(/[|:.\-–—]+$/, '').trim();
+      if (!/[a-záéíóúñü]/i.test(nombre)) continue;
+      const nUp = normalizar(nombre);
+      const esRuido = /(^|\s)(nit|cc|c\.c|certifica|cantidad|material|total|fecha|nro|no|km|via)($|\s)/.test(nUp);
+      const esMaterial = /producto|grasa|tipo|plastico|carton|papel|metal|vidrio|organico|aprovechable|disposicion|residuo|chatarra|madera/.test(nUp);
+      if (esRuido && !esMaterial) continue;
+      if (nombre.length < 2 || nombre.length > 60) continue;
+      out.push({ grupo: 'Aprovechable', nombre: _snapMaterialConocido(nombre), cantidad: cant, unidad: 'Kg' });
+    }
+    return out;
+  }
+
+  function detectarMesTexto(texto) {
+    const t = normalizar(texto);
+    for (let i = 0; i < MESES_LARGOS.length; i++) if (t.includes(MESES_LARGOS[i])) return i;
+    const mFecha = t.match(/20\d{2}-(\d{1,2})-\d{1,2}/);
+    if (mFecha) return parseInt(mFecha[1], 10) - 1;
+    return null;
+  }
+
+  async function procesarActaOCR(file, doc, estadoDiv) {
+    if (typeof Tesseract === 'undefined') {
+      estadoDiv.className = 'actas-estado-carga actas-estado-error';
+      estadoDiv.style.display = 'block';
+      estadoDiv.textContent = 'El lector OCR aún no cargó — espera unos segundos y vuelve a intentar.';
+      return;
+    }
+    estadoDiv.className = 'actas-estado-carga actas-estado-cargando';
+    estadoDiv.style.display = 'block';
+    estadoDiv.textContent = 'PDF escaneado detectado — leyendo con OCR…';
+    let textoTotal = '';
+    try {
+      for (let p = 1; p <= doc.numPages; p++) {
+        const page = await doc.getPage(p);
+        const viewport = page.getViewport({ scale: 2 });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+        const { data } = await Tesseract.recognize(canvas, 'spa', {
+          logger: m => {
+            if (m.status) estadoDiv.textContent = `Leyendo con OCR (página ${p}/${doc.numPages})… ${m.status} ${Math.round((m.progress || 0) * 100)}%`;
+          }
+        });
+        textoTotal += '\n' + data.text;
+      }
+    } catch (err) {
+      estadoDiv.className = 'actas-estado-carga actas-estado-error';
+      estadoDiv.textContent = 'No pude leer el PDF escaneado con OCR. Intenta con un escaneo más nítido.';
+      console.error(err);
+      return;
+    }
+    const mes = detectarMesTexto(textoTotal);
+    const materiales = extraerMaterialesOCR(textoTotal);
+    estadoDiv.style.display = 'none';
+    abrirModalRevisionOCR(file, mes, materiales);
+  }
+
+  let _ocrModalFile = null;
+
+  function abrirModalRevisionOCR(file, mesDetectado, materiales) {
+    _ocrModalFile = file;
+    let modal = document.getElementById('modal-ocr');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'modal-ocr';
+      modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:70;align-items:center;justify-content:center;';
+      modal.innerHTML =
+        '<div style="background:#fff;border-radius:12px;padding:20px;width:620px;max-width:94vw;max-height:88vh;overflow-y:auto;">' +
+          '<p style="font-weight:600;font-size:15px;margin:0 0 4px;">Revisar acta escaneada (OCR)</p>' +
+          '<p style="font-size:12.5px;color:var(--texto-suave);margin:0 0 12px;">Leí el documento con OCR. Revisa que cada producto y su cantidad estén bien antes de guardar — corrige lo que haga falta.</p>' +
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">' +
+            '<span style="font-size:12.5px;font-weight:600;">Mes:</span>' +
+            '<select id="ocr-mes" style="height:34px;border-radius:7px;border:1px solid var(--borde);font-size:13px;padding:0 8px;"></select>' +
+          '</div>' +
+          '<div id="ocr-filas"></div>' +
+          '<button id="ocr-add" style="background:none;border:1px solid var(--borde);border-radius:7px;padding:5px 10px;font-size:12px;cursor:pointer;margin:6px 0 14px;">+ agregar fila</button>' +
+          '<div style="display:flex;justify-content:flex-end;gap:8px;">' +
+            '<button id="ocr-cancel" style="background:none;border:1px solid var(--borde);border-radius:7px;padding:8px 14px;font-size:13px;cursor:pointer;">Cancelar</button>' +
+            '<button id="ocr-save" class="actas-btn">Guardar acta</button>' +
+          '</div>' +
+        '</div>';
+      document.body.appendChild(modal);
+      modal.querySelector('#ocr-add').addEventListener('click', () => _ocrFilaHTML(document.getElementById('ocr-filas'), { grupo: 'Aprovechable', nombre: '', cantidad: '' }));
+      modal.querySelector('#ocr-cancel').addEventListener('click', () => { modal.style.display = 'none'; });
+      modal.querySelector('#ocr-save').addEventListener('click', _ocrGuardar);
+    }
+    const selMes = modal.querySelector('#ocr-mes');
+    selMes.innerHTML = MESES.map((m, i) => '<option value="' + i + '">' + m + ' ' + AÑO_ACTUAL + '</option>').join('');
+    if (mesDetectado !== null && mesDetectado !== undefined) selMes.value = String(mesDetectado);
+    const cont = modal.querySelector('#ocr-filas');
+    cont.innerHTML = '';
+    if (!materiales.length) _ocrFilaHTML(cont, { grupo: 'Aprovechable', nombre: '', cantidad: '' });
+    else materiales.forEach(m => _ocrFilaHTML(cont, m));
+    modal.style.display = 'flex';
+  }
+
+  function _ocrFilaHTML(cont, m) {
+    const row = document.createElement('div');
+    row.className = 'ocr-fila';
+    row.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;align-items:center;';
+    row.innerHTML =
+      '<select class="ocr-grupo" style="height:32px;border-radius:6px;border:1px solid var(--borde);font-size:12px;padding:0 6px;">' +
+        '<option value="Aprovechable">Aprovechable</option>' +
+        '<option value="Disposición">Disposición</option>' +
+      '</select>' +
+      '<input class="ocr-nombre" type="text" placeholder="Producto / material" value="' + _escAttr(m.nombre || '') + '" style="flex:2;min-width:120px;height:32px;border-radius:6px;border:1px solid var(--borde);padding:0 8px;font-size:13px;">' +
+      '<input class="ocr-cant" type="text" placeholder="kg" value="' + (m.cantidad !== '' && m.cantidad != null ? _escAttr(m.cantidad) : '') + '" style="width:90px;height:32px;border-radius:6px;border:1px solid var(--borde);padding:0 8px;font-size:13px;">' +
+      '<button class="ocr-del" style="background:none;border:1px solid var(--borde);border-radius:6px;width:30px;height:32px;cursor:pointer;">×</button>';
+    row.querySelector('.ocr-grupo').value = m.grupo || 'Aprovechable';
+    row.querySelector('.ocr-del').addEventListener('click', () => row.remove());
+    cont.appendChild(row);
+  }
+
+  async function _ocrGuardar() {
+    const modal = document.getElementById('modal-ocr');
+    const mesIndex = parseInt(modal.querySelector('#ocr-mes').value, 10);
+    const filas = [...modal.querySelectorAll('.ocr-fila')].map(r => ({
+      grupo: r.querySelector('.ocr-grupo').value,
+      nombre: r.querySelector('.ocr-nombre').value.trim(),
+      cantidad: _parseCantidadOCR(r.querySelector('.ocr-cant').value)
+    })).filter(f => f.nombre && f.cantidad !== null && f.cantidad > 0);
+    if (!filas.length) { alert('Agrega al menos un material con su cantidad.'); return; }
+    const estadoDiv = document.getElementById('estado-carga');
+    const eraCorreccion = actaActivaDeMes(mesIndex) !== null;
+    if (eraCorreccion && !confirm('Ya existe una acta para ' + MESES[mesIndex] + ' ' + AÑO_ACTUAL + '.\n\n¿Reemplazarla? La versión anterior queda guardada en el historial.')) return;
+    const nuevaActa = crearActaParaMes(mesIndex);
+    filas.forEach(f => agregarRegistro(nuevaActa.id, f.grupo, f.nombre, f.cantidad, 'Kg'));
+    reconciliarMaterialesSinActa(mesIndex);
+    modal.style.display = 'none';
+    render();
+    guardarMes(mesIndex);
+    estadoDiv.className = 'actas-estado-carga actas-estado-ok';
+    estadoDiv.style.display = 'block';
+    estadoDiv.textContent = 'Listo — acta de ' + MESES[mesIndex] + ' ' + AÑO_ACTUAL + ' guardada con ' + filas.length + ' materiales (leída por OCR).';
+    if (_ocrModalFile) {
+      subirArchivoADrive(_ocrModalFile, 'acta', mesIndex).then(url => {
+        if (url) { nuevaActa.urlDrive = url; render(); guardarMes(mesIndex); }
+      });
+    }
+  }
 
   // Exponer a window solo lo que se llama desde botones (onclick/onchange) del HTML
   window.abrirModalEnsenar = abrirModalEnsenar;
