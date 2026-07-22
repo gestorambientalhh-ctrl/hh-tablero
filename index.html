@@ -5243,6 +5243,9 @@ function renderDashboard(){
 
 // ── FLUJO MODULE ──────────────────────────────────────────────
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwSCVADRhqQJ2Mm_6owSm7N1UptNnXVsWkkpKKSe97-_waK1u5WHJUtkNrvlpUERVik/exec';
+// Apps Script SEPARADO para Montevra (biz 2), desplegado en LA OTRA cuenta de Google.
+// Pega aquí la URL del deployment de Montevra cuando lo tengas.
+const APPS_SCRIPT_URL_MONTEVRA = 'https://script.google.com/macros/s/AKfycbysv00gvE54pCf10dubkrmya7hDyLes3tFgIxodUzzwAJE9Qa_RJz5cMT2s7CFgjIaT/exec';
 let flujoBiz = 0;
 let flujoType = 'pago';
 let flujoMesFilter = '';
@@ -5346,6 +5349,14 @@ async function subirSoporte(input){
   const btn = document.getElementById('soporte-btn-'+taskId);
   if(btn){ btn.disabled=true; }
 
+  // Enrutar por unidad: Montevra (biz 2) usa su propio Apps Script (otra cuenta)
+  const urlDestino = (t.biz === 2) ? APPS_SCRIPT_URL_MONTEVRA : APPS_SCRIPT_URL;
+  if(t.biz === 2 && (!APPS_SCRIPT_URL_MONTEVRA || APPS_SCRIPT_URL_MONTEVRA.includes('PEGA_AQUI'))){
+    if(btn){ btn.disabled=false; }
+    alert('Falta configurar el Apps Script de Montevra. Despliega el script en la otra cuenta y pega su URL en APPS_SCRIPT_URL_MONTEVRA dentro del código.');
+    return;
+  }
+
   // Asegurar el array de soportes y migrar el soporteUrl antiguo una sola vez
   if(!t.soportes) t.soportes = [];
   if(t.soporteUrl && !t.soportes.length){
@@ -5378,7 +5389,7 @@ async function subirSoporte(input){
       file: base64,
       filename: file.name,
       mimeType: file.type,
-      fecha: t.date ? fmtDate(t.date) : new Date().toLocaleDateString('es-CO'),
+      fecha: t.date || new Date().toISOString().split('T')[0],
       entidad: t.entidad || t.title,
       descripcion: (t.supportDesc || t.title) + ' - Factura ' + numFactura,
       tipo: t.flujoType || 'pago',
@@ -5386,7 +5397,7 @@ async function subirSoporte(input){
     };
 
     try {
-      const resp = await fetch(APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify(payload) });
+      const resp = await fetch(urlDestino, { method:'POST', body: JSON.stringify(payload) });
       const data = await resp.json();
       if(data.ok){
         t.soportes.push({ url: data.url, nombre: file.name });
@@ -5860,7 +5871,7 @@ function savePagoSinSoporte(){
 
   // Enviar la fila a la hoja de Google SIN soporte (columna soporte vacía → sale amarilla)
   try {
-    fetch(APPS_SCRIPT_URL, {
+    fetch((t.biz === 2 ? APPS_SCRIPT_URL_MONTEVRA : APPS_SCRIPT_URL), {
       method:'POST',
       body: JSON.stringify({
         sinSoporte: true,
@@ -5882,6 +5893,13 @@ async function subirSoporteParcial(input){
   const t = tasks.find(x=>x.id===taskId);
   const pago = window._ppPendiente;
   if(!t || !pago) return;
+
+  // Enrutar por unidad: Montevra (biz 2) usa su propio Apps Script (otra cuenta)
+  const urlDestino = (t.biz === 2) ? APPS_SCRIPT_URL_MONTEVRA : APPS_SCRIPT_URL;
+  if(t.biz === 2 && (!APPS_SCRIPT_URL_MONTEVRA || APPS_SCRIPT_URL_MONTEVRA.includes('PEGA_AQUI'))){
+    alert('Falta configurar el Apps Script de Montevra. Despliega el script en la otra cuenta y pega su URL en APPS_SCRIPT_URL_MONTEVRA dentro del código.');
+    return;
+  }
 
   if(!files.length){
     // Guardar sin soporte si cancela
@@ -5919,7 +5937,7 @@ async function subirSoporteParcial(input){
     };
 
     try {
-      const resp = await fetch(APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify(payload) });
+      const resp = await fetch(urlDestino, { method:'POST', body: JSON.stringify(payload) });
       const data = await resp.json();
       if(data.ok) pago.urls.push(data.url);
     } catch(err){ /* continúa con el siguiente archivo */ }
