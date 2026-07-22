@@ -5350,8 +5350,8 @@ async function subirSoporte(input){
   if(btn){ btn.disabled=true; }
 
   // Enrutar por unidad: Montevra (biz 2) usa su propio Apps Script (otra cuenta)
-  const urlDestino = (t.biz === 2) ? APPS_SCRIPT_URL_MONTEVRA : APPS_SCRIPT_URL;
-  if(t.biz === 2 && (!APPS_SCRIPT_URL_MONTEVRA || APPS_SCRIPT_URL_MONTEVRA.includes('PEGA_AQUI'))){
+  const urlDestino = (Number(t.biz) === 2) ? APPS_SCRIPT_URL_MONTEVRA : APPS_SCRIPT_URL;
+  if(Number(t.biz) === 2 && (!APPS_SCRIPT_URL_MONTEVRA || APPS_SCRIPT_URL_MONTEVRA.includes('PEGA_AQUI'))){
     if(btn){ btn.disabled=false; }
     alert('Falta configurar el Apps Script de Montevra. Despliega el script en la otra cuenta y pega su URL en APPS_SCRIPT_URL_MONTEVRA dentro del código.');
     return;
@@ -5871,7 +5871,7 @@ function savePagoSinSoporte(){
 
   // Enviar la fila a la hoja de Google SIN soporte (columna soporte vacía → sale amarilla)
   try {
-    fetch((t.biz === 2 ? APPS_SCRIPT_URL_MONTEVRA : APPS_SCRIPT_URL), {
+    fetch((Number(t.biz) === 2 ? APPS_SCRIPT_URL_MONTEVRA : APPS_SCRIPT_URL), {
       method:'POST',
       body: JSON.stringify({
         sinSoporte: true,
@@ -5895,8 +5895,8 @@ async function subirSoporteParcial(input){
   if(!t || !pago) return;
 
   // Enrutar por unidad: Montevra (biz 2) usa su propio Apps Script (otra cuenta)
-  const urlDestino = (t.biz === 2) ? APPS_SCRIPT_URL_MONTEVRA : APPS_SCRIPT_URL;
-  if(t.biz === 2 && (!APPS_SCRIPT_URL_MONTEVRA || APPS_SCRIPT_URL_MONTEVRA.includes('PEGA_AQUI'))){
+  const urlDestino = (Number(t.biz) === 2) ? APPS_SCRIPT_URL_MONTEVRA : APPS_SCRIPT_URL;
+  if(Number(t.biz) === 2 && (!APPS_SCRIPT_URL_MONTEVRA || APPS_SCRIPT_URL_MONTEVRA.includes('PEGA_AQUI'))){
     alert('Falta configurar el Apps Script de Montevra. Despliega el script en la otra cuenta y pega su URL en APPS_SCRIPT_URL_MONTEVRA dentro del código.');
     return;
   }
