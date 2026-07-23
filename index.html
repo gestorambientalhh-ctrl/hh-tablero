@@ -1753,6 +1753,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
   </div>
   <input type="file" id="input-manifiesto-mes" accept="application/pdf,image/*" style="display:none" onchange="procesarManifiestoMes(event)">
   <input type="file" id="input-acta-manifiesto" accept="application/pdf,image/*" style="display:none" onchange="procesarActaManifiesto(event)">
+  <input type="file" id="input-anexo-material" accept="application/pdf,image/*" style="display:none" onchange="procesarAnexoMaterial(event)">
   <div id="estado-carga-cert" class="actas-estado-carga"></div>
 
   <div id="modal-proveedor" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:50; align-items:center; justify-content:center;">
@@ -9662,11 +9663,15 @@ function closeBackupModal(){
         <div style="margin-top:3px;">${link}</div>
       </div>`;
     }).join('');
+    lista.innerHTML += `<div style="padding:12px 0 0"><button onclick="agregarAnexoMaterial('${reg.nombre.replace(/'/g, "\\'")}', '${reg.actaId}')" style="width:100%;background:var(--azul);color:#fff;border:none;border-radius:7px;padding:9px;font-size:12.5px;font-weight:600;cursor:pointer">＋ Agregar anexo (PDF + valor)</button></div>`;
 
     const totalKg = totalEntregasKg(reg);
     const totalUnd = totalEntregasUnidades(reg);
+    const esUnd = reg.unidadActa === 'Und';
+    const base = esUnd ? totalUnd : totalKg;
+    const dif = reg.cantidadActa - base;
     const totalesTxt = [totalKg ? `${totalKg.toLocaleString('es-CO')} kg` : null, totalUnd ? `${totalUnd.toLocaleString('es-CO')} und` : null].filter(Boolean).join(' · ');
-    document.getElementById('entregas-total').textContent = 'Total certificado: ' + totalesTxt;
+    document.getElementById('entregas-total').innerHTML = 'Total certificado: ' + totalesTxt + (dif !== 0 ? ` <span style="color:var(--rojo-texto);font-weight:600">· faltan ${dif.toLocaleString('es-CO')} ${esUnd?'und':'kg'}</span>` : ' <span style="color:var(--verde-texto);font-weight:600">· cuadra ✓</span>');
 
     document.getElementById('modal-entregas').style.display = 'flex';
   }
@@ -9752,7 +9757,7 @@ function closeBackupModal(){
     // Sin certificado todavía — amarillo, muestra el peso del acta
     if (reg.entregas.length === 0) {
       const texto = `${reg.cantidadActa.toLocaleString('es-CO')} ${sufijoActa}`;
-      return `<td><button class="actas-badge actas-badge-amarillo" onclick="editarCertificado('${nombreEsc}', '${reg.actaId}')" title="Sin certificado aún — clic para anotar a mano">${texto}</button></td>`;
+      return `<td><button class="actas-badge actas-badge-amarillo" onclick="agregarAnexoMaterial('${nombreEsc}', '${reg.actaId}')" title="Clic para adjuntar soporte (PDF) y poner el valor">${texto}</button></td>`;
     }
 
     // Solo hay manifiesto(s) sin certificar todavía — azul
@@ -9870,6 +9875,44 @@ function closeBackupModal(){
     if (file) m.actaNombre = file.name;
     guardarManifiestos(); render();
     if (estadoDiv) { estadoDiv.className = 'actas-estado-carga actas-estado-ok'; estadoDiv.style.display = 'block'; estadoDiv.innerHTML = `Acta ${file ? 'adjuntada' : 'actualizada'} para el manifiesto N°${m.numero||''}${m.valor ? ' — $' + Number(m.valor).toLocaleString('es-CO') : ''}.` + (actaUrl ? ` <a href="${actaUrl}" target="_blank" style="color:var(--azul);font-weight:600">Ver acta</a>` : ''); }
+  }
+
+  let _anexoRef = null;
+  function agregarAnexoMaterial(nombreMat, actaId) {
+    _anexoRef = { nombreMat, actaId };
+    const inp = document.getElementById('input-anexo-material');
+    if (inp) { inp.value = ''; inp.click(); }
+  }
+  async function procesarAnexoMaterial(event) {
+    const ref = _anexoRef; if (!ref) return;
+    const reg = registros.find(r => r.actaId === ref.actaId && r.nombre === ref.nombreMat);
+    if (!reg) return;
+    const acta = actas.find(a => a.id === ref.actaId);
+    const file = event.target.files[0];
+    const estadoDiv = document.getElementById('estado-carga');
+    let urlDrive = null;
+    if (file) {
+      if (estadoDiv) { estadoDiv.className = 'actas-estado-carga actas-estado-cargando'; estadoDiv.style.display = 'block'; estadoDiv.textContent = 'Subiendo soporte a Drive…'; }
+      try { urlDrive = await subirArchivoADrive(file, 'certificado', acta ? acta.mesIndex : 0); } catch(e){}
+    }
+    const esUnd = reg.unidadActa === 'Und';
+    const numero = prompt('Número del soporte (certificado / manifiesto / anexo) — opcional:', '');
+    if (numero === null) { if (estadoDiv) estadoDiv.style.display = 'none'; return; }
+    const valorStr = prompt('Valor a cruzar ' + (esUnd ? '(unidades)' : '(kg)') + ' para "' + reg.nombre + '":', '');
+    if (valorStr === null) { if (estadoDiv) estadoDiv.style.display = 'none'; return; }
+    const val = parseFloat(String(valorStr).replace(/\./g, '').replace(',', '.'));
+    if (isNaN(val)) { alert('Valor inválido.'); return; }
+    reg.entregas.push({ proveedor: 'Manual', numeroCertificado: numero ? numero.trim() : null, numeroManifiesto: null, pesoKg: esUnd ? null : val, unidades: esUnd ? val : null, urlDrive, provisional: false, fecha: Date.now() });
+    render();
+    if (acta) guardarMes(acta.mesIndex, acta.año);
+    const base = esUnd ? totalEntregasUnidades(reg) : totalEntregasKg(reg);
+    const dif = reg.cantidadActa - base;
+    if (estadoDiv) {
+      estadoDiv.className = 'actas-estado-carga actas-estado-ok'; estadoDiv.style.display = 'block';
+      estadoDiv.innerHTML = (dif === 0)
+        ? `Cuadra con el acta ✓ (${reg.nombre}).` + (urlDrive ? ` <a href="${urlDrive}" target="_blank" style="color:var(--azul);font-weight:600">ver soporte</a>` : '')
+        : `Anexo agregado a "${reg.nombre}". Faltan <b>${dif.toLocaleString('es-CO')} ${esUnd ? 'und' : 'kg'}</b> para cuadrar — vuelve a dar clic en la celda para agregar otro anexo.` + (urlDrive ? ` <a href="${urlDrive}" target="_blank" style="color:var(--azul);font-weight:600">ver soporte</a>` : '');
+    }
   }
 
   function render() {
@@ -10395,6 +10438,8 @@ function closeBackupModal(){
   window.eliminarManifiesto = eliminarManifiesto;
   window.adjuntarActaManifiesto = adjuntarActaManifiesto;
   window.procesarActaManifiesto = procesarActaManifiesto;
+  window.agregarAnexoMaterial = agregarAnexoMaterial;
+  window.procesarAnexoMaterial = procesarAnexoMaterial;
 })();
 </script>
 </body>
