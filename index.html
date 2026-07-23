@@ -6052,26 +6052,46 @@ async function nmDescargarConciliacion(){
     columnStyles:{1:{halign:'right'},2:{halign:'right'},3:{halign:'right'},4:{halign:'right'}},
     didParseCell:(d)=>{ if(d.section==='body'&&d.column.index===4) d.cell.styles.textColor=[185,28,28]; }
   });
-  // Detalle por material de cada mes con desglose
+  // Detalle por mes: materiales + abonos registrados
   for(const m of ord){
-    if(!m.items) continue;
-    const rows=NM_CATALOGO.filter(([mat])=>m.items[mat]!==undefined).map(([mat])=>{
-      const cant=Number(m.items[mat])||0, p=nmPrecio(mat);
-      return [mat, nmQty(cant), nmMoney(p), nmMoney(cant*p)];
-    });
-    if(!rows.length) continue;
+    const abs=(m.abonos||[]).slice().sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+    let rows=[];
+    if(m.items){
+      rows=NM_CATALOGO.filter(([mat])=>m.items[mat]!==undefined).map(([mat])=>{
+        const cant=Number(m.items[mat])||0, p=nmPrecio(mat);
+        return [mat, nmQty(cant), nmMoney(p), nmMoney(cant*p)];
+      });
+    }
+    if(!rows.length && !abs.length) continue;
     let y=doc.lastAutoTable.finalY+18;
-    if(y>500){ doc.addPage(); y=50; }
+    if(y>620){ doc.addPage(); y=50; }
     doc.setFontSize(11); doc.setTextColor(45,74,122); doc.text(m.label||m.ym,40,y);
+    const stBody={fontSize:8,cellPadding:4,textColor:[26,26,26],lineColor:[229,229,229],lineWidth:0.5};
+    if(rows.length){
+      doc.autoTable({
+        startY:y+6,
+        head:[['Material','Cantidad (kg)','$ unit.','Total']],
+        body:rows,
+        foot:[['Total generado','','',nmMoney(nmGenerado(m))]],
+        styles:stBody,
+        headStyles:{fillColor:[255,255,255],textColor:[45,74,122],fontStyle:'bold',lineColor:[45,74,122],lineWidth:{bottom:1.5}},
+        footStyles:{fillColor:[255,255,255],textColor:[26,26,26],fontStyle:'bold',lineColor:[45,74,122],lineWidth:{top:1.5}},
+        columnStyles:{1:{halign:'right'},2:{halign:'right'},3:{halign:'right'}},
+        margin:{left:40,right:40}
+      });
+      y=doc.lastAutoTable.finalY;
+    }
+    // Abonos registrados del mes (con fecha)
     doc.autoTable({
-      startY:y+6,
-      head:[['Material','Cantidad (kg)','$ unit.','Total']],
-      body:rows,
-      foot:[['Total generado','','',nmMoney(nmGenerado(m))]],
-      styles:{fontSize:8,cellPadding:4,textColor:[26,26,26],lineColor:[229,229,229],lineWidth:0.5},
-      headStyles:{fillColor:[255,255,255],textColor:[45,74,122],fontStyle:'bold',lineColor:[45,74,122],lineWidth:{bottom:1.5}},
-      footStyles:{fillColor:[255,255,255],textColor:[26,26,26],fontStyle:'bold',lineColor:[45,74,122],lineWidth:{top:1.5}},
-      columnStyles:{1:{halign:'right'},2:{halign:'right'},3:{halign:'right'}},
+      startY:y+10,
+      head:[['Abonos recibidos','Fecha','Factura','Valor']],
+      body: abs.length ? abs.map((a,i)=>['Abono '+(i+1), a.fecha?fmtDate(a.fecha):'—', a.facturaNumero||'—', nmMoney(a.valor)])
+                        : [['Sin abonos registrados','','','']],
+      foot: abs.length ? [['Total abonado','','',nmMoney(nmAbonado(m))]] : undefined,
+      styles:stBody,
+      headStyles:{fillColor:[240,253,244],textColor:[22,101,52],fontStyle:'bold',lineColor:[22,101,52],lineWidth:{bottom:1.5}},
+      footStyles:{fillColor:[255,255,255],textColor:[22,101,52],fontStyle:'bold',lineColor:[22,101,52],lineWidth:{top:1.5}},
+      columnStyles:{1:{halign:'right'},3:{halign:'right'}},
       margin:{left:40,right:40}
     });
   }
