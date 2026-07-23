@@ -5814,7 +5814,8 @@ function nmMesCard(m){
     <div style="display:flex;justify-content:space-between;padding:7px 0;font-size:12px;border-bottom:1px dashed #e6e6e2"><span style="color:var(--text2)">(−) Abonos</span><span style="color:#16a34a">− ${nmMoney(ab)}</span></div>
     <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px;font-weight:700"><span>Saldo acumulado</span><span style="color:${saldo>0?'#dc2626':'#16a34a'}">${nmMoney(saldo)}</span></div>
   </div>`;
-  const cobroBtn=`<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button onclick="nmGenerarCuentaCobro('${m.id}')" style="height:30px;padding:0 13px;font-size:12px;font-weight:600;background:#2d4a7a;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit">🧾 Cuenta de cobro (PDF)</button></div>`;
+  const cobroLink=m.cuentaCobroUrl?`<a href="${m.cuentaCobroUrl}" target="_blank" style="height:30px;display:inline-flex;align-items:center;padding:0 10px;font-size:11px;color:#2d4a7a;text-decoration:none;border:1px solid #c5d3e8;border-radius:8px;margin-right:8px">📎 Cuenta en Drive ↗</a>`:'';
+  const cobroBtn=`<div style="display:flex;justify-content:flex-end;align-items:center;margin-bottom:10px">${cobroLink}<button onclick="nmGenerarCuentaCobro('${m.id}')" style="height:30px;padding:0 13px;font-size:12px;font-weight:600;background:#2d4a7a;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit">🧾 Cuenta de cobro (PDF)</button></div>`;
   const body=abierto?`<div style="border-top:1px solid var(--border);padding:14px 14px">${cobroBtn}${concil}${nmMaterialesHtml(m)}${nmAbonosHtml(m)}</div>`:'';
   return `<div class="fl-row" style="flex-direction:column;align-items:stretch;padding:0">${head}${body}</div>`;
 }
@@ -5995,7 +5996,16 @@ async function nmGenerarCuentaCobro(id){
   doc.setFontSize(13); doc.setTextColor(185,28,28);
   doc.text('Saldo total por cobrar:',tx,y); doc.text(nmMoney(saldoAcum),555,y,{align:'right'});
   if(m.facturaSiigo&&m.facturaSiigo.numero){ y+=24; doc.setFontSize(9); doc.setTextColor(120,120,120); doc.text('Factura Siigo asociada: '+m.facturaSiigo.numero,tx,y); }
-  doc.save('Cuenta de cobro Nuevo Milenio '+(m.ym||'')+'.pdf');
+  const nombre='Cuenta de cobro Nuevo Milenio '+(m.ym||'')+'.pdf';
+  doc.save(nombre); // descarga local
+  // Guardar el mismo PDF en Drive (carpeta del mes → subcarpeta “Cuentas de cobro”)
+  try{
+    const base64=doc.output('datauristring').split(',')[1];
+    const resp=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({ reporte:true, file:base64, filename:nombre, mimeType:'application/pdf', fecha:(m.ym||new Date().toISOString().slice(0,7))+'-15', entidad:'Nuevo Milenio', descripcion:'Cuenta de cobro Nuevo Milenio '+(m.label||m.ym), subcarpeta:'Cuentas de cobro' })});
+    const data=await resp.json();
+    if(data && data.ok){ m.cuentaCobroUrl=data.url; persistNM(); renderFlujoBody(); alert('Cuenta de cobro descargada y guardada en Drive (carpeta del mes → Cuentas de cobro).'); }
+    else alert('Cuenta descargada. No se pudo guardar en Drive: '+((data&&data.error)||'revisa el Apps Script.'));
+  }catch(e){ console.warn('Subida cuenta de cobro:', e); }
 }
 async function nmDescargarConciliacion(){
   const corteYM=(nmFechaCorte||new Date().toISOString().split('T')[0]).slice(0,7);
