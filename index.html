@@ -1813,6 +1813,10 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 
   <!-- INPUT OCULTO PARA SOPORTE -->
   <input type="file" id="soporte-file-input" accept="image/*,.pdf" multiple style="display:none" onchange="subirSoporte(this)">
+  <!-- INPUT OCULTO PARA SOPORTE PURINA -->
+  <input type="file" id="purina-file-input" accept="image/*,.pdf" style="display:none" onchange="purinaFileSelected(this)">
+  <!-- INPUT OCULTO PARA LECTURA AUTOMÁTICA DE FACTURA PURINA -->
+  <input type="file" id="purina-extract-input" accept="image/*,.pdf" style="display:none" onchange="extraerFacturaPurina(this)">
 
   <!-- MOBILE BOTTOM NAV -->->
   <nav class="mob-nav">
@@ -5249,6 +5253,13 @@ const APPS_SCRIPT_URL_MONTEVRA = 'https://script.google.com/macros/s/AKfycbysv00
 let flujoBiz = 0;
 let flujoType = 'pago';
 let flujoMesFilter = '';
+// ── PURINA (submódulo de HH / biz 0) ──────────────────────────
+let flujoSub = 'normal'; // 'normal' | 'purina'
+let purinaFacturas = JSON.parse(localStorage.getItem('hh-purina-v1')||'[]');
+let _purinaFormOpen = false;
+let _purinaPagoFor = null; // id de factura con el form de pago abierto
+let _purinaExtractFile = null; // PDF/imagen leído para autocompletar la factura
+let purinaAnioFilter = ''; // filtro de año por fecha de emisión
 const BIZ_NAMES_F = ['Gestor HH','Logístico','Montevra'];
 // Solo estas unidades de negocio se muestran como pestañas en Flujo (por índice de biz)
 const FLUJO_BIZ_VISIBLE = [0, 2];
@@ -5437,6 +5448,8 @@ function fmtMoney(v){
 function renderFlujoBody(){
   if(window.tasks&&window.tasks.length>0)tasks=window.tasks;
   const body=document.getElementById('flujo-body');if(!body)return;
+  // Sub-módulo Purina (solo HH / biz 0)
+  if(flujoBiz===0 && flujoSub==='purina'){ renderPurinaView(body); return; }
   const now=new Date();now.setHours(0,0,0,0);
   const dow=now.getDay()===0?7:now.getDay();
   const wStart=new Date(now);wStart.setDate(now.getDate()-(dow-1));
@@ -5594,7 +5607,7 @@ function renderFlujoBody(){
       </div>`;
     }).join('');
   }
-  body.innerHTML=`
+  body.innerHTML=(flujoBiz===0?purinaSubSelector():'')+`
   ${alertaHtml}
   <!-- Filtro mes -->
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
@@ -5689,6 +5702,386 @@ function renderFlujoBody(){
       }).join('');
   }
 }
+
+// ── PURINA (submódulo Facturas + Pagos de HH) ─────────────────
+function persistPurina(){
+  localStorage.setItem('hh-purina-v1', JSON.stringify(purinaFacturas));
+  if(window.persistPurinaToFirebase) window.persistPurinaToFirebase([...purinaFacturas]);
+}
+function purinaPagado(f){ return (f.pagos||[]).reduce((s,p)=>s+(p.valor||0),0); }
+function purinaSaldo(f){ return Math.max(0,(f.valor||0)-purinaPagado(f)); }
+function purinaEstado(f){ return purinaSaldo(f)<=0 ? 'pagada' : 'pendiente'; }
+function setFlujoSub(m){ flujoSub=m; _purinaFormOpen=false; _purinaPagoFor=null; renderFlujoBody(); }
+
+function purinaSubSelector(){
+  const mk=(m,label)=>`<button onclick="setFlujoSub('${m}')" style="height:30px;padding:0 16px;font-size:12px;font-weight:${flujoSub===m?'600':'500'};border:1.5px solid ${flujoSub===m?'#2d4a7a':'var(--border)'};border-radius:8px;background:${flujoSub===m?'#2d4a7a':'#fff'};color:${flujoSub===m?'#fff':'var(--text2)'};cursor:pointer;font-family:inherit">${label}</button>`;
+  return `<div style="display:flex;gap:8px;margin-bottom:16px">${mk('normal','Flujo normal')}${mk('purina','Purina')}</div>`;
+}
+
+function renderPurinaView(body){
+  let facturas=[...purinaFacturas].sort((a,b)=>(b.fechaEmision||'').localeCompare(a.fechaEmision||''));
+  const anios=[...new Set(purinaFacturas.map(f=>(f.fechaEmision||'').slice(0,4)).filter(Boolean))].sort().reverse();
+  if(purinaAnioFilter) facturas=facturas.filter(f=>(f.fechaEmision||'').slice(0,4)===purinaAnioFilter);
+  const totalFact=facturas.reduce((s,f)=>s+(f.valor||0),0);
+  const totalPag=facturas.reduce((s,f)=>s+purinaPagado(f),0);
+  const totalSaldo=facturas.reduce((s,f)=>s+purinaSaldo(f),0);
+  const pendientes=facturas.filter(f=>purinaEstado(f)==='pendiente').length;
+  const kpi=(lbl,val,col,sub)=>`<div class="fl-kpi"><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">${lbl}</div><div style="font-size:20px;font-weight:600;color:${col}">${val}</div><div style="font-size:10px;color:var(--text3)">${sub||''}</div></div>`;
+  const kpis=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+    ${kpi('Facturado',fmtMoney(totalFact),'#2d4a7a',facturas.length+' factura'+(facturas.length!==1?'s':''))}
+    ${kpi('Pagado',fmtMoney(totalPag),'#16a34a','')}
+    ${kpi('Saldo pendiente',fmtMoney(totalSaldo),totalSaldo>0?'#dc2626':'#16a34a',pendientes+' pendiente'+(pendientes!==1?'s':''))}
+  </div>`;
+  const nuevoBtn=!isViewer?`<button onclick="togglePurinaForm()" style="height:30px;padding:0 14px;font-size:12px;font-weight:600;background:#2d4a7a;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit">${_purinaFormOpen?'Cerrar':'+ Nueva factura'}</button>`:'';
+  const anioSel=`<select onchange="purinaAnioFilter=this.value;renderFlujoBody()" style="height:30px;font-size:12px;border:1px solid var(--border);border-radius:8px;padding:0 8px;font-family:inherit;color:var(--text2);background:var(--bg)">
+    <option value="">Todos los años</option>
+    ${anios.map(a=>`<option value="${a}" ${purinaAnioFilter===a?'selected':''}>${a}</option>`).join('')}
+  </select>`;
+  const pdfBtn=facturas.length?`<button onclick="descargarRelacionPurina()" style="height:30px;padding:0 12px;font-size:12px;font-weight:600;background:#fff;color:#2d4a7a;border:1px solid #c5d3e8;border-radius:8px;cursor:pointer;font-family:inherit">⬇ PDF relación</button>`:'';
+  const form=_purinaFormOpen?purinaFacturaFormHtml():'';
+  const lista=facturas.length?facturas.map(f=>purinaFacturaCard(f)).join(''):'<div style="text-align:center;padding:32px;color:var(--text3);font-size:12px">Sin facturas de Purina'+(purinaAnioFilter?' en '+purinaAnioFilter:'')+'</div>';
+  body.innerHTML=purinaSubSelector()+`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:13px;font-weight:700;color:#2d4a7a">Facturas y pagos Purina</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${anioSel}${pdfBtn}${nuevoBtn}</div>
+    </div>
+    ${form}
+    ${kpis}
+    <div style="display:flex;flex-direction:column;gap:10px">${lista}</div>`;
+}
+
+function descargarRelacionPurina(){
+  let facturas=[...purinaFacturas].sort((a,b)=>(a.fechaEmision||'').localeCompare(b.fechaEmision||''));
+  if(purinaAnioFilter) facturas=facturas.filter(f=>(f.fechaEmision||'').slice(0,4)===purinaAnioFilter);
+  if(!facturas.length){ alert('No hay facturas para exportar.'); return; }
+  const totalFact=facturas.reduce((s,f)=>s+(f.valor||0),0);
+  const totalPag=facturas.reduce((s,f)=>s+purinaPagado(f),0);
+  const totalSaldo=facturas.reduce((s,f)=>s+purinaSaldo(f),0);
+  const periodo=purinaAnioFilter||'Todos los años';
+  const logoSrc=(document.querySelector('.lock-card img')||document.querySelector('img[src^="data:image"]')||{}).src||'';
+  const logoHtml=logoSrc?`<img src="${logoSrc}" style="width:54px;height:54px;border-radius:50%;object-fit:cover;flex-shrink:0">`:'';
+  const filas=facturas.map(f=>{
+    const pagado=purinaPagado(f), saldo=purinaSaldo(f), estado=purinaEstado(f);
+    const pagosTxt=(f.pagos||[]).length?(f.pagos||[]).map(p=>`${p.fecha?fmtDate(p.fecha):'—'}: ${fmtMoney(p.valor)}`).join('<br>'):'—';
+    const estCol=estado==='pagada'?'#166534':(saldo>0&&f.fechaVencimiento&&new Date(f.fechaVencimiento+'T00:00:00')<new Date()?'#b91c1c':'#92400e');
+    return `<tr>
+      <td>${f.numero||'s/n'}</td>
+      <td>${f.fechaEmision?fmtDate(f.fechaEmision):'—'}</td>
+      <td>${f.fechaVencimiento?fmtDate(f.fechaVencimiento):'—'}</td>
+      <td style="text-align:right">${f.cantidad||'—'}</td>
+      <td style="text-align:right">${fmtMoney(f.valor||0)}</td>
+      <td style="text-align:right;color:#166534">${fmtMoney(pagado)}</td>
+      <td style="text-align:right;color:${saldo>0?'#b91c1c':'#166534'}">${fmtMoney(saldo)}</td>
+      <td style="color:${estCol};font-weight:600;text-transform:capitalize">${estado}</td>
+      <td style="font-size:10px">${pagosTxt}</td>
+    </tr>`;
+  }).join('');
+  const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Relación de facturas Purina</title>
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;padding:28px;margin:0}
+    .hdr{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+    h1{font-size:18px;margin:0 0 2px;color:#2d4a7a}
+    .sub{font-size:12px;color:#666}
+    table{width:100%;border-collapse:collapse;font-size:11px}
+    th{background:#2d4a7a;color:#fff;text-align:left;padding:7px 8px;font-weight:600}
+    th:nth-child(4),th:nth-child(5),th:nth-child(6),th:nth-child(7){text-align:right}
+    td{padding:6px 8px;border-bottom:1px solid #e5e5e5;vertical-align:top}
+    tr:nth-child(even) td{background:#f7f9fc}
+    tfoot td{font-weight:700;border-top:2px solid #2d4a7a;background:#eef2fb}
+    .totrow td{padding:8px}
+    @media print{body{padding:0}}
+  </style></head><body>
+    <div class="hdr">${logoHtml}<div>
+      <h1>Relación de facturas · Nestlé Purina</h1>
+      <div class="sub">Gestor HH · Período: ${periodo} · Generado ${fmtDate(new Date().toISOString().split('T')[0])} · ${facturas.length} factura(s)</div>
+    </div></div>
+    <table>
+      <thead><tr>
+        <th>N° factura</th><th>Emisión</th><th>Vencimiento</th><th>Cant.</th>
+        <th>Valor</th><th>Pagado</th><th>Saldo</th><th>Estado</th><th>Fechas de pago</th>
+      </tr></thead>
+      <tbody>${filas}</tbody>
+      <tfoot><tr class="totrow">
+        <td colspan="4">TOTALES (${facturas.length})</td>
+        <td style="text-align:right">${fmtMoney(totalFact)}</td>
+        <td style="text-align:right;color:#166534">${fmtMoney(totalPag)}</td>
+        <td style="text-align:right;color:${totalSaldo>0?'#b91c1c':'#166534'}">${fmtMoney(totalSaldo)}</td>
+        <td colspan="2"></td>
+      </tr></tfoot>
+    </table>
+  </body></html>`;
+  const w=window.open('','_blank');
+  if(!w){ alert('Permite las ventanas emergentes para descargar el PDF.'); return; }
+  w.document.write(html);
+  w.document.close();
+  setTimeout(()=>{ w.focus(); w.print(); }, 400);
+}
+
+function purinaFacturaFormHtml(){
+  const hoy=new Date().toISOString().split('T')[0];
+  const inp='height:32px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit';
+  const lbl='font-size:10px;color:var(--text2);display:block;margin-bottom:3px;font-weight:500';
+  return `<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:12px;font-weight:600;color:#2d4a7a">Nueva factura Purina</div>
+      <button onclick="document.getElementById('purina-extract-input').value='';document.getElementById('purina-extract-input').click()" style="height:30px;padding:0 12px;font-size:12px;font-weight:600;background:#eef2fb;color:#2d4a7a;border:1px solid #c5d3e8;border-radius:7px;cursor:pointer;font-family:inherit">📄 Leer factura (PDF/foto)</button>
+    </div>
+    <div id="pur-extract-status" style="display:none;font-size:11px;color:#2d4a7a;background:#eef2fb;border-radius:6px;padding:6px 10px;margin-bottom:10px"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <div><label style="${lbl}">N° factura</label><input id="pur-numero" placeholder="Ej: PV041798" style="${inp};width:130px"></div>
+      <div><label style="${lbl}">Emisión</label><input type="date" id="pur-emision" value="${hoy}" style="${inp}"></div>
+      <div><label style="${lbl}">Vencimiento</label><input type="date" id="pur-vencimiento" style="${inp}"></div>
+      <div><label style="${lbl}">Cantidad</label><input type="number" id="pur-cantidad" placeholder="0" style="${inp};width:90px"></div>
+      <div><label style="${lbl}">Valor</label><input type="number" id="pur-valor" placeholder="0" style="${inp};width:130px"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button onclick="savePurinaFactura()" style="height:32px;padding:0 16px;font-size:12px;font-weight:600;background:#2d4a7a;color:#fff;border:none;border-radius:7px;cursor:pointer;font-family:inherit">Guardar factura</button>
+      <button onclick="togglePurinaForm()" style="height:32px;padding:0 14px;font-size:12px;background:var(--bg2);color:var(--text2);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-family:inherit">Cancelar</button>
+    </div>
+  </div>`;
+}
+function togglePurinaForm(){ _purinaFormOpen=!_purinaFormOpen; _purinaPagoFor=null; if(!_purinaFormOpen)_purinaExtractFile=null; renderFlujoBody(); }
+function savePurinaFactura(){
+  const numero=document.getElementById('pur-numero').value.trim();
+  const emision=document.getElementById('pur-emision').value;
+  const vencimiento=document.getElementById('pur-vencimiento').value;
+  const cantidad=parseFloat(document.getElementById('pur-cantidad').value)||0;
+  const valor=parseFloat(document.getElementById('pur-valor').value)||0;
+  if(!numero){ alert('Ingresa el número de factura.'); return; }
+  if(!valor){ alert('Ingresa el valor de la factura.'); return; }
+  const nueva={ id:'pur'+Date.now(), numero, fechaEmision:emision, fechaVencimiento:vencimiento, cantidad, valor, pagos:[], creadaEn:new Date().toISOString() };
+  purinaFacturas.push(nueva);
+  persistPurina();
+  const archivo=_purinaExtractFile; _purinaExtractFile=null;
+  _purinaFormOpen=false;
+  renderFlujoBody();
+  // Si la factura se leyó de un PDF/foto, subir ese mismo archivo como soporte a Drive
+  if(archivo){ _uploadPurina(nueva, archivo, true, null).then(ok=>{ if(ok) renderFlujoBody(); }); }
+}
+function delPurinaFactura(id){
+  const f=purinaFacturas.find(x=>x.id===id);
+  if(!confirm('¿Eliminar la factura '+(f?f.numero:'')+' y todos sus pagos?')) return;
+  purinaFacturas=purinaFacturas.filter(x=>x.id!==id);
+  persistPurina(); renderFlujoBody();
+}
+
+function purinaFacturaCard(f){
+  const pagado=purinaPagado(f), saldo=purinaSaldo(f), estado=purinaEstado(f);
+  const total=f.valor||0;
+  const pct=total>0?Math.min(100,Math.round(pagado/total*100)):0;
+  const now=new Date();now.setHours(0,0,0,0);
+  const venc=f.fechaVencimiento?new Date(f.fechaVencimiento+'T00:00:00'):null;
+  const vencida=estado==='pendiente'&&venc&&venc<now;
+  const bs='font-size:10px;padding:2px 8px;border-radius:999px;font-weight:500';
+  const badge=estado==='pagada'
+    ?`<span style="${bs};background:#dcfce7;color:#166534">Pagada ✓</span>`
+    :vencida?`<span style="${bs};background:#fcebeb;color:#791f1f">Vencida</span>`
+    :`<span style="${bs};background:#faeeda;color:#633806">Pendiente</span>`;
+  const progress=total>0?`
+    <div style="margin-top:6px">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:3px">
+        <span>Pagado: <strong style="color:#16a34a">${fmtMoney(pagado)}</strong></span>
+        <span>Saldo: <strong style="color:${saldo>0?'#dc2626':'#16a34a'}">${fmtMoney(saldo)}</strong></span>
+      </div>
+      <div style="height:5px;background:#e2e8f0;border-radius:999px;overflow:hidden">
+        <div style="height:100%;background:${pct>=100?'#16a34a':'#2d4a7a'};border-radius:999px;width:${pct}%;transition:width .3s"></div>
+      </div>
+    </div>`:'';
+  const pagos=f.pagos||[];
+  const historial=pagos.length?`
+    <div style="margin-top:6px;border-top:1px solid #f0f0ee;padding-top:6px">
+      ${pagos.map(p=>`
+        <div style="display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text2);padding:2px 0">
+          <span style="color:#16a34a;font-weight:600">✓</span>
+          <span>Pago</span>
+          <span style="color:#16a34a;font-weight:600;margin-left:auto">${fmtMoney(p.valor)}</span>
+          <span style="color:var(--text3)">${p.fecha?fmtDate(p.fecha):''}</span>
+          ${p.soporteUrl?`<a href="${p.soporteUrl}" target="_blank" style="color:#2d4a7a;text-decoration:none">↗</a>`:(!isViewer?`<button onclick="subirComprobantePurina('${f.id}','${p.id}')" title="Adjuntar comprobante" style="background:none;border:1px solid #c5d3e8;border-radius:4px;padding:0 5px;font-size:10px;cursor:pointer;color:#2d4a7a">📎</button>`:'')}
+          ${!isViewer?`<button onclick="delPagoPurina('${f.id}','${p.id}')" style="background:none;border:none;font-size:13px;cursor:pointer;color:#d1cdc7;line-height:1">×</button>`:''}
+        </div>`).join('')}
+    </div>`:'';
+  const pagoForm=(_purinaPagoFor===f.id)?purinaPagoFormHtml(f):'';
+  return `<div class="fl-row" style="flex-direction:column;align-items:stretch">
+    <div style="display:flex;align-items:center;gap:6px">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;color:var(--text)">Factura ${f.numero||'s/n'}</div>
+        <div style="color:var(--text3);font-size:11px;margin-top:2px">Emitida ${f.fechaEmision?fmtDate(f.fechaEmision):'—'} · Vence ${f.fechaVencimiento?fmtDate(f.fechaVencimiento):'—'}${f.cantidad?' · Cant: '+f.cantidad:''}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+        <span style="font-weight:600;color:#dc2626;font-size:12px">${fmtMoney(total)}</span>
+        ${badge}
+        ${estado!=='pagada'&&!isViewer?`<button onclick="abrirPagoPurina('${f.id}')" style="background:#2d4a7a;color:#fff;border:none;border-radius:5px;padding:2px 8px;font-size:11px;cursor:pointer;font-weight:500">+ Pago</button>`:''}
+        ${f.soporteUrl?`<a href="${f.soporteUrl}" target="_blank" title="Factura" style="font-size:11px;color:#2d4a7a;text-decoration:none;border:1px solid #c5d3e8;border-radius:5px;padding:2px 6px">📄</a>`:(!isViewer?`<button onclick="subirFacturaPurina('${f.id}')" title="Adjuntar factura (PDF/foto)" style="background:none;border:1px solid #c5d3e8;border-radius:5px;padding:2px 6px;font-size:11px;cursor:pointer;color:#2d4a7a">📎</button>`:'')}
+        ${!isViewer?`<button onclick="delPurinaFactura('${f.id}')" style="background:none;border:none;font-size:15px;cursor:pointer;color:#d1cdc7;line-height:1;padding:0 2px">×</button>`:''}
+      </div>
+    </div>
+    ${progress}
+    ${historial}
+    ${pagoForm}
+  </div>`;
+}
+
+function purinaPagoFormHtml(f){
+  const saldo=purinaSaldo(f);
+  const hoy=new Date().toISOString().split('T')[0];
+  const inp='height:30px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit';
+  const lbl='font-size:10px;color:var(--text2);display:block;margin-bottom:3px;font-weight:500';
+  return `<div style="margin-top:8px;border-top:1px dashed #d9d9d9;padding-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end">
+    <div><label style="${lbl}">Fecha de pago</label><input type="date" id="pur-pago-fecha" value="${hoy}" style="${inp}"></div>
+    <div><label style="${lbl}">Valor pagado</label><input type="number" id="pur-pago-valor" value="${saldo}" style="${inp};width:120px"></div>
+    <button onclick="savePagoPurina('${f.id}')" style="height:30px;padding:0 14px;font-size:12px;font-weight:600;background:#16a34a;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit">Guardar pago</button>
+    <button onclick="_purinaPagoFor=null;renderFlujoBody()" style="height:30px;padding:0 12px;font-size:12px;background:var(--bg2);color:var(--text2);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-family:inherit">Cancelar</button>
+    <div style="font-size:10px;color:var(--text3);width:100%">Tras guardar podrás adjuntar el comprobante con 📎 (se sube a Drive).</div>
+  </div>`;
+}
+function abrirPagoPurina(id){ _purinaPagoFor=id; renderFlujoBody(); setTimeout(()=>{const el=document.getElementById('pur-pago-valor');if(el){el.focus();el.select();}},60); }
+function savePagoPurina(id){
+  const f=purinaFacturas.find(x=>x.id===id); if(!f) return;
+  const fecha=document.getElementById('pur-pago-fecha').value;
+  const valor=parseFloat(document.getElementById('pur-pago-valor').value)||0;
+  if(!valor){ alert('Ingresa el valor del pago.'); return; }
+  if(!f.pagos) f.pagos=[];
+  f.pagos.push({ id:'pp'+Date.now(), fecha, valor });
+  persistPurina();
+  _purinaPagoFor=null;
+  renderFlujoBody();
+}
+function delPagoPurina(facturaId, pagoId){
+  const f=purinaFacturas.find(x=>x.id===facturaId); if(!f) return;
+  if(!confirm('¿Eliminar este pago?')) return;
+  f.pagos=(f.pagos||[]).filter(p=>p.id!==pagoId);
+  persistPurina(); renderFlujoBody();
+}
+
+function subirFacturaPurina(facturaId){
+  const inp=document.getElementById('purina-file-input');
+  inp.dataset.kind='factura'; inp.dataset.facturaId=facturaId; inp.dataset.pagoId=''; inp.value=''; inp.click();
+}
+function subirComprobantePurina(facturaId, pagoId){
+  const inp=document.getElementById('purina-file-input');
+  inp.dataset.kind='pago'; inp.dataset.facturaId=facturaId; inp.dataset.pagoId=pagoId; inp.value=''; inp.click();
+}
+async function _fileToBase64(file){
+  return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});
+}
+async function _uploadPurina(f, file, esFactura, pago){
+  let base64;
+  try{ base64=await _fileToBase64(file); }catch(e){ alert('No se pudo leer el archivo.'); return false; }
+  const payload={
+    file:base64, filename:file.name, mimeType:file.type,
+    fecha: esFactura ? (f.fechaEmision||new Date().toISOString().split('T')[0]) : (pago?pago.fecha:new Date().toISOString().split('T')[0]),
+    entidad:'Purina',
+    descripcion:'Factura '+(f.numero||'s/n')+(esFactura?' - Documento':' - Pago'),
+    tipo:'pago',
+    valor: esFactura ? (f.valor||0) : (pago?pago.valor:0)
+  };
+  try{
+    const resp=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify(payload)});
+    const data=await resp.json();
+    if(data.ok){
+      if(esFactura){ f.soporteUrl=data.url; f.soporteNombre=file.name; }
+      else if(pago){ pago.soporteUrl=data.url; pago.soporteNombre=file.name; }
+      persistPurina();
+      return true;
+    }
+    alert('No se pudo subir el archivo: '+(data.error||'error'));
+    return false;
+  }catch(err){ alert('Error subiendo el archivo: '+err); return false; }
+}
+async function purinaFileSelected(input){
+  const files=Array.from(input.files||[]); if(!files.length) return;
+  const kind=input.dataset.kind, fId=input.dataset.facturaId, pId=input.dataset.pagoId;
+  const f=purinaFacturas.find(x=>x.id===fId); if(!f) return;
+  const esFactura=kind==='factura';
+  const pago=esFactura?null:(f.pagos||[]).find(p=>p.id===pId);
+  const ok=await _uploadPurina(f, files[0], esFactura, pago);
+  if(ok) renderFlujoBody();
+}
+
+// ── Lectura automática de la factura (PDF con texto o foto/escaneo con OCR) ──
+function _purinaParseMoney(s){
+  if(!s) return 0;
+  s=String(s).replace(/[^\d.,]/g,'');
+  s=s.replace(/[.,]\d{2}$/,''); // quita centavos ,00 / .00
+  s=s.replace(/[.,]/g,'');
+  return parseInt(s)||0;
+}
+function _purinaFechaISO(dmy){
+  const m=String(dmy).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(!m) return '';
+  return m[3]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[1]).slice(-2);
+}
+function _purinaExtraerCampos(texto){
+  const out={};
+  // Número de factura: "FACTURA ELECTRÓNICA DE VENTA: XXXX" o "N° Referencia Factura"
+  let m=texto.match(/FACTURA\s+ELECTR[ÓO]NICA\s+DE\s+VENTA:?\s*([A-Z0-9\-]+)/i);
+  if(!m) m=texto.match(/N[°º]?\s*Referencia\s*Factura:?\s*([A-Z0-9\-]+)/i);
+  if(m) out.numero=m[1];
+  // Fechas dd/mm/yyyy en orden de aparición
+  const fechas=[...texto.matchAll(/(\d{1,2}\/\d{1,2}\/\d{4})/g)].map(x=>x[1]);
+  if(fechas.length){
+    out.emision=_purinaFechaISO(fechas[0]);
+    const em=new Date(out.emision+'T00:00:00');
+    const venc=fechas.map(_purinaFechaISO).find(iso=>iso && new Date(iso+'T00:00:00')>em);
+    if(venc) out.vencimiento=venc;
+  }
+  // Valor: "Valor a Pagar" > "Total" > "Subtotal"
+  m=texto.match(/Valor\s+a\s+Pagar:?\s*\$?\s*([\d.,]+)/i)
+    || texto.match(/Total\s+(?:a\s+pagar|factura|general):?\s*\$?\s*([\d.,]+)/i);
+  if(m) out.valor=_purinaParseMoney(m[1]);
+  // Cantidad: "Total Líneas: N"
+  m=texto.match(/Total\s+L[íi]neas:?\s*([\d.,]+)/i);
+  if(m) out.cantidad=parseInt(String(m[1]).replace(/[.,]\d*$/,'').replace(/[.,]/g,''))||0;
+  return out;
+}
+async function extraerFacturaPurina(input){
+  const file=(input.files||[])[0]; if(!file) return;
+  _purinaExtractFile=file;
+  const st=document.getElementById('pur-extract-status');
+  const setSt=t=>{ if(st){ st.style.display='block'; st.textContent=t; } };
+  setSt('Leyendo la factura…');
+  let texto='';
+  try{
+    if(file.type==='application/pdf' || /\.pdf$/i.test(file.name)){
+      const buffer=await file.arrayBuffer();
+      const doc=await pdfjsLib.getDocument({data:buffer}).promise;
+      for(let p=1;p<=doc.numPages;p++){
+        const page=await doc.getPage(p);
+        const c=await page.getTextContent();
+        texto+=c.items.map(i=>i.str).join('\n')+'\n';
+      }
+      // PDF escaneado sin texto → OCR
+      if(texto.replace(/\s/g,'').length<20 && typeof Tesseract!=='undefined'){
+        setSt('Factura escaneada — leyendo con OCR…');
+        texto='';
+        for(let p=1;p<=doc.numPages;p++){
+          const page=await doc.getPage(p);
+          const vp=page.getViewport({scale:2});
+          const cv=document.createElement('canvas'); cv.width=vp.width; cv.height=vp.height;
+          await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+          const {data}=await Tesseract.recognize(cv,'spa');
+          texto+=data.text+'\n';
+        }
+      }
+    } else if(typeof Tesseract!=='undefined'){
+      setSt('Foto de factura — leyendo con OCR…');
+      const {data}=await Tesseract.recognize(file,'spa');
+      texto=data.text;
+    }
+  }catch(e){ setSt('No pude leer la factura. Completa los campos a mano.'); console.warn('Purina extract:', e); return; }
+  const campos=_purinaExtraerCampos(texto);
+  const set=(id,val)=>{ const el=document.getElementById(id); if(el && val!==undefined && val!==''&&val!==0) el.value=val; };
+  set('pur-numero',campos.numero);
+  set('pur-emision',campos.emision);
+  set('pur-vencimiento',campos.vencimiento);
+  set('pur-cantidad',campos.cantidad);
+  set('pur-valor',campos.valor);
+  const leidos=['numero','emision','vencimiento','cantidad','valor'].filter(k=>campos[k]!==undefined&&campos[k]!==''&&campos[k]!==0);
+  setSt(leidos.length?('✓ Leído: '+leidos.join(', ')+'. Revisa y guarda.'):'No reconocí los campos. Complétalos a mano.');
+}
+
+
 
 // ── PAGOS PARCIALES ───────────────────────────────────────────
 let _ppTaskId = null;
@@ -7046,6 +7439,22 @@ onSnapshot(HITOS_REF, snap => {
   if(typeof hitos !== 'undefined') hitos = data.hitos;
   localStorage.setItem('hh-hitos-v1', JSON.stringify(data.hitos));
   if(typeof renderHitosBar === 'function') renderHitosBar();
+});
+
+// ── PURINA FIREBASE SYNC ──────────────────────────────────────
+const PURINA_REF = doc(db, 'hh-socios', 'purina');
+window.persistPurinaToFirebase = async function(list) {
+  try {
+    await setDoc(PURINA_REF, { facturas: list, updatedAt: Date.now() });
+  } catch(e) { console.warn('Purina write error:', e); }
+};
+onSnapshot(PURINA_REF, snap => {
+  if(!snap.exists()) return;
+  const data = snap.data();
+  if(!data.facturas || !Array.isArray(data.facturas)) return;
+  if(typeof purinaFacturas !== 'undefined') purinaFacturas = data.facturas;
+  localStorage.setItem('hh-purina-v1', JSON.stringify(data.facturas));
+  if(typeof flujoSub !== 'undefined' && flujoSub === 'purina' && typeof renderFlujoBody === 'function') renderFlujoBody();
 });
 
 // ── RECURRENTES FIREBASE SYNC ─────────────────────────────────
