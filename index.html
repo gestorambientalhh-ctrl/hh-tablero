@@ -693,6 +693,8 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
 
@@ -5750,71 +5752,59 @@ function renderPurinaView(body){
     <div style="display:flex;flex-direction:column;gap:10px">${lista}</div>`;
 }
 
-function descargarRelacionPurina(){
+function descargarRelacionPurina(){ _descargarRelacionPurina(); }
+async function _descargarRelacionPurina(){
   let facturas=[...purinaFacturas].sort((a,b)=>(a.fechaEmision||'').localeCompare(b.fechaEmision||''));
   if(purinaAnioFilter) facturas=facturas.filter(f=>(f.fechaEmision||'').slice(0,4)===purinaAnioFilter);
   if(!facturas.length){ alert('No hay facturas para exportar.'); return; }
+  const jsPDFctor=(window.jspdf||{}).jsPDF;
+  if(!jsPDFctor){ alert('El generador de PDF aún no cargó — espera unos segundos y vuelve a intentar.'); return; }
   const totalFact=facturas.reduce((s,f)=>s+(f.valor||0),0);
   const totalPag=facturas.reduce((s,f)=>s+purinaPagado(f),0);
   const totalSaldo=facturas.reduce((s,f)=>s+purinaSaldo(f),0);
   const periodo=purinaAnioFilter||'Todos los años';
-  const logoSrc=(document.querySelector('.lock-card img')||document.querySelector('img[src^="data:image"]')||{}).src||'';
-  const logoHtml=logoSrc?`<img src="${logoSrc}" style="width:54px;height:54px;border-radius:50%;object-fit:cover;flex-shrink:0">`:'';
-  const filas=facturas.map(f=>{
-    const pagado=purinaPagado(f), saldo=purinaSaldo(f), estado=purinaEstado(f);
-    const pagosTxt=(f.pagos||[]).length?(f.pagos||[]).map(p=>`${p.fecha?fmtDate(p.fecha):'—'}: ${fmtMoney(p.valor)}`).join('<br>'):'—';
-    const estCol=estado==='pagada'?'#166534':(saldo>0&&f.fechaVencimiento&&new Date(f.fechaVencimiento+'T00:00:00')<new Date()?'#b91c1c':'#92400e');
-    return `<tr>
-      <td>${f.numero||'s/n'}</td>
-      <td>${f.fechaEmision?fmtDate(f.fechaEmision):'—'}</td>
-      <td>${f.fechaVencimiento?fmtDate(f.fechaVencimiento):'—'}</td>
-      <td style="text-align:right">${f.cantidad||'—'}</td>
-      <td style="text-align:right">${fmtMoney(f.valor||0)}</td>
-      <td style="text-align:right;color:#166534">${fmtMoney(pagado)}</td>
-      <td style="text-align:right;color:${saldo>0?'#b91c1c':'#166534'}">${fmtMoney(saldo)}</td>
-      <td style="color:${estCol};font-weight:600;text-transform:capitalize">${estado}</td>
-      <td style="font-size:10px">${pagosTxt}</td>
-    </tr>`;
-  }).join('');
-  const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Relación de facturas Purina</title>
-  <style>
-    *{box-sizing:border-box}
-    body{font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;padding:28px;margin:0}
-    .hdr{display:flex;align-items:center;gap:14px;margin-bottom:16px}
-    h1{font-size:18px;margin:0 0 2px;color:#2d4a7a}
-    .sub{font-size:12px;color:#666}
-    table{width:100%;border-collapse:collapse;font-size:11px}
-    th{background:#fff;color:#2d4a7a;text-align:left;padding:7px 8px;font-weight:700;border-bottom:2px solid #2d4a7a}
-    th:nth-child(4),th:nth-child(5),th:nth-child(6),th:nth-child(7){text-align:right}
-    td{padding:6px 8px;border-bottom:1px solid #e5e5e5;vertical-align:top;background:#fff}
-    tfoot td{font-weight:700;border-top:2px solid #2d4a7a;background:#fff}
-    .totrow td{padding:8px}
-    @media print{body{padding:0}}
-  </style></head><body>
-    <div class="hdr">${logoHtml}<div>
-      <h1>Relación de facturas · Nestlé Purina</h1>
-      <div class="sub">Gestor HH · Período: ${periodo} · Generado ${fmtDate(new Date().toISOString().split('T')[0])} · ${facturas.length} factura(s)</div>
-    </div></div>
-    <table>
-      <thead><tr>
-        <th>N° factura</th><th>Emisión</th><th>Vencimiento</th><th>Cant.</th>
-        <th>Valor</th><th>Pagado</th><th>Saldo</th><th>Estado</th><th>Fechas de pago</th>
-      </tr></thead>
-      <tbody>${filas}</tbody>
-      <tfoot><tr class="totrow">
-        <td colspan="4">TOTALES (${facturas.length})</td>
-        <td style="text-align:right">${fmtMoney(totalFact)}</td>
-        <td style="text-align:right;color:#166534">${fmtMoney(totalPag)}</td>
-        <td style="text-align:right;color:${totalSaldo>0?'#b91c1c':'#166534'}">${fmtMoney(totalSaldo)}</td>
-        <td colspan="2"></td>
-      </tr></tfoot>
-    </table>
-  </body></html>`;
-  const w=window.open('','_blank');
-  if(!w){ alert('Permite las ventanas emergentes para descargar el PDF.'); return; }
-  w.document.write(html);
-  w.document.close();
-  setTimeout(()=>{ w.focus(); w.print(); }, 400);
+  const hoyISO=new Date().toISOString().split('T')[0];
+  const doc=new jsPDFctor({orientation:'landscape',unit:'pt',format:'a4'});
+  let tx=40;
+  const logo=(document.querySelector('.lock-card img')||document.querySelector('img[src^="data:image"]')||{}).src;
+  if(logo){ try{ doc.addImage(logo,'JPEG',40,22,36,36); tx=88; }catch(e){} }
+  doc.setFontSize(15); doc.setTextColor(45,74,122); doc.text('Relación de facturas · Nestlé Purina',tx,42);
+  doc.setFontSize(9); doc.setTextColor(110,110,110);
+  doc.text('Gestor HH · Período: '+periodo+' · Generado '+fmtDate(hoyISO)+' · '+facturas.length+' factura(s)',tx,56);
+  const body=facturas.map(f=>{
+    const pagosTxt=(f.pagos||[]).length?(f.pagos||[]).map(p=>(p.fecha?fmtDate(p.fecha):'—')+': '+fmtMoney(p.valor)).join('\n'):'—';
+    return [f.numero||'s/n', f.fechaEmision?fmtDate(f.fechaEmision):'—', f.fechaVencimiento?fmtDate(f.fechaVencimiento):'—',
+      String(f.cantidad||'—'), fmtMoney(f.valor||0), fmtMoney(purinaPagado(f)), fmtMoney(purinaSaldo(f)),
+      purinaEstado(f)==='pagada'?'Pagada':'Pendiente', pagosTxt];
+  });
+  doc.autoTable({
+    startY:72,
+    head:[['N° factura','Emisión','Vencimiento','Cant.','Valor','Pagado','Saldo','Estado','Fechas de pago']],
+    body,
+    foot:[['TOTALES ('+facturas.length+')','','','',fmtMoney(totalFact),fmtMoney(totalPag),fmtMoney(totalSaldo),'','']],
+    styles:{fontSize:8,cellPadding:4,textColor:[26,26,26],lineColor:[229,229,229],lineWidth:0.5,fillColor:[255,255,255]},
+    headStyles:{fillColor:[255,255,255],textColor:[45,74,122],fontStyle:'bold',lineColor:[45,74,122],lineWidth:{bottom:1.5}},
+    footStyles:{fillColor:[255,255,255],textColor:[26,26,26],fontStyle:'bold',lineColor:[45,74,122],lineWidth:{top:1.5}},
+    columnStyles:{3:{halign:'right'},4:{halign:'right'},5:{halign:'right'},6:{halign:'right'},8:{cellWidth:150}},
+    didParseCell:(d)=>{
+      if(d.section!=='body') return;
+      const f=facturas[d.row.index]; if(!f) return;
+      const saldo=purinaSaldo(f), estado=purinaEstado(f);
+      const vencida=saldo>0&&f.fechaVencimiento&&new Date(f.fechaVencimiento+'T00:00:00')<new Date();
+      if(d.column.index===5) d.cell.styles.textColor=[22,101,52];
+      if(d.column.index===6) d.cell.styles.textColor=saldo>0?[185,28,28]:[22,101,52];
+      if(d.column.index===7){ d.cell.styles.fontStyle='bold'; d.cell.styles.textColor=estado==='pagada'?[22,101,52]:(vencida?[185,28,28]:[146,64,14]); }
+    }
+  });
+  const nombre='Relacion facturas Purina '+periodo.replace(/\s/g,'_')+'.pdf';
+  doc.save(nombre); // descarga local
+  // Guardar el mismo PDF en Drive (carpeta del mes/año actual → subcarpeta Reportes) como soporte
+  try{
+    const base64=doc.output('datauristring').split(',')[1];
+    const resp=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({ reporte:true, file:base64, filename:nombre, mimeType:'application/pdf', fecha:hoyISO, entidad:'Purina', descripcion:'Relación de facturas Purina '+periodo })});
+    const data=await resp.json();
+    if(data && data.ok) alert('PDF descargado y guardado en Drive (carpeta del mes → Reportes).');
+  }catch(e){ console.warn('Subida reporte Purina:', e); }
 }
 
 function purinaFacturaFormHtml(){
