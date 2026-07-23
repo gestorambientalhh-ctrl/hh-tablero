@@ -5989,9 +5989,27 @@ async function nmGenerarCuentaCobro(id){
     columnStyles:{1:{halign:'right'},2:{halign:'right'},3:{halign:'right'}}
   });
   let y=doc.lastAutoTable.finalY+24;
+  const abList=(m.abonos||[]).slice().sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
   const ab=nmAbonado(m), saldoAcum=nmSaldoFinal(m), saldoAnt=nmSaldoInicial(m);
+  const linea=(l,v)=>{ doc.text(l,tx,y); doc.text(v,572,y,{align:'right'}); y+=16; };
   doc.setFontSize(10); doc.setTextColor(90,90,90);
-  [['Saldo anterior (meses previos):',nmMoney(saldoAnt)],['Generado este mes:',nmMoney(gen)],['Abonos recibidos este mes:','- '+nmMoney(ab)]].forEach(([l,v])=>{ doc.text(l,tx,y); doc.text(v,572,y,{align:'right'}); y+=16; });
+  linea('Saldo anterior (meses previos):', nmMoney(saldoAnt));
+  linea('Generado este mes:', nmMoney(gen));
+  // Detalle de abonos con su fecha (para que el cliente vea cuándo pagó cada uno)
+  doc.setTextColor(45,74,122); doc.setFont(undefined,'bold'); doc.text('Abonos recibidos:',tx,y); doc.setFont(undefined,'normal'); y+=16;
+  doc.setTextColor(90,90,90);
+  if(abList.length){
+    abList.forEach(a=>{
+      if(y>760){ doc.addPage(); y=50; }
+      doc.text('\u2022  '+(a.fecha?fmtDate(a.fecha):'sin fecha')+(a.facturaNumero?'    \u00b7  Factura '+a.facturaNumero:''), tx+10, y);
+      doc.text('- '+nmMoney(a.valor), 572, y, {align:'right'}); y+=15;
+    });
+    doc.setTextColor(22,101,52); doc.setFont(undefined,'bold');
+    doc.text('Total abonado este mes:', tx+10, y); doc.text('- '+nmMoney(ab), 572, y, {align:'right'});
+    doc.setFont(undefined,'normal'); doc.setTextColor(90,90,90); y+=16;
+  } else {
+    doc.text('Sin abonos registrados en este mes.', tx+10, y); y+=16;
+  }
   doc.setDrawColor(45,74,122); doc.setLineWidth(1); doc.line(tx,y+2,572,y+2); y+=20;
   doc.setFontSize(13); doc.setTextColor(185,28,28);
   doc.text('Saldo total por cobrar:',tx,y); doc.text(nmMoney(saldoAcum),572,y,{align:'right'});
