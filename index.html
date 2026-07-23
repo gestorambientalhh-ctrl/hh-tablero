@@ -6055,12 +6055,22 @@ async function nmDescargarConciliacion(){
     startY:80,
     head:[['Concepto','Fecha','Mes de abono','Factura','Abono','Saldo']],
     body:ledger.map(r=>[r.concepto, r.fecha, r.mes, r.factura!=null?nmMoney(r.factura):'—', r.abono!=null?('- '+nmMoney(r.abono)):'—', nmMoney(r.saldo)]),
-    foot:[['SALDO TOTAL POR COBRAR','','','','',nmMoney(totalGen-totalAb)]],
+    foot:[
+      ['Total facturado','','',nmMoney(totalGen),'',''],
+      ['Total abonado','','','','- '+nmMoney(totalAb),''],
+      ['SALDO TOTAL POR COBRAR','','','','',nmMoney(totalGen-totalAb)]
+    ],
     styles:{fontSize:8.5,cellPadding:4.5,textColor:[26,26,26],lineColor:[232,232,228],lineWidth:0.5},
     headStyles:{fillColor:[242,246,252],textColor:[45,74,122],fontStyle:'bold',lineColor:[45,74,122],lineWidth:{bottom:1.5}},
-    footStyles:{fillColor:[255,255,255],textColor:[185,28,28],fontStyle:'bold',lineColor:[45,74,122],lineWidth:{top:1.5},fontSize:10},
+    footStyles:{fillColor:[255,255,255],textColor:[26,26,26],fontStyle:'bold',lineColor:[232,232,228],lineWidth:{top:0.5}},
     columnStyles:{3:{halign:'right'},4:{halign:'right'},5:{halign:'right',fontStyle:'bold'}},
     didParseCell:(d)=>{
+      if(d.section==='foot'){
+        if(d.row.index===0 && d.column.index===3) d.cell.styles.textColor=[45,74,122];
+        if(d.row.index===1 && d.column.index===4) d.cell.styles.textColor=[22,101,52];
+        if(d.row.index===2){ d.cell.styles.textColor=[185,28,28]; d.cell.styles.fontSize=10; if(d.column.index===0) d.cell.styles.lineWidth={top:1.5}; if(d.column.index===5) d.cell.styles.lineWidth={top:1.5}; }
+        return;
+      }
       if(d.section!=='body') return;
       const r=ledger[d.row.index]; if(!r) return;
       if(r.tipo==='fact') d.cell.styles.fillColor=[242,246,252];
@@ -6072,16 +6082,17 @@ async function nmDescargarConciliacion(){
   // ── Detalle de materiales — solo meses que aún hace falta cobrar ──
   const pend=ord.filter(m=>m.items && (nmGenerado(m)-nmAbonado(m))>0.5);
   if(pend.length){
-    let y=doc.lastAutoTable.finalY+24;
+    let y=doc.lastAutoTable.finalY+26;
     if(y>640){ doc.addPage(); y=50; }
     doc.setFontSize(12); doc.setTextColor(45,74,122); doc.text('Detalle de materiales · meses por cobrar',40,y);
+    let cy=y+8;
     for(const m of pend){
       const rows=NM_CATALOGO.filter(([mat])=>m.items[mat]!==undefined && (Number(m.items[mat])||0)>0).map(([mat])=>{
         const cant=Number(m.items[mat])||0, p=nmPrecio(mat);
         return [mat, nmQty(cant), nmMoney(p), nmMoney(cant*p)];
       });
       if(!rows.length) continue;
-      let yy=doc.lastAutoTable.finalY+16;
+      let yy=cy+20;
       if(yy>660){ doc.addPage(); yy=50; }
       doc.setFontSize(10.5); doc.setTextColor(45,74,122);
       doc.text((m.label||m.ym)+'   ·   por cobrar '+nmMoney(nmGenerado(m)-nmAbonado(m)),40,yy);
@@ -6096,6 +6107,7 @@ async function nmDescargarConciliacion(){
         columnStyles:{1:{halign:'right'},2:{halign:'right'},3:{halign:'right'}},
         margin:{left:40,right:40}
       });
+      cy=doc.lastAutoTable.finalY;
     }
   }
   doc.save('Conciliacion Nuevo Milenio '+corteYM+'.pdf');
