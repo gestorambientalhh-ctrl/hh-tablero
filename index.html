@@ -6038,62 +6038,65 @@ async function nmDescargarConciliacion(){
   doc.setFontSize(15); doc.setTextColor(45,74,122); doc.text('Conciliación · Nuevo Milenio (aprovechables)',tx,42);
   doc.setFontSize(9); doc.setTextColor(110,110,110);
   doc.text('Gestor HH · Corte: '+fmtDate(nmFechaCorte)+' · '+ord.length+' mes(es)',tx,56);
-  // Resumen de meses
+  // ── Estado de cuenta: la factura del mes suma, los abonos restan, saldo corrido ──
   const totalGen=ord.reduce((s,m)=>s+nmGenerado(m),0);
   const totalAb=ord.reduce((s,m)=>s+nmAbonado(m),0);
-  doc.autoTable({
-    startY:72,
-    head:[['Mes','Saldo anterior','Generado','Abonos','Saldo acumulado']],
-    body:ord.map(m=>[m.label||m.ym, nmMoney(nmSaldoInicial(m)), nmMoney(nmGenerado(m)), nmMoney(nmAbonado(m)), nmMoney(nmSaldoFinal(m))]),
-    foot:[['TOTAL','',nmMoney(totalGen),nmMoney(totalAb),nmMoney(totalGen-totalAb)]],
-    styles:{fontSize:9,cellPadding:5,textColor:[26,26,26],lineColor:[229,229,229],lineWidth:0.5},
-    headStyles:{fillColor:[255,255,255],textColor:[45,74,122],fontStyle:'bold',lineColor:[45,74,122],lineWidth:{bottom:1.5}},
-    footStyles:{fillColor:[255,255,255],textColor:[26,26,26],fontStyle:'bold',lineColor:[45,74,122],lineWidth:{top:1.5}},
-    columnStyles:{1:{halign:'right'},2:{halign:'right'},3:{halign:'right'},4:{halign:'right'}},
-    didParseCell:(d)=>{ if(d.section==='body'&&d.column.index===4) d.cell.styles.textColor=[185,28,28]; }
-  });
-  // Detalle por mes: materiales + abonos registrados
+  const ledger=[]; let run=0;
   for(const m of ord){
-    const abs=(m.abonos||[]).slice().sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
-    let rows=[];
-    if(m.items){
-      rows=NM_CATALOGO.filter(([mat])=>m.items[mat]!==undefined).map(([mat])=>{
+    const gen=nmGenerado(m); run+=gen;
+    ledger.push({tipo:'fact', concepto:'Factura del mes', fecha:'—', mes:m.label||m.ym, factura:gen, abono:null, saldo:run});
+    (m.abonos||[]).slice().sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||'')).forEach(a=>{
+      run-=Number(a.valor)||0;
+      ledger.push({tipo:'abono', concepto:'Abono', fecha:a.fecha?fmtDate(a.fecha):'—', mes:m.label||m.ym, factura:null, abono:Number(a.valor)||0, saldo:run});
+    });
+  }
+  doc.setFontSize(11); doc.setTextColor(45,74,122); doc.text('Estado de cuenta',40,72);
+  doc.autoTable({
+    startY:80,
+    head:[['Concepto','Fecha','Mes de abono','Factura','Abono','Saldo']],
+    body:ledger.map(r=>[r.concepto, r.fecha, r.mes, r.factura!=null?nmMoney(r.factura):'—', r.abono!=null?('- '+nmMoney(r.abono)):'—', nmMoney(r.saldo)]),
+    foot:[['SALDO TOTAL POR COBRAR','','','','',nmMoney(totalGen-totalAb)]],
+    styles:{fontSize:8.5,cellPadding:4.5,textColor:[26,26,26],lineColor:[232,232,228],lineWidth:0.5},
+    headStyles:{fillColor:[242,246,252],textColor:[45,74,122],fontStyle:'bold',lineColor:[45,74,122],lineWidth:{bottom:1.5}},
+    footStyles:{fillColor:[255,255,255],textColor:[185,28,28],fontStyle:'bold',lineColor:[45,74,122],lineWidth:{top:1.5},fontSize:10},
+    columnStyles:{3:{halign:'right'},4:{halign:'right'},5:{halign:'right',fontStyle:'bold'}},
+    didParseCell:(d)=>{
+      if(d.section!=='body') return;
+      const r=ledger[d.row.index]; if(!r) return;
+      if(r.tipo==='fact') d.cell.styles.fillColor=[242,246,252];
+      if(d.column.index===3) d.cell.styles.textColor=[45,74,122];
+      if(d.column.index===4) d.cell.styles.textColor=[22,101,52];
+      if(d.column.index===5) d.cell.styles.textColor = r.saldo>0.5?[185,28,28]:[22,101,52];
+    }
+  });
+  // ── Detalle de materiales — solo meses que aún hace falta cobrar ──
+  const pend=ord.filter(m=>m.items && (nmGenerado(m)-nmAbonado(m))>0.5);
+  if(pend.length){
+    let y=doc.lastAutoTable.finalY+24;
+    if(y>640){ doc.addPage(); y=50; }
+    doc.setFontSize(12); doc.setTextColor(45,74,122); doc.text('Detalle de materiales · meses por cobrar',40,y);
+    for(const m of pend){
+      const rows=NM_CATALOGO.filter(([mat])=>m.items[mat]!==undefined && (Number(m.items[mat])||0)>0).map(([mat])=>{
         const cant=Number(m.items[mat])||0, p=nmPrecio(mat);
         return [mat, nmQty(cant), nmMoney(p), nmMoney(cant*p)];
       });
-    }
-    if(!rows.length && !abs.length) continue;
-    let y=doc.lastAutoTable.finalY+18;
-    if(y>620){ doc.addPage(); y=50; }
-    doc.setFontSize(11); doc.setTextColor(45,74,122); doc.text(m.label||m.ym,40,y);
-    const stBody={fontSize:8,cellPadding:4,textColor:[26,26,26],lineColor:[229,229,229],lineWidth:0.5};
-    if(rows.length){
+      if(!rows.length) continue;
+      let yy=doc.lastAutoTable.finalY+16;
+      if(yy>660){ doc.addPage(); yy=50; }
+      doc.setFontSize(10.5); doc.setTextColor(45,74,122);
+      doc.text((m.label||m.ym)+'   ·   por cobrar '+nmMoney(nmGenerado(m)-nmAbonado(m)),40,yy);
       doc.autoTable({
-        startY:y+6,
+        startY:yy+6,
         head:[['Material','Cantidad (kg)','$ unit.','Total']],
         body:rows,
         foot:[['Total generado','','',nmMoney(nmGenerado(m))]],
-        styles:stBody,
+        styles:{fontSize:8,cellPadding:4,textColor:[26,26,26],lineColor:[232,232,228],lineWidth:0.5},
         headStyles:{fillColor:[255,255,255],textColor:[45,74,122],fontStyle:'bold',lineColor:[45,74,122],lineWidth:{bottom:1.5}},
         footStyles:{fillColor:[255,255,255],textColor:[26,26,26],fontStyle:'bold',lineColor:[45,74,122],lineWidth:{top:1.5}},
         columnStyles:{1:{halign:'right'},2:{halign:'right'},3:{halign:'right'}},
         margin:{left:40,right:40}
       });
-      y=doc.lastAutoTable.finalY;
     }
-    // Abonos registrados del mes (con fecha)
-    doc.autoTable({
-      startY:y+10,
-      head:[['Abonos recibidos','Fecha','Factura','Valor']],
-      body: abs.length ? abs.map((a,i)=>['Abono '+(i+1), a.fecha?fmtDate(a.fecha):'—', a.facturaNumero||'—', nmMoney(a.valor)])
-                        : [['Sin abonos registrados','','','']],
-      foot: abs.length ? [['Total abonado','','',nmMoney(nmAbonado(m))]] : undefined,
-      styles:stBody,
-      headStyles:{fillColor:[240,253,244],textColor:[22,101,52],fontStyle:'bold',lineColor:[22,101,52],lineWidth:{bottom:1.5}},
-      footStyles:{fillColor:[255,255,255],textColor:[22,101,52],fontStyle:'bold',lineColor:[22,101,52],lineWidth:{top:1.5}},
-      columnStyles:{1:{halign:'right'},3:{halign:'right'}},
-      margin:{left:40,right:40}
-    });
   }
   doc.save('Conciliacion Nuevo Milenio '+corteYM+'.pdf');
 }
