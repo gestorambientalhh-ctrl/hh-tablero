@@ -5283,6 +5283,7 @@ let nmStore = JSON.parse(localStorage.getItem('hh-nm-v1')||'null') || _NM_SEED;
 if(!nmStore.precios) nmStore.precios = Object.fromEntries(NM_CATALOGO);
 if(!nmStore.meses) nmStore.meses = [];
 let _nmOpen = new Set();       // ids de meses desplegados
+let _nmInit = false;           // apertura inicial del último mes (una sola vez)
 let _nmAbonoFor = null;        // id de mes con el form de abono abierto
 let nmFechaCorte = new Date().toISOString().split('T')[0]; // corte del PDF de conciliación
 const BIZ_NAMES_F = ['Gestor HH','Logístico','Montevra'];
@@ -5769,7 +5770,7 @@ function nmSaldoFinal(mes){ return nmSaldoInicial(mes)+nmGenerado(mes)-nmAbonado
 
 function renderNuevoMilenioView(body){
   const ord=nmMesesOrden();
-  if(_nmOpen.size===0 && ord.length) _nmOpen.add(ord[ord.length-1].id);
+  if(!_nmInit && ord.length){ _nmInit=true; _nmOpen.add(ord[ord.length-1].id); }
   const totalGen=ord.reduce((s,m)=>s+nmGenerado(m),0);
   const totalAb=ord.reduce((s,m)=>s+nmAbonado(m),0);
   const saldo=totalGen-totalAb;
