@@ -5962,7 +5962,7 @@ async function nmGenerarCuentaCobro(id){
   const m=nmMes(id); if(!m) return;
   const jsPDFctor=(window.jspdf||{}).jsPDF;
   if(!jsPDFctor){ alert('El generador de PDF aún no cargó — espera unos segundos y vuelve a intentar.'); return; }
-  const doc=new jsPDFctor({orientation:'portrait',unit:'pt',format:'a4'});
+  const doc=new jsPDFctor({orientation:'portrait',unit:'pt',format:'letter'});
   let tx=40;
   const logo=(document.querySelector('.lock-card img')||document.querySelector('img[src^="data:image"]')||{}).src;
   if(logo){ try{ doc.addImage(logo,'JPEG',40,28,42,42); tx=94; }catch(e){} }
@@ -5991,10 +5991,10 @@ async function nmGenerarCuentaCobro(id){
   let y=doc.lastAutoTable.finalY+24;
   const ab=nmAbonado(m), saldoAcum=nmSaldoFinal(m), saldoAnt=nmSaldoInicial(m);
   doc.setFontSize(10); doc.setTextColor(90,90,90);
-  [['Saldo anterior (meses previos):',nmMoney(saldoAnt)],['Generado este mes:',nmMoney(gen)],['Abonos recibidos este mes:','- '+nmMoney(ab)]].forEach(([l,v])=>{ doc.text(l,tx,y); doc.text(v,555,y,{align:'right'}); y+=16; });
-  doc.setDrawColor(45,74,122); doc.setLineWidth(1); doc.line(tx,y+2,555,y+2); y+=20;
+  [['Saldo anterior (meses previos):',nmMoney(saldoAnt)],['Generado este mes:',nmMoney(gen)],['Abonos recibidos este mes:','- '+nmMoney(ab)]].forEach(([l,v])=>{ doc.text(l,tx,y); doc.text(v,572,y,{align:'right'}); y+=16; });
+  doc.setDrawColor(45,74,122); doc.setLineWidth(1); doc.line(tx,y+2,572,y+2); y+=20;
   doc.setFontSize(13); doc.setTextColor(185,28,28);
-  doc.text('Saldo total por cobrar:',tx,y); doc.text(nmMoney(saldoAcum),555,y,{align:'right'});
+  doc.text('Saldo total por cobrar:',tx,y); doc.text(nmMoney(saldoAcum),572,y,{align:'right'});
   if(m.facturaSiigo&&m.facturaSiigo.numero){ y+=24; doc.setFontSize(9); doc.setTextColor(120,120,120); doc.text('Factura Siigo asociada: '+m.facturaSiigo.numero,tx,y); }
   const nombre='Cuenta de cobro Nuevo Milenio '+(m.ym||'')+'.pdf';
   doc.save(nombre); // descarga local
@@ -6013,7 +6013,7 @@ async function nmDescargarConciliacion(){
   if(!ord.length){ alert('No hay meses hasta la fecha de corte.'); return; }
   const jsPDFctor=(window.jspdf||{}).jsPDF;
   if(!jsPDFctor){ alert('El generador de PDF aún no cargó — espera unos segundos y vuelve a intentar.'); return; }
-  const doc=new jsPDFctor({orientation:'landscape',unit:'pt',format:'a4'});
+  const doc=new jsPDFctor({orientation:'portrait',unit:'pt',format:'letter'});
   let tx=40;
   const logo=(document.querySelector('.lock-card img')||document.querySelector('img[src^="data:image"]')||{}).src;
   if(logo){ try{ doc.addImage(logo,'JPEG',40,22,36,36); tx=88; }catch(e){} }
@@ -6054,7 +6054,7 @@ async function nmDescargarConciliacion(){
       headStyles:{fillColor:[255,255,255],textColor:[45,74,122],fontStyle:'bold',lineColor:[45,74,122],lineWidth:{bottom:1.5}},
       footStyles:{fillColor:[255,255,255],textColor:[26,26,26],fontStyle:'bold',lineColor:[45,74,122],lineWidth:{top:1.5}},
       columnStyles:{1:{halign:'right'},2:{halign:'right'},3:{halign:'right'}},
-      margin:{left:40,right:400}
+      margin:{left:40,right:40}
     });
   }
   doc.save('Conciliacion Nuevo Milenio '+corteYM+'.pdf');
