@@ -1819,6 +1819,8 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
   <input type="file" id="purina-file-input" accept="image/*,.pdf" style="display:none" onchange="purinaFileSelected(this)">
   <!-- INPUT OCULTO PARA LECTURA AUTOMÁTICA DE FACTURA PURINA -->
   <input type="file" id="purina-extract-input" accept="image/*,.pdf" style="display:none" onchange="extraerFacturaPurina(this)">
+  <!-- INPUT OCULTO PARA FACTURA SIIGO DE NUEVO MILENIO -->
+  <input type="file" id="nm-factura-input" accept="image/*,.pdf" style="display:none" onchange="nmFacturaSelected(this)">
 
   <!-- MOBILE BOTTOM NAV -->->
   <nav class="mob-nav">
@@ -5801,6 +5803,7 @@ function nmMesCard(m){
   const head=`<div onclick="nmTog('${m.id}')" style="display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;user-select:none">
     <span style="font-size:11px;color:var(--text3);transition:transform .18s;display:inline-block;${abierto?'transform:rotate(90deg)':''}">▶</span>
     <span style="font-size:13px;font-weight:700;color:#2d4a7a;min-width:110px">${m.label||m.ym}</span>
+    ${nmFacturaChip(m)}
     <div style="display:flex;gap:16px;margin-left:auto;flex-wrap:wrap;align-items:center">
       ${meta('Generado',gen,'#2d4a7a')}${meta('Abonos',ab,'#16a34a')}${meta('Saldo acum.',saldo,saldo>0?'#dc2626':'#16a34a')}
     </div>
@@ -5857,6 +5860,7 @@ function nmAbonosHtml(m){
   const abonos=m.abonos||[];
   const lista=abonos.length?abonos.map(a=>`<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 0;border-bottom:1px solid #f2f2ee">
       <span style="color:#16a34a;font-weight:700">✓</span><span>Abono</span>
+      ${a.facturaNumero?`<span style="font-size:10px;color:#2d4a7a;background:#eef4ff;border:1px solid #d5e2f5;border-radius:5px;padding:1px 6px">→ Fact. ${a.facturaNumero}</span>`:''}
       <span style="color:var(--text3)">${a.fecha?fmtDate(a.fecha):''}</span>
       <span style="margin-left:auto;color:#16a34a;font-weight:700">${nmMoney(a.valor)}</span>
       ${a.soporteUrl?`<a href="${a.soporteUrl}" target="_blank" style="color:#2d4a7a;text-decoration:none">↗</a>`:''}
@@ -5874,6 +5878,7 @@ function nmAbonoFormHtml(m){
   const inp='height:30px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit';
   const lbl='font-size:10px;color:var(--text2);display:block;margin-bottom:3px;font-weight:500';
   return `<div style="margin-top:8px;border-top:1px dashed #d9d9d9;padding-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end">
+    <div style="width:100%;font-size:11px;color:var(--text2);margin-bottom:2px">${(m.facturaSiigo&&m.facturaSiigo.url)?('Se relaciona con la <b style="color:#2d4a7a">Factura Siigo '+(m.facturaSiigo.numero||'')+'</b>'):'⚠ Este mes aún no tiene factura Siigo cargada (puedes subirla arriba, al lado del mes).'}</div>
     <div><label style="${lbl}">Fecha</label><input type="date" id="nm-ab-fecha" value="${hoy}" style="${inp}"></div>
     <div><label style="${lbl}">Valor del abono</label><input type="number" id="nm-ab-valor" placeholder="0" style="${inp};width:140px"></div>
     <div><label style="${lbl}">Comprobante (link, opcional)</label><input type="text" id="nm-ab-url" placeholder="https://…" style="${inp};width:170px"></div>
@@ -5883,7 +5888,45 @@ function nmAbonoFormHtml(m){
 }
 
 function nmTog(id){ if(_nmOpen.has(id))_nmOpen.delete(id); else _nmOpen.add(id); renderFlujoBody(); }
-function nmMes(id){ return nmStore.meses.find(m=>m.id===id); }
+function nmFacturaChip(m){
+  const st='font-size:10px;padding:3px 8px;border-radius:7px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:4px;font-family:inherit';
+  if(m.facturaSiigo&&m.facturaSiigo.url){
+    return `<a href="${m.facturaSiigo.url}" target="_blank" onclick="event.stopPropagation()" style="${st};background:#eef4ff;color:#2d4a7a;border:1px solid #c5d3e8">📄 Factura ${m.facturaSiigo.numero||'Siigo'} ↗</a>`
+      +(!isViewer?`<button onclick="event.stopPropagation();nmSubirFacturaSiigo('${m.id}')" title="Reemplazar factura" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px;padding:0 2px">✎</button>`:'');
+  }
+  return !isViewer?`<button onclick="event.stopPropagation();nmSubirFacturaSiigo('${m.id}')" style="${st};background:#fff;color:#2d4a7a;border:1px dashed #c5d3e8;cursor:pointer">+ Factura Siigo</button>`:'';
+}
+function nmSubirFacturaSiigo(id){
+  const m=nmMes(id); if(!m) return;
+  const num=prompt('Número de la factura Siigo (opcional):', (m.facturaSiigo&&m.facturaSiigo.numero)||'');
+  if(num===null) return;
+  const inp=document.getElementById('nm-factura-input');
+  inp.dataset.mesId=id; inp.dataset.numero=num.trim(); inp.value=''; inp.click();
+}
+async function nmFacturaSelected(input){
+  const files=Array.from(input.files||[]); if(!files.length) return;
+  const id=input.dataset.mesId, numero=input.dataset.numero||'';
+  const m=nmMes(id); if(!m) return;
+  const ok=await _nmUploadFactura(m, files[0], numero);
+  if(ok){ alert('Factura Siigo subida a la carpeta del mes.'); renderFlujoBody(); }
+}
+async function _nmUploadFactura(m, file, numero){
+  let base64; try{ base64=await _fileToBase64(file); }catch(e){ alert('No se pudo leer el archivo.'); return false; }
+  const payload={
+    file:base64, filename:file.name, mimeType:file.type,
+    fecha:(m.ym||new Date().toISOString().slice(0,7))+'-15',
+    entidad:'Nuevo Milenio',
+    descripcion:'Factura Siigo '+(numero||'')+' - '+(m.label||m.ym),
+    tipo:'pago',
+    valor:nmGenerado(m)
+  };
+  try{
+    const resp=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify(payload)});
+    const data=await resp.json();
+    if(data&&data.ok){ m.facturaSiigo={numero:numero||'', url:data.url, nombre:file.name, fecha:new Date().toISOString().split('T')[0]}; persistNM(); return true; }
+    alert('No se pudo subir la factura: '+((data&&data.error)||'error')); return false;
+  }catch(err){ alert('Error subiendo la factura: '+err); return false; }
+}function nmMes(id){ return nmStore.meses.find(m=>m.id===id); }
 function nmSetCant(id,mat,val){ const m=nmMes(id); if(!m) return; if(!m.items)m.items={}; const v=parseFloat(val); if(isNaN(v)||v===0)delete m.items[mat]; else m.items[mat]=v; persistNM(); renderFlujoBody(); }
 function nmSetPrecio(mat,val){ nmStore.precios[mat]=parseFloat(val)||0; persistNM(); renderFlujoBody(); }
 function nmSetTotalManual(id,val){ const m=nmMes(id); if(!m) return; m.totalManual=parseFloat(val)||0; persistNM(); renderFlujoBody(); }
@@ -5895,7 +5938,8 @@ function nmAddAbono(id){
   const url=(document.getElementById('nm-ab-url').value||'').trim();
   if(!valor){ alert('Ingresa el valor del abono.'); return; }
   if(!m.abonos)m.abonos=[];
-  m.abonos.push({ id:'nma'+Date.now(), fecha, valor, soporteUrl:url||undefined });
+  const fact=m.facturaSiigo||{};
+  m.abonos.push({ id:'nma'+Date.now(), fecha, valor, soporteUrl:url||undefined, facturaNumero:fact.numero||undefined, facturaUrl:fact.url||undefined });
   persistNM(); _nmAbonoFor=null; renderFlujoBody();
 }
 function nmDelAbono(id,aid){ const m=nmMes(id); if(!m) return; if(!confirm('¿Eliminar este abono?')) return; m.abonos=(m.abonos||[]).filter(a=>a.id!==aid); persistNM(); renderFlujoBody(); }
