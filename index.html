@@ -6057,7 +6057,6 @@ async function nmDescargarConciliacion(){
     body:ledger.map(r=>[r.concepto, r.fecha, r.mes, r.factura!=null?nmMoney(r.factura):'—', r.abono!=null?('- '+nmMoney(r.abono)):'—', nmMoney(r.saldo)]),
     foot:[
       ['Total facturado','','',nmMoney(totalGen),'',''],
-      ['Total abonado','','','','- '+nmMoney(totalAb),''],
       ['SALDO TOTAL POR COBRAR','','','','',nmMoney(totalGen-totalAb)]
     ],
     styles:{fontSize:8.5,cellPadding:4.5,textColor:[26,26,26],lineColor:[232,232,228],lineWidth:0.5},
@@ -6067,8 +6066,7 @@ async function nmDescargarConciliacion(){
     didParseCell:(d)=>{
       if(d.section==='foot'){
         if(d.row.index===0 && d.column.index===3) d.cell.styles.textColor=[45,74,122];
-        if(d.row.index===1 && d.column.index===4) d.cell.styles.textColor=[22,101,52];
-        if(d.row.index===2){ d.cell.styles.textColor=[185,28,28]; d.cell.styles.fontSize=10; if(d.column.index===0) d.cell.styles.lineWidth={top:1.5}; if(d.column.index===5) d.cell.styles.lineWidth={top:1.5}; }
+        if(d.row.index===1){ d.cell.styles.textColor=[185,28,28]; d.cell.styles.fontSize=10; if(d.column.index===0||d.column.index===5) d.cell.styles.lineWidth={top:1.5}; }
         return;
       }
       if(d.section!=='body') return;
