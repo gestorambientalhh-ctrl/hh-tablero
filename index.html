@@ -5857,6 +5857,7 @@ function savePurinaFactura(){
   renderFlujoBody();
   // Si la factura se leyó de un PDF/foto, subir ese mismo archivo como soporte a Drive
   if(archivo){ _uploadPurina(nueva, archivo, true, null).then(ok=>{ if(ok) renderFlujoBody(); }); }
+  else { _purinaWriteSinSoporte(nueva, true, null); } // sin archivo: igual escribe la fila en el Excel del mes
 }
 function delPurinaFactura(id){
   const f=purinaFacturas.find(x=>x.id===id);
@@ -5941,10 +5942,12 @@ function savePagoPurina(id){
   const valor=parseFloat(document.getElementById('pur-pago-valor').value)||0;
   if(!valor){ alert('Ingresa el valor del pago.'); return; }
   if(!f.pagos) f.pagos=[];
-  f.pagos.push({ id:'pp'+Date.now(), fecha, valor });
+  const nuevoPago={ id:'pp'+Date.now(), fecha, valor };
+  f.pagos.push(nuevoPago);
   persistPurina();
   _purinaPagoFor=null;
   renderFlujoBody();
+  _purinaWriteSinSoporte(f, false, nuevoPago); // el pago siempre queda en el Excel del mes (aunque no tenga comprobante)
 }
 function delPagoPurina(facturaId, pagoId){
   const f=purinaFacturas.find(x=>x.id===facturaId); if(!f) return;
@@ -5987,6 +5990,18 @@ async function _uploadPurina(f, file, esFactura, pago){
     alert('No se pudo subir el archivo: '+(data.error||'error'));
     return false;
   }catch(err){ alert('Error subiendo el archivo: '+err); return false; }
+}
+async function _purinaWriteSinSoporte(f, esFactura, pago){
+  const hoy=new Date().toISOString().split('T')[0];
+  const payload={
+    sinSoporte:true,
+    fecha: esFactura ? (f.fechaEmision||hoy) : (pago?pago.fecha:hoy),
+    entidad:'Purina',
+    descripcion:'Factura '+(f.numero||'s/n')+(esFactura?' - Documento':' - Pago'),
+    tipo:'pago',
+    valor: esFactura ? (f.valor||0) : (pago?pago.valor:0)
+  };
+  try{ await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify(payload)}); }catch(e){ console.warn('Purina Excel:', e); }
 }
 async function purinaFileSelected(input){
   const files=Array.from(input.files||[]); if(!files.length) return;
