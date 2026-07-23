@@ -5972,7 +5972,7 @@ async function _uploadPurina(f, file, esFactura, pago){
   try{ base64=await _fileToBase64(file); }catch(e){ alert('No se pudo leer el archivo.'); return false; }
   const payload={
     file:base64, filename:file.name, mimeType:file.type,
-    fecha: esFactura ? (f.fechaEmision||new Date().toISOString().split('T')[0]) : (pago?pago.fecha:new Date().toISOString().split('T')[0]),
+    fecha: esFactura ? (f.fechaVencimiento||f.fechaEmision||new Date().toISOString().split('T')[0]) : (pago?pago.fecha:new Date().toISOString().split('T')[0]),
     entidad:'Purina',
     descripcion:'Factura '+(f.numero||'s/n')+(esFactura?' - Documento':' - Pago'),
     tipo:'pago',
@@ -5995,7 +5995,7 @@ async function _purinaWriteSinSoporte(f, esFactura, pago){
   const hoy=new Date().toISOString().split('T')[0];
   const payload={
     sinSoporte:true,
-    fecha: esFactura ? (f.fechaEmision||hoy) : (pago?pago.fecha:hoy),
+    fecha: esFactura ? (f.fechaVencimiento||f.fechaEmision||hoy) : (pago?pago.fecha:hoy),
     entidad:'Purina',
     descripcion:'Factura '+(f.numero||'s/n')+(esFactura?' - Documento':' - Pago'),
     tipo:'pago',
