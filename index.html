@@ -6224,7 +6224,7 @@ async function _descargarRelacionPurina(){
   const totalPag=facturas.reduce((s,f)=>s+purinaPagado(f),0);
   const totalSaldo=facturas.reduce((s,f)=>s+purinaSaldo(f),0);
   const periodo=purinaAnioFilter||'Todos los años';  const hoyISO=new Date().toISOString().split('T')[0];
-  const doc=new jsPDFctor({orientation:'landscape',unit:'pt',format:'a4'});
+  const doc=new jsPDFctor({orientation:'portrait',unit:'pt',format:'letter'});
   let tx=40;
   const logo=(document.querySelector('.lock-card img')||document.querySelector('img[src^="data:image"]')||{}).src;
   if(logo){ try{ doc.addImage(logo,'JPEG',40,22,36,36); tx=88; }catch(e){} }
@@ -6242,10 +6242,11 @@ async function _descargarRelacionPurina(){
     head:[['N° factura','Emisión','Vencimiento','Cant.','Valor','Pagado','Saldo','Estado','Fechas de pago']],
     body,
     foot:[['TOTALES ('+facturas.length+')','','','',fmtMoney(totalFact),fmtMoney(totalPag),fmtMoney(totalSaldo),'','']],
-    styles:{fontSize:8,cellPadding:4,textColor:[26,26,26],lineColor:[229,229,229],lineWidth:0.5,fillColor:[255,255,255]},
-    headStyles:{fillColor:[255,255,255],textColor:[45,74,122],fontStyle:'bold',lineColor:[45,74,122],lineWidth:{bottom:1.5}},
+    styles:{fontSize:7,cellPadding:3,textColor:[26,26,26],lineColor:[229,229,229],lineWidth:0.5,fillColor:[255,255,255],overflow:'linebreak'},
+    headStyles:{fillColor:[255,255,255],textColor:[45,74,122],fontStyle:'bold',lineColor:[45,74,122],lineWidth:{bottom:1.5},fontSize:7},
     footStyles:{fillColor:[255,255,255],textColor:[26,26,26],fontStyle:'bold',lineColor:[45,74,122],lineWidth:{top:1.5}},
-    columnStyles:{3:{halign:'right'},4:{halign:'right'},5:{halign:'right'},6:{halign:'right'},8:{cellWidth:150}},
+    columnStyles:{3:{halign:'right'},4:{halign:'right'},5:{halign:'right'},6:{halign:'right'},8:{cellWidth:66}},
+    margin:{left:40,right:40},
     didParseCell:(d)=>{
       if(d.section!=='body') return;
       const f=facturas[d.row.index]; if(!f) return;
