@@ -5814,7 +5814,8 @@ function nmMesCard(m){
     <div style="display:flex;justify-content:space-between;padding:7px 0;font-size:12px;border-bottom:1px dashed #e6e6e2"><span style="color:var(--text2)">(−) Abonos</span><span style="color:#16a34a">− ${nmMoney(ab)}</span></div>
     <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px;font-weight:700"><span>Saldo acumulado</span><span style="color:${saldo>0?'#dc2626':'#16a34a'}">${nmMoney(saldo)}</span></div>
   </div>`;
-  const body=abierto?`<div style="border-top:1px solid var(--border);padding:14px 14px">${concil}${nmMaterialesHtml(m)}${nmAbonosHtml(m)}</div>`:'';
+  const cobroBtn=`<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button onclick="nmGenerarCuentaCobro('${m.id}')" style="height:30px;padding:0 13px;font-size:12px;font-weight:600;background:#2d4a7a;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit">🧾 Cuenta de cobro (PDF)</button></div>`;
+  const body=abierto?`<div style="border-top:1px solid var(--border);padding:14px 14px">${cobroBtn}${concil}${nmMaterialesHtml(m)}${nmAbonosHtml(m)}</div>`:'';
   return `<div class="fl-row" style="flex-direction:column;align-items:stretch;padding:0">${head}${body}</div>`;
 }
 
@@ -5910,8 +5911,7 @@ async function nmFacturaSelected(input){
   const ok=await _nmUploadFactura(m, files[0], numero);
   if(ok){ alert('Factura Siigo subida a la carpeta del mes.'); renderFlujoBody(); }
 }
-async function _nmUploadFactura(m, file, numero){
-  let base64; try{ base64=await _fileToBase64(file); }catch(e){ alert('No se pudo leer el archivo.'); return false; }
+async function _nmUploadFactura(m, file, numero){  let base64; try{ base64=await _fileToBase64(file); }catch(e){ alert('No se pudo leer el archivo.'); return false; }
   const payload={
     file:base64, filename:file.name, mimeType:file.type,
     fecha:(m.ym||new Date().toISOString().slice(0,7))+'-15',
@@ -5957,6 +5957,46 @@ function nmAddMes(){
   persistNM(); renderFlujoBody();
 }
 
+async function nmGenerarCuentaCobro(id){
+  const m=nmMes(id); if(!m) return;
+  const jsPDFctor=(window.jspdf||{}).jsPDF;
+  if(!jsPDFctor){ alert('El generador de PDF aún no cargó — espera unos segundos y vuelve a intentar.'); return; }
+  const doc=new jsPDFctor({orientation:'portrait',unit:'pt',format:'a4'});
+  let tx=40;
+  const logo=(document.querySelector('.lock-card img')||document.querySelector('img[src^="data:image"]')||{}).src;
+  if(logo){ try{ doc.addImage(logo,'JPEG',40,28,42,42); tx=94; }catch(e){} }
+  doc.setFontSize(16); doc.setTextColor(45,74,122); doc.text('Cuenta de cobro',tx,46);
+  doc.setFontSize(10); doc.setTextColor(90,90,90);
+  doc.text('Gestor Ambiental HH   →   Nuevo Milenio',tx,62);
+  doc.text('Periodo: '+(m.label||m.ym)+'    ·    Generada: '+fmtDate(new Date().toISOString().split('T')[0]),tx,76);
+  let rows;
+  if(m.items){
+    rows=NM_CATALOGO.filter(([mat])=>m.items[mat]!==undefined && (Number(m.items[mat])||0)>0).map(([mat])=>{
+      const cant=Number(m.items[mat])||0, p=nmPrecio(mat);
+      return [mat, nmQty(cant)+' kg', nmMoney(p), nmMoney(cant*p)];
+    });
+  } else { rows=[['Total general del mes','','',nmMoney(m.totalManual||0)]]; }
+  const gen=nmGenerado(m);
+  doc.autoTable({
+    startY:96,
+    head:[['Material','Cantidad','Valor unitario','Total']],
+    body:rows,
+    foot:[['','','TOTAL A COBRAR',nmMoney(gen)]],
+    styles:{fontSize:10,cellPadding:6,textColor:[26,26,26],lineColor:[229,229,229],lineWidth:0.5},
+    headStyles:{fillColor:[255,255,255],textColor:[45,74,122],fontStyle:'bold',lineColor:[45,74,122],lineWidth:{bottom:1.5}},
+    footStyles:{fillColor:[240,247,255],textColor:[45,74,122],fontStyle:'bold',lineColor:[45,74,122],lineWidth:{top:1.5},fontSize:12},
+    columnStyles:{1:{halign:'right'},2:{halign:'right'},3:{halign:'right'}}
+  });
+  let y=doc.lastAutoTable.finalY+24;
+  const ab=nmAbonado(m), saldoAcum=nmSaldoFinal(m), saldoAnt=nmSaldoInicial(m);
+  doc.setFontSize(10); doc.setTextColor(90,90,90);
+  [['Saldo anterior (meses previos):',nmMoney(saldoAnt)],['Generado este mes:',nmMoney(gen)],['Abonos recibidos este mes:','- '+nmMoney(ab)]].forEach(([l,v])=>{ doc.text(l,tx,y); doc.text(v,555,y,{align:'right'}); y+=16; });
+  doc.setDrawColor(45,74,122); doc.setLineWidth(1); doc.line(tx,y+2,555,y+2); y+=20;
+  doc.setFontSize(13); doc.setTextColor(185,28,28);
+  doc.text('Saldo total por cobrar:',tx,y); doc.text(nmMoney(saldoAcum),555,y,{align:'right'});
+  if(m.facturaSiigo&&m.facturaSiigo.numero){ y+=24; doc.setFontSize(9); doc.setTextColor(120,120,120); doc.text('Factura Siigo asociada: '+m.facturaSiigo.numero,tx,y); }
+  doc.save('Cuenta de cobro Nuevo Milenio '+(m.ym||'')+'.pdf');
+}
 async function nmDescargarConciliacion(){
   const corteYM=(nmFechaCorte||new Date().toISOString().split('T')[0]).slice(0,7);
   const ord=nmMesesOrden().filter(m=>m.ym<=corteYM);
