@@ -8567,7 +8567,7 @@ function closeBackupModal(){
   const MATERIALES_DISPOSICION_DEFAULT = [
     'Cafetería y Sanitarios', 'Madera', 'Retal de Madera', 'Disposición Latas', 'Bolsas Lad',
     'Orgánicos', 'Lonas en mal estado', 'Material Peligroso', 'Biosanitarios y Cortopunzante',
-    'Manifiesto',
+    'Manifiestos',
     'Transporte Cafetería y sanitarios'
   ];
 
@@ -8583,10 +8583,18 @@ function closeBackupModal(){
           nombre, cantidad: '', unidad: nombre === 'Estibas en Buen Estado' ? 'Und' : 'Kg', mostrarOtro: false
         }));
       }
+      const unidadDe = nombre => (nombre === 'Transporte Cafetería y sanitarios' || nombre === 'Manifiestos') ? 'Und' : 'Kg';
       if (filasActaManual.disposicion.length === 0) {
         filasActaManual.disposicion = MATERIALES_DISPOSICION_DEFAULT.map(nombre => ({
-          nombre, cantidad: '', unidad: nombre === 'Transporte Cafetería y sanitarios' ? 'Und' : 'Kg', mostrarOtro: false
+          nombre, cantidad: '', unidad: unidadDe(nombre), mostrarOtro: false
         }));
+      } else {
+        // Asegurar que los materiales por defecto (p. ej. Manifiestos) aparezcan aunque ya hubiera filas guardadas
+        MATERIALES_DISPOSICION_DEFAULT.forEach(nombre => {
+          if (!filasActaManual.disposicion.some(f => f.nombre === nombre)) {
+            filasActaManual.disposicion.push({ nombre, cantidad: '', unidad: unidadDe(nombre), mostrarOtro: false });
+          }
+        });
       }
       poblarSelectMesActaManual();
       renderFilasActaManual();
@@ -8799,14 +8807,19 @@ function closeBackupModal(){
     const contDisp = document.getElementById('filas-disposicion');
     if (contDisp) {
       contDisp.innerHTML = '<div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 12px;">' +
-        filasActaManual.disposicion.map((f, i) => `
-          <div style="display:flex; align-items:center; gap:6px;">
+        filasActaManual.disposicion.map((f, i) => {
+          const esMani = f.nombre === 'Manifiestos';
+          const rowStyle = esMani ? 'background:#f2ecfd; border:1px solid #d7c8f5; border-radius:8px; padding:3px 8px;' : '';
+          const nameStyle = esMani ? 'flex:1.4; font-size:12px; color:#6d5ad6; font-weight:700;' : 'flex:1.4; font-size:12px; color:var(--texto);';
+          return `
+          <div style="display:flex; align-items:center; gap:6px; ${rowStyle}">
             ${f.nombre
-              ? `<span style="flex:1.4; font-size:12px; color:var(--texto);">${f.nombre}</span>`
+              ? `<span style="${nameStyle}">${esMani ? '📄 ' : ''}${f.nombre}</span>`
               : `<input type="text" placeholder="Nombre del material" value="${f.nombre}" oninput="actualizarFilaMaterial('disposicion', ${i}, 'nombre', this.value)" style="flex:1.4; height:30px; border-radius:6px; border:1px solid var(--borde); padding:0 6px; font-size:12px;">`}
-            <input type="number" placeholder="Cantidad" value="${f.cantidad}" oninput="actualizarFilaMaterial('disposicion', ${i}, 'cantidad', this.value)" style="width:80px; height:30px; border-radius:6px; border:1px solid var(--borde); padding:0 6px; font-size:12px;">
+            <input type="number" placeholder="Cantidad" value="${f.cantidad}" oninput="actualizarFilaMaterial('disposicion', ${i}, 'cantidad', this.value)" style="width:80px; height:30px; border-radius:6px; border:1px solid ${esMani ? '#d7c8f5' : 'var(--borde)'}; padding:0 6px; font-size:12px;">
             <span style="font-size:11px; color:var(--texto-suave); width:26px;">${f.unidad}</span>
-          </div>`).join('') +
+          </div>`;
+        }).join('') +
         '</div>' +
         '<button onclick="agregarFilaMaterial(\'disposicion\')" style="background:none; border:1px solid var(--borde); border-radius:7px; padding:5px 10px; font-size:12px; cursor:pointer; margin-top:8px;">+ otro material de Disposición</button>';
     }
