@@ -5265,6 +5265,26 @@ let _purinaExtractFile = null; // PDF/imagen leído para autocompletar la factur
 let purinaAnioFilter = ''; // filtro de año por fecha de emisión
 let purinaFechaCorte = new Date().toISOString().split('T')[0]; // corte del PDF: solo facturas vencidas a esta fecha
 let _purinaHistOpen = new Set(); // ids de facturas con el historial de pagos desplegado
+// ── NUEVO MILENIO (aprovechables · submódulo de HH / biz 0) ────
+const NM_CATALOGO = [ // [nombre, precio unitario por defecto]
+  ['Plástico',1100],['Chatarra',550],['Cartón',500],['Cobre encauchetado',7000],
+  ['Empaque',200],['Estibas (buen estado)',2600],['Plegadiza',100],['Lonas en mal estado',80],
+  ['Bolsas LAD',0],['Retal de madera',0]
+];
+const _NM_SEED = {
+  precios: Object.fromEntries(NM_CATALOGO),
+  meses: [
+    { id:'2026-04', ym:'2026-04', label:'Abril 2026', items:null, totalManual:11750600, abonos:[{id:'nma1',fecha:'2026-04-15',valor:4000000}] },
+    { id:'2026-05', ym:'2026-05', label:'Mayo 2026', items:{'Plástico':3400,'Chatarra':3400,'Cartón':3441,'Cobre encauchetado':160,'Empaque':4910,'Estibas (buen estado)':253,'Plegadiza':5970,'Lonas en mal estado':6850,'Bolsas LAD':660,'Retal de madera':530}, abonos:[] },
+    { id:'2026-06', ym:'2026-06', label:'Junio 2026', items:{'Plástico':3419.1,'Empaque':4502.4,'Estibas (buen estado)':245,'Plegadiza':5864.9,'Lonas en mal estado':6160,'Cartón':105.4,'Bolsas LAD':850,'Retal de madera':350}, abonos:[] }
+  ]
+};
+let nmStore = JSON.parse(localStorage.getItem('hh-nm-v1')||'null') || _NM_SEED;
+if(!nmStore.precios) nmStore.precios = Object.fromEntries(NM_CATALOGO);
+if(!nmStore.meses) nmStore.meses = [];
+let _nmOpen = new Set();       // ids de meses desplegados
+let _nmAbonoFor = null;        // id de mes con el form de abono abierto
+let nmFechaCorte = new Date().toISOString().split('T')[0]; // corte del PDF de conciliación
 const BIZ_NAMES_F = ['Gestor HH','Logístico','Montevra'];
 // Solo estas unidades de negocio se muestran como pestañas en Flujo (por índice de biz)
 const FLUJO_BIZ_VISIBLE = [0, 2];
@@ -5455,6 +5475,7 @@ function renderFlujoBody(){
   const body=document.getElementById('flujo-body');if(!body)return;
   // Sub-módulo Purina (solo HH / biz 0)
   if(flujoBiz===0 && flujoSub==='purina'){ renderPurinaView(body); return; }
+  if(flujoBiz===0 && flujoSub==='nuevomilenio'){ renderNuevoMilenioView(body); return; }
   const now=new Date();now.setHours(0,0,0,0);
   const dow=now.getDay()===0?7:now.getDay();
   const wStart=new Date(now);wStart.setDate(now.getDate()-(dow-1));
@@ -5716,11 +5737,232 @@ function persistPurina(){
 function purinaPagado(f){ return (f.pagos||[]).reduce((s,p)=>s+(p.valor||0),0); }
 function purinaSaldo(f){ return Math.max(0,(f.valor||0)-purinaPagado(f)); }
 function purinaEstado(f){ return purinaSaldo(f)<=0 ? 'pagada' : 'pendiente'; }
-function setFlujoSub(m){ flujoSub=m; _purinaFormOpen=false; _purinaPagoFor=null; renderFlujoBody(); }
+function setFlujoSub(m){ flujoSub=m; _purinaFormOpen=false; _purinaPagoFor=null; _nmAbonoFor=null; renderFlujoBody(); }
 
 function purinaSubSelector(){
   const mk=(m,label)=>`<button onclick="setFlujoSub('${m}')" style="height:30px;padding:0 16px;font-size:12px;font-weight:${flujoSub===m?'600':'500'};border:1.5px solid ${flujoSub===m?'#2d4a7a':'var(--border)'};border-radius:8px;background:${flujoSub===m?'#2d4a7a':'#fff'};color:${flujoSub===m?'#fff':'var(--text2)'};cursor:pointer;font-family:inherit">${label}</button>`;
-  return `<div style="display:flex;gap:8px;margin-bottom:16px">${mk('normal','Flujo normal')}${mk('purina','Purina')}</div>`;
+  return `<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">${mk('normal','Flujo normal')}${mk('purina','Purina')}${mk('nuevomilenio','Nuevo Milenio')}</div>`;
+}
+
+// ── NUEVO MILENIO (aprovechables) ─────────────────────────────
+function persistNM(){
+  localStorage.setItem('hh-nm-v1', JSON.stringify(nmStore));
+  if(window.persistNMToFirebase) window.persistNMToFirebase(JSON.parse(JSON.stringify(nmStore)));
+}
+function nmMoney(v){ return '$'+Math.round(v||0).toLocaleString('es-CO'); }
+function nmQty(v){ return (v||v===0)&&v!==''?Number(v).toLocaleString('es-CO',{maximumFractionDigits:1}):''; }
+function nmPrecio(mat){ return Number(nmStore.precios[mat]||0); }
+function nmMesesOrden(){ return [...nmStore.meses].sort((a,b)=>(a.ym||'').localeCompare(b.ym||'')); }
+function nmGenerado(mes){
+  if(mes.items && typeof mes.items==='object'){
+    return Object.entries(mes.items).reduce((s,[mat,cant])=>s+(Number(cant)||0)*nmPrecio(mat),0);
+  }
+  return Number(mes.totalManual||0);
+}
+function nmAbonado(mes){ return (mes.abonos||[]).reduce((s,a)=>s+(Number(a.valor)||0),0); }
+function nmSaldoInicial(mes){
+  const ord=nmMesesOrden(); let saldo=0;
+  for(const m of ord){ if(m.ym>=mes.ym) break; saldo+=nmGenerado(m)-nmAbonado(m); }
+  return saldo;
+}
+function nmSaldoFinal(mes){ return nmSaldoInicial(mes)+nmGenerado(mes)-nmAbonado(mes); }
+
+function renderNuevoMilenioView(body){
+  const ord=nmMesesOrden();
+  if(_nmOpen.size===0 && ord.length) _nmOpen.add(ord[ord.length-1].id);
+  const totalGen=ord.reduce((s,m)=>s+nmGenerado(m),0);
+  const totalAb=ord.reduce((s,m)=>s+nmAbonado(m),0);
+  const saldo=totalGen-totalAb;
+  const nAb=ord.reduce((s,m)=>s+((m.abonos||[]).length),0);
+  const kpi=(l,v,c,s)=>`<div class="fl-kpi" style="flex:1;min-width:150px"><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">${l}</div><div style="font-size:20px;font-weight:700;color:${c}">${nmMoney(v)}</div><div style="font-size:10px;color:var(--text3);margin-top:2px">${s||''}</div></div>`;
+  const kpis=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+    ${kpi('Total generado 2026',totalGen,'#2d4a7a',ord.length+' mes'+(ord.length!==1?'es':''))}
+    ${kpi('Total abonado',totalAb,'#16a34a',nAb+' abono'+(nAb!==1?'s':''))}
+    ${kpi('Saldo por cobrar',saldo,saldo>0?'#dc2626':'#16a34a','acumulado')}
+  </div>`;
+  const corteSel=ord.length?`<label style="display:flex;align-items:center;gap:5px;height:30px;font-size:11px;color:var(--text2);border:1px solid #c5d3e8;border-radius:8px;padding:0 8px;background:var(--bg)">Corte<input type="date" value="${nmFechaCorte}" onchange="nmFechaCorte=this.value" title="El PDF incluye solo meses hasta esta fecha" style="border:none;background:none;font-size:11px;font-family:inherit;color:var(--text2);outline:none"></label>`:'';
+  const pdfBtn=ord.length?`<button onclick="nmDescargarConciliacion()" style="height:30px;padding:0 12px;font-size:12px;font-weight:600;background:#fff;color:#2d4a7a;border:1px solid #c5d3e8;border-radius:8px;cursor:pointer;font-family:inherit">⬇ PDF conciliación</button>`:'';
+  const addBtn=!isViewer?`<button onclick="nmAddMes()" style="height:30px;padding:0 14px;font-size:12px;font-weight:600;background:#2d4a7a;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit">+ Agregar mes</button>`:'';
+  const meses=ord.length?ord.slice().reverse().map(m=>nmMesCard(m)).join(''):'<div style="text-align:center;padding:32px;color:var(--text3);font-size:12px">Sin meses registrados. Usa “+ Agregar mes”.</div>';
+  body.innerHTML=purinaSubSelector()+`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:13px;font-weight:700;color:#2d4a7a">Aprovechables · Nuevo Milenio</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${corteSel}${pdfBtn}${addBtn}</div>
+    </div>
+    ${kpis}
+    <div style="display:flex;flex-direction:column;gap:10px">${meses}</div>`;
+}
+
+function nmMesCard(m){
+  const abierto=_nmOpen.has(m.id);
+  const gen=nmGenerado(m), ab=nmAbonado(m), saldo=nmSaldoFinal(m), ini=nmSaldoInicial(m);
+  const meta=(l,v,c)=>`<div style="text-align:right;font-size:11px;color:var(--text2)">${l}<div style="font-size:13px;font-weight:700;color:${c||'var(--text)'}">${nmMoney(v)}</div></div>`;
+  const head=`<div onclick="nmTog('${m.id}')" style="display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;user-select:none">
+    <span style="font-size:11px;color:var(--text3);transition:transform .18s;display:inline-block;${abierto?'transform:rotate(90deg)':''}">▶</span>
+    <span style="font-size:13px;font-weight:700;color:#2d4a7a;min-width:110px">${m.label||m.ym}</span>
+    <div style="display:flex;gap:16px;margin-left:auto;flex-wrap:wrap;align-items:center">
+      ${meta('Generado',gen,'#2d4a7a')}${meta('Abonos',ab,'#16a34a')}${meta('Saldo acum.',saldo,saldo>0?'#dc2626':'#16a34a')}
+    </div>
+  </div>`;
+  const concil=`<div style="background:#f8f9fb;border:1px solid #eaeef4;border-radius:10px;padding:2px 14px;margin-bottom:14px">
+    <div style="display:flex;justify-content:space-between;padding:7px 0;font-size:12px;border-bottom:1px dashed #e6e6e2"><span style="color:var(--text2)">Saldo anterior</span><span>${nmMoney(ini)}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:7px 0;font-size:12px;border-bottom:1px dashed #e6e6e2"><span style="color:var(--text2)">(+) Generado ${m.label||''}</span><span style="color:#2d4a7a">+ ${nmMoney(gen)}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:7px 0;font-size:12px;border-bottom:1px dashed #e6e6e2"><span style="color:var(--text2)">(−) Abonos</span><span style="color:#16a34a">− ${nmMoney(ab)}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px;font-weight:700"><span>Saldo acumulado</span><span style="color:${saldo>0?'#dc2626':'#16a34a'}">${nmMoney(saldo)}</span></div>
+  </div>`;
+  const body=abierto?`<div style="border-top:1px solid var(--border);padding:14px 14px">${concil}${nmMaterialesHtml(m)}${nmAbonosHtml(m)}</div>`:'';
+  return `<div class="fl-row" style="flex-direction:column;align-items:stretch;padding:0">${head}${body}</div>`;
+}
+
+function nmMaterialesHtml(m){
+  const ro=isViewer;
+  if(!m.items){ // mes solo con total general (ej. abril)
+    const inp=ro?nmMoney(m.totalManual||0):`<input type="number" value="${m.totalManual||0}" onchange="nmSetTotalManual('${m.id}',this.value)" style="height:30px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;width:160px">`;
+    return `<div style="margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;color:#2d4a7a;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Total general del mes</div>
+      <div style="display:flex;align-items:center;gap:10px">${inp}
+        ${ro?'':`<button onclick="nmActivarDesglose('${m.id}')" style="height:30px;padding:0 12px;font-size:11px;font-weight:600;background:#fff;color:#2d4a7a;border:1px solid #c5d3e8;border-radius:7px;cursor:pointer;font-family:inherit">Cargar desglose por material</button>`}
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:6px">Sin desglose por material en la base. Puedes cargarlo si lo tienes.</div>
+    </div>`;
+  }
+  const rows=NM_CATALOGO.map(([mat])=>{
+    const cant=m.items[mat]!==undefined?m.items[mat]:'';
+    const precio=nmPrecio(mat);
+    const total=(Number(cant)||0)*precio;
+    const cero=precio===0;
+    const cantCell=ro?nmQty(cant):`<input type="number" step="any" value="${cant}" placeholder="0" onchange="nmSetCant('${m.id}','${mat.replace(/'/g,"\\'")}',this.value)" style="height:28px;width:90px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 6px;font-family:inherit;text-align:right">`;
+    const precioCell=ro?nmMoney(precio):`<input type="number" step="any" value="${precio}" onchange="nmSetPrecio('${mat.replace(/'/g,"\\'")}',this.value)" style="height:28px;width:80px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 6px;font-family:inherit;text-align:right">`;
+    return `<tr style="${cero?'color:var(--text3)':''}">
+      <td style="text-align:left;padding:5px 6px;font-size:12px;border-bottom:1px solid #f2f2ee">${mat}${cero?' <span style="font-size:9px;padding:1px 6px;border-radius:999px;font-weight:600;background:#eef0f2;color:#6b7280">costo 0</span>':''}</td>
+      <td style="text-align:right;padding:5px 6px;border-bottom:1px solid #f2f2ee">${cantCell}</td>
+      <td style="text-align:right;padding:5px 6px;border-bottom:1px solid #f2f2ee">${precioCell}</td>
+      <td style="text-align:right;padding:5px 6px;border-bottom:1px solid #f2f2ee;font-weight:600">${total?nmMoney(total):'—'}</td>
+    </tr>`;
+  }).join('');
+  const th='font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--text2);padding:6px;border-bottom:1.5px solid #2d4a7a;font-weight:600';
+  return `<div style="margin-bottom:14px;overflow-x:auto">
+    <div style="font-size:11px;font-weight:700;color:#2d4a7a;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Materiales recogidos</div>
+    <table style="width:100%;border-collapse:collapse;min-width:420px">
+      <thead><tr><th style="${th};text-align:left">Material</th><th style="${th};text-align:right">Cantidad (kg)</th><th style="${th};text-align:right">$ unit.</th><th style="${th};text-align:right">Total</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr><td colspan="3" style="text-align:left;padding-top:9px;border-top:1.5px solid #2d4a7a;font-weight:700;font-size:12px">Total generado</td><td style="text-align:right;padding-top:9px;border-top:1.5px solid #2d4a7a;font-weight:700;color:#2d4a7a;font-size:12.5px">${nmMoney(nmGenerado(m))}</td></tr></tfoot>
+    </table>
+    <div style="font-size:11px;color:var(--text2);margin-top:6px">Los de <b>costo 0</b> se registran para el tonelaje; no suman al saldo.</div>
+  </div>`;
+}
+
+function nmAbonosHtml(m){
+  const abonos=m.abonos||[];
+  const lista=abonos.length?abonos.map(a=>`<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 0;border-bottom:1px solid #f2f2ee">
+      <span style="color:#16a34a;font-weight:700">✓</span><span>Abono</span>
+      <span style="color:var(--text3)">${a.fecha?fmtDate(a.fecha):''}</span>
+      <span style="margin-left:auto;color:#16a34a;font-weight:700">${nmMoney(a.valor)}</span>
+      ${a.soporteUrl?`<a href="${a.soporteUrl}" target="_blank" style="color:#2d4a7a;text-decoration:none">↗</a>`:''}
+      ${!isViewer?`<button onclick="nmDelAbono('${m.id}','${a.id}')" style="background:none;border:none;font-size:14px;cursor:pointer;color:#d1cdc7;line-height:1">×</button>`:''}
+    </div>`).join(''):'<div style="font-size:11px;color:var(--text3);padding:6px 0">Sin abonos registrados en este mes.</div>';
+  const form=(_nmAbonoFor===m.id)?nmAbonoFormHtml(m):'';
+  const addBtn=(!isViewer && _nmAbonoFor!==m.id)?`<button onclick="_nmAbonoFor='${m.id}';renderFlujoBody()" style="height:28px;padding:0 12px;font-size:11px;font-weight:600;background:#16a34a;color:#fff;border:none;border-radius:7px;cursor:pointer;font-family:inherit;margin-top:8px">+ Registrar abono</button>`:'';
+  return `<div>
+    <div style="font-size:11px;font-weight:700;color:#2d4a7a;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Abonos del mes</div>
+    ${lista}${form}${addBtn}
+  </div>`;
+}
+function nmAbonoFormHtml(m){
+  const hoy=new Date().toISOString().split('T')[0];
+  const inp='height:30px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit';
+  const lbl='font-size:10px;color:var(--text2);display:block;margin-bottom:3px;font-weight:500';
+  return `<div style="margin-top:8px;border-top:1px dashed #d9d9d9;padding-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end">
+    <div><label style="${lbl}">Fecha</label><input type="date" id="nm-ab-fecha" value="${hoy}" style="${inp}"></div>
+    <div><label style="${lbl}">Valor del abono</label><input type="number" id="nm-ab-valor" placeholder="0" style="${inp};width:140px"></div>
+    <div><label style="${lbl}">Comprobante (link, opcional)</label><input type="text" id="nm-ab-url" placeholder="https://…" style="${inp};width:170px"></div>
+    <button onclick="nmAddAbono('${m.id}')" style="height:30px;padding:0 14px;font-size:12px;font-weight:600;background:#16a34a;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit">Guardar abono</button>
+    <button onclick="_nmAbonoFor=null;renderFlujoBody()" style="height:30px;padding:0 12px;font-size:12px;background:var(--bg2);color:var(--text2);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-family:inherit">Cancelar</button>
+  </div>`;
+}
+
+function nmTog(id){ if(_nmOpen.has(id))_nmOpen.delete(id); else _nmOpen.add(id); renderFlujoBody(); }
+function nmMes(id){ return nmStore.meses.find(m=>m.id===id); }
+function nmSetCant(id,mat,val){ const m=nmMes(id); if(!m) return; if(!m.items)m.items={}; const v=parseFloat(val); if(isNaN(v)||v===0)delete m.items[mat]; else m.items[mat]=v; persistNM(); renderFlujoBody(); }
+function nmSetPrecio(mat,val){ nmStore.precios[mat]=parseFloat(val)||0; persistNM(); renderFlujoBody(); }
+function nmSetTotalManual(id,val){ const m=nmMes(id); if(!m) return; m.totalManual=parseFloat(val)||0; persistNM(); renderFlujoBody(); }
+function nmActivarDesglose(id){ const m=nmMes(id); if(!m) return; m.items={}; m.totalManual=null; persistNM(); renderFlujoBody(); }
+function nmAddAbono(id){
+  const m=nmMes(id); if(!m) return;
+  const fecha=document.getElementById('nm-ab-fecha').value;
+  const valor=parseFloat(document.getElementById('nm-ab-valor').value)||0;
+  const url=(document.getElementById('nm-ab-url').value||'').trim();
+  if(!valor){ alert('Ingresa el valor del abono.'); return; }
+  if(!m.abonos)m.abonos=[];
+  m.abonos.push({ id:'nma'+Date.now(), fecha, valor, soporteUrl:url||undefined });
+  persistNM(); _nmAbonoFor=null; renderFlujoBody();
+}
+function nmDelAbono(id,aid){ const m=nmMes(id); if(!m) return; if(!confirm('¿Eliminar este abono?')) return; m.abonos=(m.abonos||[]).filter(a=>a.id!==aid); persistNM(); renderFlujoBody(); }
+function nmAddMes(){
+  const val=prompt('Mes a agregar (formato AAAA-MM, ej. 2026-07):','');
+  if(!val) return;
+  const ym=val.trim();
+  if(!/^\d{4}-\d{2}$/.test(ym)){ alert('Formato inválido. Usa AAAA-MM, ej. 2026-07.'); return; }
+  if(nmStore.meses.some(m=>m.ym===ym)){ alert('Ese mes ya existe.'); return; }
+  const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const [y,mm]=ym.split('-');
+  const label=meses[parseInt(mm)-1]+' '+y;
+  nmStore.meses.push({ id:ym, ym, label, items:{}, abonos:[] });
+  _nmOpen.clear(); _nmOpen.add(ym);
+  persistNM(); renderFlujoBody();
+}
+
+async function nmDescargarConciliacion(){
+  const corteYM=(nmFechaCorte||new Date().toISOString().split('T')[0]).slice(0,7);
+  const ord=nmMesesOrden().filter(m=>m.ym<=corteYM);
+  if(!ord.length){ alert('No hay meses hasta la fecha de corte.'); return; }
+  const jsPDFctor=(window.jspdf||{}).jsPDF;
+  if(!jsPDFctor){ alert('El generador de PDF aún no cargó — espera unos segundos y vuelve a intentar.'); return; }
+  const doc=new jsPDFctor({orientation:'landscape',unit:'pt',format:'a4'});
+  let tx=40;
+  const logo=(document.querySelector('.lock-card img')||document.querySelector('img[src^="data:image"]')||{}).src;
+  if(logo){ try{ doc.addImage(logo,'JPEG',40,22,36,36); tx=88; }catch(e){} }
+  doc.setFontSize(15); doc.setTextColor(45,74,122); doc.text('Conciliación · Nuevo Milenio (aprovechables)',tx,42);
+  doc.setFontSize(9); doc.setTextColor(110,110,110);
+  doc.text('Gestor HH · Corte: '+fmtDate(nmFechaCorte)+' · '+ord.length+' mes(es)',tx,56);
+  // Resumen de meses
+  const totalGen=ord.reduce((s,m)=>s+nmGenerado(m),0);
+  const totalAb=ord.reduce((s,m)=>s+nmAbonado(m),0);
+  doc.autoTable({
+    startY:72,
+    head:[['Mes','Saldo anterior','Generado','Abonos','Saldo acumulado']],
+    body:ord.map(m=>[m.label||m.ym, nmMoney(nmSaldoInicial(m)), nmMoney(nmGenerado(m)), nmMoney(nmAbonado(m)), nmMoney(nmSaldoFinal(m))]),
+    foot:[['TOTAL','',nmMoney(totalGen),nmMoney(totalAb),nmMoney(totalGen-totalAb)]],
+    styles:{fontSize:9,cellPadding:5,textColor:[26,26,26],lineColor:[229,229,229],lineWidth:0.5},
+    headStyles:{fillColor:[255,255,255],textColor:[45,74,122],fontStyle:'bold',lineColor:[45,74,122],lineWidth:{bottom:1.5}},
+    footStyles:{fillColor:[255,255,255],textColor:[26,26,26],fontStyle:'bold',lineColor:[45,74,122],lineWidth:{top:1.5}},
+    columnStyles:{1:{halign:'right'},2:{halign:'right'},3:{halign:'right'},4:{halign:'right'}},
+    didParseCell:(d)=>{ if(d.section==='body'&&d.column.index===4) d.cell.styles.textColor=[185,28,28]; }
+  });
+  // Detalle por material de cada mes con desglose
+  for(const m of ord){
+    if(!m.items) continue;
+    const rows=NM_CATALOGO.filter(([mat])=>m.items[mat]!==undefined).map(([mat])=>{
+      const cant=Number(m.items[mat])||0, p=nmPrecio(mat);
+      return [mat, nmQty(cant), nmMoney(p), nmMoney(cant*p)];
+    });
+    if(!rows.length) continue;
+    let y=doc.lastAutoTable.finalY+18;
+    if(y>500){ doc.addPage(); y=50; }
+    doc.setFontSize(11); doc.setTextColor(45,74,122); doc.text(m.label||m.ym,40,y);
+    doc.autoTable({
+      startY:y+6,
+      head:[['Material','Cantidad (kg)','$ unit.','Total']],
+      body:rows,
+      foot:[['Total generado','','',nmMoney(nmGenerado(m))]],
+      styles:{fontSize:8,cellPadding:4,textColor:[26,26,26],lineColor:[229,229,229],lineWidth:0.5},
+      headStyles:{fillColor:[255,255,255],textColor:[45,74,122],fontStyle:'bold',lineColor:[45,74,122],lineWidth:{bottom:1.5}},
+      footStyles:{fillColor:[255,255,255],textColor:[26,26,26],fontStyle:'bold',lineColor:[45,74,122],lineWidth:{top:1.5}},
+      columnStyles:{1:{halign:'right'},2:{halign:'right'},3:{halign:'right'}},
+      margin:{left:40,right:400}
+    });
+  }
+  doc.save('Conciliacion Nuevo Milenio '+corteYM+'.pdf');
 }
 
 function renderPurinaView(body){
@@ -7531,6 +7773,22 @@ onSnapshot(PURINA_REF, snap => {
   if(typeof purinaFacturas !== 'undefined') purinaFacturas = data.facturas;
   localStorage.setItem('hh-purina-v1', JSON.stringify(data.facturas));
   if(typeof flujoSub !== 'undefined' && flujoSub === 'purina' && typeof renderFlujoBody === 'function') renderFlujoBody();
+});
+
+// ── NUEVO MILENIO FIREBASE SYNC ───────────────────────────────
+const NM_REF = doc(db, 'hh-socios', 'nuevomilenio');
+window.persistNMToFirebase = async function(store) {
+  try {
+    await setDoc(NM_REF, { store: store, updatedAt: Date.now() });
+  } catch(e) { console.warn('Nuevo Milenio write error:', e); }
+};
+onSnapshot(NM_REF, snap => {
+  if(!snap.exists()) return;
+  const data = snap.data();
+  if(!data.store || typeof data.store !== 'object') return;
+  if(typeof nmStore !== 'undefined') nmStore = data.store;
+  localStorage.setItem('hh-nm-v1', JSON.stringify(data.store));
+  if(typeof flujoSub !== 'undefined' && flujoSub === 'nuevomilenio' && typeof renderFlujoBody === 'function') renderFlujoBody();
 });
 
 // ── RECURRENTES FIREBASE SYNC ─────────────────────────────────
