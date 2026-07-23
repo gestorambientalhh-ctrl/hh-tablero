@@ -1751,6 +1751,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
       <input type="file" id="input-cert" accept="application/pdf" onchange="cargarCertificado(event)">
     </div>
   </div>
+  <input type="file" id="input-manifiesto-mes" accept="application/pdf,image/*" style="display:none" onchange="procesarManifiestoMes(event)">
   <div id="estado-carga-cert" class="actas-estado-carga"></div>
 
   <div id="modal-proveedor" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:50; align-items:center; justify-content:center;">
@@ -8070,6 +8071,8 @@ function closeBackupModal(){
   let actas = [];
   // Cada registro de material: { actaId, grupo, nombre, cantidadActa, unidadActa, entregas }
   let registros = [];
+  // Manifiestos por mes (fila especial de la sábana): { [mesIndex]: [{numero, fecha, urlDrive, nombre}] }
+  let manifiestosPorMes = (() => { try { return JSON.parse(localStorage.getItem('hh-actas-manifiestos') || '{}'); } catch(e){ return {}; } })();
   // Estado manual de la fila "Acta de conciliación" por mes (ok/pendiente), independiente de si hay PDF cargado
   const estadoManual = MESES.map(() => null);
 
@@ -9778,6 +9781,60 @@ function closeBackupModal(){
     return `<td><button class="actas-badge actas-badge-ok" onclick="verEntregas('${nombreEsc}', '${reg.actaId}')" title="Cuadra con el acta — clic para ver el detalle">${texto}</button></td>`;
   }
 
+  function guardarManifiestos() {
+    try { localStorage.setItem('hh-actas-manifiestos', JSON.stringify(manifiestosPorMes)); } catch(e){}
+    if (db && firestoreFns) { try { const { doc, setDoc } = firestoreFns; setDoc(doc(db, 'hh-actas-meta', 'manifiestos'), { mapa: manifiestosPorMes }); } catch(e){} }
+  }
+  function celdaManifiesto(mesIndex) {
+    const lista = manifiestosPorMes[mesIndex] || [];
+    const chips = lista.map((m, k) => `<span style="display:inline-flex;align-items:center;gap:3px;background:#efe8fc;color:#6d5ad6;border:1px solid #d7c8f5;border-radius:6px;padding:1px 5px;margin:1px;font-size:11px;font-weight:700">${m.urlDrive ? `<a href="${m.urlDrive}" target="_blank" onclick="event.stopPropagation()" style="color:#6d5ad6;text-decoration:none">N°${m.numero||'?'}</a>` : `N°${m.numero||'?'}`}<button onclick="event.stopPropagation();eliminarManifiesto(${mesIndex},${k})" title="Quitar" style="background:none;border:none;color:#b5a3e0;cursor:pointer;font-size:12px;line-height:1;padding:0">×</button></span>`).join('');
+    const fechas = lista.filter(m=>m.fecha).map(m=>m.fecha).join(', ');
+    return `<td onclick="subirManifiestoMes(${mesIndex})" style="cursor:pointer" title="${fechas || ('Subir manifiesto de '+MESES[mesIndex])}">${chips}<div style="font-size:10.5px;color:#6d5ad6;margin-top:2px;font-weight:600">${lista.length ? '+ agregar' : '＋ subir'}</div></td>`;
+  }
+  let _manifiestoMesActual = null;
+  function subirManifiestoMes(mesIndex) {
+    _manifiestoMesActual = mesIndex;
+    const inp = document.getElementById('input-manifiesto-mes');
+    if (inp) { inp.value = ''; inp.click(); }
+  }
+  function eliminarManifiesto(mesIndex, k) {
+    if (!manifiestosPorMes[mesIndex]) return;
+    if (!confirm('¿Quitar este manifiesto?')) return;
+    manifiestosPorMes[mesIndex].splice(k, 1);
+    if (manifiestosPorMes[mesIndex].length === 0) delete manifiestosPorMes[mesIndex];
+    guardarManifiestos(); render();
+  }
+  async function procesarManifiestoMes(event) {
+    const file = event.target.files[0]; if (!file) return;
+    const mesIndex = _manifiestoMesActual; if (mesIndex == null) return;
+    const estadoDiv = document.getElementById('estado-carga');
+    if (estadoDiv) { estadoDiv.className = 'actas-estado-carga actas-estado-cargando'; estadoDiv.style.display = 'block'; estadoDiv.textContent = 'Leyendo manifiesto…'; }
+    let numero = null, fecha = null;
+    try {
+      const buffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+      let texto = '';
+      for (let p = 1; p <= pdf.numPages; p++) { const page = await pdf.getPage(p); const c = await page.getTextContent(); texto += c.items.map(it => it.str).join(' ') + '\n'; }
+      const mN = texto.match(/manifiesto[\s\S]{0,30}?N[°º]?\.?\s*(\d{3,})/i) || texto.match(/N[°º]\s*(\d{4,})/);
+      if (mN) numero = mN[1];
+      const mF = texto.match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);
+      if (mF) fecha = mF[1].padStart(2,'0') + '/' + mF[2].padStart(2,'0') + '/' + mF[3];
+    } catch(e) { /* PDF sin texto legible */ }
+    // Fallback por nombre de archivo (ej. Manifiesto-10616_01-04-2026.pdf)
+    if (!numero) { const fm = file.name.match(/(\d{3,})/); if (fm) numero = fm[1]; }
+    if (!fecha) { const ff = file.name.match(/(\d{1,2})[-_\/.](\d{1,2})[-_\/.](\d{4})/); if (ff) fecha = ff[1].padStart(2,'0') + '/' + ff[2].padStart(2,'0') + '/' + ff[3]; }
+    // Confirmar / corregir a mano (permite carga manual si el PDF no se leyó)
+    numero = prompt('Número del manifiesto:', numero || ''); if (numero === null) { if (estadoDiv) estadoDiv.style.display = 'none'; return; }
+    fecha = prompt('Fecha del manifiesto (dd/mm/aaaa):', fecha || '') || '';
+    if (estadoDiv) estadoDiv.textContent = 'Subiendo a Drive…';
+    let urlDrive = null;
+    try { urlDrive = await subirArchivoADrive(file, 'manifiesto', mesIndex); } catch(e){}
+    if (!manifiestosPorMes[mesIndex]) manifiestosPorMes[mesIndex] = [];
+    manifiestosPorMes[mesIndex].push({ numero: String(numero).trim(), fecha, urlDrive, nombre: file.name });
+    guardarManifiestos(); render();
+    if (estadoDiv) { estadoDiv.className = 'actas-estado-carga actas-estado-ok'; estadoDiv.style.display = 'block'; estadoDiv.innerHTML = `Manifiesto N°${numero} (${fecha || 'sin fecha'}) agregado a ${MESES[mesIndex]}.` + (urlDrive ? ` <a href="${urlDrive}" target="_blank" style="color:var(--azul);font-weight:600">Ver en Drive</a>` : ''); }
+  }
+
   function render() {
     const tabla = document.getElementById('tabla-sabana');
     let html = '<thead><tr><th class="actas-col-material">Concepto</th>';
@@ -9827,6 +9884,13 @@ function closeBackupModal(){
       html += `<td class="actas-total">${conCert ? `<span class="${total === 0 ? 'actas-dif-ok' : 'actas-dif-mal'}">${total.toLocaleString('es-CO')} ${sufijoTotal}</span>` : '<span class="actas-dif-vacio">—</span>'}</td>`;
       html += '</tr>';
     });
+
+    // Fila especial: Manifiestos (clic en un mes para subir y leer número + fecha)
+    html += `<tr class="actas-fila-grupo"><td colspan="${MESES.length + 2}">Manifiestos</td></tr>`;
+    html += '<tr style="background:#faf7ff"><td class="actas-nombre-material" style="color:#6d5ad6;font-weight:700">📄 Manifiestos</td>';
+    for (let i = 0; i < MESES.length; i++) html += celdaManifiesto(i);
+    const totalMani = Object.values(manifiestosPorMes).reduce((s, a) => s + (Array.isArray(a) ? a.length : 0), 0);
+    html += `<td class="actas-total"><span style="color:#6d5ad6;font-weight:700">${totalMani || '—'}</span></td></tr>`;
 
     if (materialesOrdenados.length === 0) {
       html += `<tr><td colspan="${MESES.length + 2}" style="text-align:center; padding:24px; color:var(--texto-suave);">Sube el primer PDF de acta para empezar a llenar la tabla</td></tr>`;
@@ -9980,6 +10044,11 @@ function closeBackupModal(){
         materialesSinActa.push(...sinActaDoc.data().lista);
       }
     } catch (err) { /* sin materiales pendientes guardados aún */ }
+
+    try {
+      const manDoc = await getDoc(doc(db, 'hh-actas-meta', 'manifiestos'));
+      if (manDoc.exists() && manDoc.data().mapa) manifiestosPorMes = manDoc.data().mapa;
+    } catch (err) { /* sin manifiestos guardados aún */ }
   }
 
   async function iniciar() {
@@ -10284,6 +10353,9 @@ function closeBackupModal(){
   window.abrirEnsenarDesdeArchivo = abrirEnsenarDesdeArchivo;
   window.cargarCertificado = cargarCertificado;
   window.cargarPDF = cargarPDF;
+  window.subirManifiestoMes = subirManifiestoMes;
+  window.procesarManifiestoMes = procesarManifiestoMes;
+  window.eliminarManifiesto = eliminarManifiesto;
 })();
 </script>
 </body>
