@@ -1752,6 +1752,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
     </div>
   </div>
   <input type="file" id="input-manifiesto-mes" accept="application/pdf,image/*" style="display:none" onchange="procesarManifiestoMes(event)">
+  <input type="file" id="input-acta-manifiesto" accept="application/pdf,image/*" style="display:none" onchange="procesarActaManifiesto(event)">
   <div id="estado-carga-cert" class="actas-estado-carga"></div>
 
   <div id="modal-proveedor" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:50; align-items:center; justify-content:center;">
@@ -9787,7 +9788,18 @@ function closeBackupModal(){
   }
   function celdaManifiesto(mesIndex) {
     const lista = manifiestosPorMes[mesIndex] || [];
-    const chips = lista.map((m, k) => `<span style="display:inline-flex;align-items:center;justify-content:center;gap:3px;background:#efe8fc;color:#6d5ad6;border:1px solid #d7c8f5;border-radius:6px;padding:2px 6px;font-size:11px;font-weight:700">${m.urlDrive ? `<a href="${m.urlDrive}" target="_blank" onclick="event.stopPropagation()" style="color:#6d5ad6;text-decoration:none">N°${m.numero||'?'}</a>` : `N°${m.numero||'?'}`}<button onclick="event.stopPropagation();eliminarManifiesto(${mesIndex},${k})" title="Quitar" style="background:none;border:none;color:#b5a3e0;cursor:pointer;font-size:12px;line-height:1;padding:0">×</button></span>`).join('');
+    const chips = lista.map((m, k) => {
+      const valorTxt = (m.valor != null && m.valor !== '') ? '$' + Number(m.valor).toLocaleString('es-CO') : '';
+      return `<div style="background:#efe8fc;border:1px solid #d7c8f5;border-radius:7px;padding:3px 6px;display:flex;flex-direction:column;gap:2px;align-items:center;min-width:80px">
+        <div style="display:flex;align-items:center;gap:4px">
+          <button onclick="event.stopPropagation();adjuntarActaManifiesto(${mesIndex},${k})" title="Adjuntar acta (PDF) y poner valor" style="background:none;border:none;color:#6d5ad6;font-weight:700;font-size:11px;cursor:pointer;padding:0">N°${m.numero||'?'}</button>
+          ${m.urlDrive ? `<a href="${m.urlDrive}" target="_blank" onclick="event.stopPropagation()" title="Manifiesto" style="text-decoration:none;font-size:10px">📎</a>` : ''}
+          ${m.actaUrl ? `<a href="${m.actaUrl}" target="_blank" onclick="event.stopPropagation()" title="Acta" style="text-decoration:none;font-size:10px">📄</a>` : ''}
+          <button onclick="event.stopPropagation();eliminarManifiesto(${mesIndex},${k})" title="Quitar" style="background:none;border:none;color:#b5a3e0;cursor:pointer;font-size:12px;line-height:1;padding:0">×</button>
+        </div>
+        ${valorTxt ? `<div style="font-size:10.5px;color:#166534;font-weight:700">${valorTxt}</div>` : `<button onclick="event.stopPropagation();adjuntarActaManifiesto(${mesIndex},${k})" style="background:none;border:none;color:#9a8fd0;font-size:9.5px;cursor:pointer;padding:0">poner valor</button>`}
+      </div>`;
+    }).join('');
     const fechas = lista.filter(m=>m.fecha).map(m=>m.fecha).join(', ');
     return `<td onclick="subirManifiestoMes(${mesIndex})" style="cursor:pointer" title="${fechas || ('Subir manifiesto de '+MESES[mesIndex])}"><div style="display:flex;flex-direction:column;gap:3px;align-items:center">${chips}</div><div style="font-size:10.5px;color:#6d5ad6;margin-top:3px;font-weight:600">${lista.length ? '+ agregar' : '＋ subir'}</div></td>`;
   }
@@ -9833,6 +9845,31 @@ function closeBackupModal(){
     manifiestosPorMes[mesIndex].push({ numero: String(numero).trim(), fecha, urlDrive, nombre: file.name });
     guardarManifiestos(); render();
     if (estadoDiv) { estadoDiv.className = 'actas-estado-carga actas-estado-ok'; estadoDiv.style.display = 'block'; estadoDiv.innerHTML = `Manifiesto N°${numero} (${fecha || 'sin fecha'}) agregado a ${MESES[mesIndex]}.` + (urlDrive ? ` <a href="${urlDrive}" target="_blank" style="color:var(--azul);font-weight:600">Ver en Drive</a>` : ''); }
+  }
+
+  let _actaManiRef = null;
+  function adjuntarActaManifiesto(mesIndex, k) {
+    _actaManiRef = { mesIndex, k };
+    const inp = document.getElementById('input-acta-manifiesto');
+    if (inp) { inp.value = ''; inp.click(); }
+  }
+  async function procesarActaManifiesto(event) {
+    const ref = _actaManiRef; if (!ref) return;
+    const lista = manifiestosPorMes[ref.mesIndex] || [];
+    const m = lista[ref.k]; if (!m) return;
+    const file = event.target.files[0];
+    const estadoDiv = document.getElementById('estado-carga');
+    let actaUrl = m.actaUrl || null;
+    if (file) {
+      if (estadoDiv) { estadoDiv.className = 'actas-estado-carga actas-estado-cargando'; estadoDiv.style.display = 'block'; estadoDiv.textContent = 'Subiendo acta a Drive…'; }
+      try { actaUrl = await subirArchivoADrive(file, 'acta', ref.mesIndex); } catch(e){}
+    }
+    const valor = prompt('Valor del acta / manifiesto N°' + (m.numero||'') + ':', (m.valor != null && m.valor !== '') ? m.valor : '');
+    if (valor !== null) m.valor = parseFloat(String(valor).replace(/[^\d.-]/g, '')) || 0;
+    if (actaUrl) m.actaUrl = actaUrl;
+    if (file) m.actaNombre = file.name;
+    guardarManifiestos(); render();
+    if (estadoDiv) { estadoDiv.className = 'actas-estado-carga actas-estado-ok'; estadoDiv.style.display = 'block'; estadoDiv.innerHTML = `Acta ${file ? 'adjuntada' : 'actualizada'} para el manifiesto N°${m.numero||''}${m.valor ? ' — $' + Number(m.valor).toLocaleString('es-CO') : ''}.` + (actaUrl ? ` <a href="${actaUrl}" target="_blank" style="color:var(--azul);font-weight:600">Ver acta</a>` : ''); }
   }
 
   function render() {
@@ -10356,6 +10393,8 @@ function closeBackupModal(){
   window.subirManifiestoMes = subirManifiestoMes;
   window.procesarManifiestoMes = procesarManifiestoMes;
   window.eliminarManifiesto = eliminarManifiesto;
+  window.adjuntarActaManifiesto = adjuntarActaManifiesto;
+  window.procesarActaManifiesto = procesarActaManifiesto;
 })();
 </script>
 </body>
