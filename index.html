@@ -9787,9 +9787,9 @@ function closeBackupModal(){
   }
   function celdaManifiesto(mesIndex) {
     const lista = manifiestosPorMes[mesIndex] || [];
-    const chips = lista.map((m, k) => `<span style="display:inline-flex;align-items:center;gap:3px;background:#efe8fc;color:#6d5ad6;border:1px solid #d7c8f5;border-radius:6px;padding:1px 5px;margin:1px;font-size:11px;font-weight:700">${m.urlDrive ? `<a href="${m.urlDrive}" target="_blank" onclick="event.stopPropagation()" style="color:#6d5ad6;text-decoration:none">N°${m.numero||'?'}</a>` : `N°${m.numero||'?'}`}<button onclick="event.stopPropagation();eliminarManifiesto(${mesIndex},${k})" title="Quitar" style="background:none;border:none;color:#b5a3e0;cursor:pointer;font-size:12px;line-height:1;padding:0">×</button></span>`).join('');
+    const chips = lista.map((m, k) => `<span style="display:inline-flex;align-items:center;justify-content:center;gap:3px;background:#efe8fc;color:#6d5ad6;border:1px solid #d7c8f5;border-radius:6px;padding:2px 6px;font-size:11px;font-weight:700">${m.urlDrive ? `<a href="${m.urlDrive}" target="_blank" onclick="event.stopPropagation()" style="color:#6d5ad6;text-decoration:none">N°${m.numero||'?'}</a>` : `N°${m.numero||'?'}`}<button onclick="event.stopPropagation();eliminarManifiesto(${mesIndex},${k})" title="Quitar" style="background:none;border:none;color:#b5a3e0;cursor:pointer;font-size:12px;line-height:1;padding:0">×</button></span>`).join('');
     const fechas = lista.filter(m=>m.fecha).map(m=>m.fecha).join(', ');
-    return `<td onclick="subirManifiestoMes(${mesIndex})" style="cursor:pointer" title="${fechas || ('Subir manifiesto de '+MESES[mesIndex])}">${chips}<div style="font-size:10.5px;color:#6d5ad6;margin-top:2px;font-weight:600">${lista.length ? '+ agregar' : '＋ subir'}</div></td>`;
+    return `<td onclick="subirManifiestoMes(${mesIndex})" style="cursor:pointer" title="${fechas || ('Subir manifiesto de '+MESES[mesIndex])}"><div style="display:flex;flex-direction:column;gap:3px;align-items:center">${chips}</div><div style="font-size:10.5px;color:#6d5ad6;margin-top:3px;font-weight:600">${lista.length ? '+ agregar' : '＋ subir'}</div></td>`;
   }
   let _manifiestoMesActual = null;
   function subirManifiestoMes(mesIndex) {
