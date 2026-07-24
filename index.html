@@ -546,10 +546,13 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 
 /* KPI BAR BOTTOM */
 .kpi-bar{position:fixed;bottom:0;left:0;right:0;height:48px;background:#fff;border-top:1px solid #e2e8f0;display:none;align-items:center;justify-content:center;z-index:90;box-shadow:0 -2px 8px rgba(0,0,0,.06)}
-.kpi-bar.visible{display:flex}
+.kpi-bar,.kpi-bar.visible{display:none!important}
 @media(max-width:700px){.kpi-bar{bottom:56px}}
 .main-wrap{padding-bottom:96px!important}
 #board,#global-view,#dash-view{padding-bottom:96px}
+@media(min-width:1001px){body.has-notes-panel #board,body.has-notes-panel #global-view,body.has-notes-panel #dash-view{padding-right:372px!important}}
+@media(min-width:681px) and (max-width:1000px){#fixed-notes-panel-wrapper{width:300px!important}body.has-notes-panel #board,body.has-notes-panel #global-view,body.has-notes-panel #dash-view{padding-right:312px!important}}
+@media(max-width:680px){#fixed-notes-panel-wrapper{display:none!important}}
 @media(max-width:700px){.hitos-bar{bottom:104px;height:auto;min-height:44px}}
 
 /* ZOOM CONTROL */
@@ -558,7 +561,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 
 /* HITOS BAR */
 .hitos-bar{position:fixed;bottom:48px;left:0;right:0;height:44px;background:#1a2744;border-top:2px solid #2a9a4a;display:none;align-items:center;padding:0 16px;gap:8px;z-index:91;box-shadow:0 -2px 8px rgba(0,0,0,.15)}
-.hitos-bar.visible{display:flex!important}
+.hitos-bar,.hitos-bar.visible{display:none!important}
 @media(max-width:700px){.hitos-bar{bottom:56px;height:auto;min-height:44px;flex-wrap:wrap;padding:6px 12px}}
 .hitos-label{font-size:9px;font-weight:700;color:#2a9a4a;text-transform:uppercase;letter-spacing:1.2px;white-space:nowrap;flex-shrink:0}
 .hitos-sep{width:1px;height:24px;background:rgba(255,255,255,0.15);flex-shrink:0}
@@ -587,6 +590,8 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 .card-vencida{border-left:3px solid #d97706!important;background:#fdfaf7!important;border-color:#e8d5c4!important}
 .card-vencida:hover{background:#fdf5ec!important}
 .add-btn{background:none!important;border:1px dashed #d1cdc7!important;border-radius:8px!important;padding:8px 12px!important;margin-top:2px!important}
+.proj-ic-card{width:26px;height:26px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:800;color:#fff;letter-spacing:.3px;margin-top:1px}
+.card-who-name{font-size:11px;font-weight:700;color:var(--text2);white-space:nowrap}
 
 </style>
 
@@ -3501,6 +3506,35 @@ function restoreTask(id){
 // ── HITOS ─────────────────────────────────────────────────────
 let hitos = JSON.parse(localStorage.getItem('hh-hitos-v1')||'[]');
 
+// ── ACTIVIDADES A REALIZAR (to-do independiente de las tareas) ──
+let actividades = JSON.parse(localStorage.getItem('hh-actividades-v1')||'[]');
+function persistActividades(){
+  localStorage.setItem('hh-actividades-v1', JSON.stringify(actividades));
+  if(window.persistActividadesToFirebase) window.persistActividadesToFirebase([...actividades]);
+}
+function addActividad(){
+  const inp=document.getElementById('act-input');
+  const who=document.getElementById('act-who');
+  const texto=(inp?.value||'').trim();
+  if(!texto) return;
+  actividades.push({id:Date.now()+'', texto, who: who?who.value:'', done:false, ts:Date.now()});
+  persistActividades();
+  if(inp) inp.value='';
+  if(typeof renderGlobal==='function') renderGlobal();
+  setTimeout(()=>document.getElementById('act-input')?.focus(),30);
+}
+function toggleActividad(id){
+  const a=actividades.find(x=>x.id===id); if(!a) return;
+  a.done=!a.done;
+  persistActividades();
+  if(typeof renderGlobal==='function') renderGlobal();
+}
+function delActividad(id){
+  actividades=actividades.filter(x=>x.id!==id);
+  persistActividades();
+  if(typeof renderGlobal==='function') renderGlobal();
+}
+
 function openHitosModal(){
   renderHitosList();
   document.getElementById('hitos-overlay').style.display='flex';
@@ -4129,6 +4163,7 @@ function cardHtml(t,showBiz){
     ${t.edited?'<span class="edit-badge">✏️ Editada '+t.editedAt+'</span>':''}
     ${t.isRecurring?`<span class="rec-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>${t.recLabel||'Recurrente'}</span>`:''}
     <div class="card-top">
+      ${t.biz!==undefined?`<span class="proj-ic-card" style="background:${BIZ_C[t.biz]}">${['GH','LG','MV'][t.biz]||''}</span>`:''}
       <div class="card-cb${done?' done':''}" onclick="toggleDone('${t.id}')"></div>
       <span class="card-title${done?' done':''}">${t.title}</span>
       ${t.biz!==undefined?`<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;background:#fff;border:1.5px solid ${BIZ_C[t.biz]};color:${BIZ_C[t.biz]};white-space:nowrap;flex-shrink:0">${BIZ_NAMES[t.biz]||''}</span>`:''}
@@ -4143,7 +4178,7 @@ function cardHtml(t,showBiz){
       </span>
       ${t.date?`<span class="date-pill${sem.vencida?' over':''}">${fmtDate(t.date)}</span>`:''}
       ${showBiz?`<span class="biz-pill" style="background:${BIZ_C[t.biz]}20;color:${BIZ_C[t.biz]}">${BIZ_NAMES[t.biz]||''}</span>`:''}
-      <div class="avatar-sm" style="background:${wa.bg};color:${wa.col}">${wa.init}</div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:6px"><span class="card-who-name">${t.who||''}</span><div class="avatar-sm" style="background:${wa.bg};color:${wa.col};margin-left:0">${wa.init}</div></div>
     </div>
     ${t.isPayment&&!t.supportDone&&!done&&!t.fromFlujo?`<button onclick="markSupportDone('${t.id}')" style="width:100%;margin-bottom:6px;height:28px;background:#FEF3C7;border:1.5px solid #F59E0B;border-radius:6px;font-size:11px;font-weight:600;color:#92400E;cursor:pointer;font-family:inherit">📎 Marcar soporte como registrado</button>`:''}
     ${t.isPayment&&t.flujoValue&&!done?(()=>{
@@ -4361,6 +4396,7 @@ function createFixedNotesPanel(){
   if(boardContainer){
     boardContainer.style.position = 'relative';
     boardContainer.appendChild(wrapper);
+    document.body.classList.add('has-notes-panel');
     setTimeout(() => {
       loadKanbanNotesPanelFixed();
     }, 300);
@@ -4863,18 +4899,48 @@ function renderGlobal(){
     </button>
   </div>
 
-  <!-- 4 COLUMNAS -->
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px">
-    ${colDef.map(col=>`
-    <div style="background:var(--bg);border-radius:14px;overflow:hidden;box-shadow:0 1px 8px rgba(0,0,0,.06)">
-      <div style="background:${col.grad};padding:12px 14px;display:flex;align-items:center;justify-content:space-between">
-        <span style="font-size:13px;font-weight:700;color:#fff">${col.label}</span>
-        <span style="background:rgba(255,255,255,.25);color:#fff;font-size:12px;font-weight:700;padding:2px 10px;border-radius:999px">${col.list.length}</span>
-      </div>
-      <div style="padding:10px;max-height:60vh;overflow-y:auto">
-        ${col.list.length ? col.list.map(t=>taskCard(t,col.col,col.bg,col.dateCol)).join('') : `<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px">✓ Sin tareas</div>`}
-      </div>
-    </div>`).join('')}
+  <!-- CUERPO: lista izquierda + por responsable en el centro -->
+  <div style="display:flex;gap:20px;align-items:flex-start">
+    <!-- LISTA VERTICAL DE TAREAS -->
+    <div style="display:flex;flex-direction:column;gap:6px;flex:0 0 360px;max-width:360px">
+      ${(()=>{ const all=[...venc,...prog,...pend];
+        if(!all.length) return '<div style="text-align:center;padding:40px;color:var(--text3);font-size:13px">✓ Sin tareas</div>';
+        return all.map(t=>{
+          const over=t.date&&isOver(t.date)&&t.status!=='c';
+          const bc = over?'#dc2626':(t.status==='e'?'#3b82f6':'#d97706');
+          return taskCard(t,bc,'#fff',bc);
+        }).join('');
+      })()}
+    </div>
+    <!-- ACTIVIDADES A REALIZAR (lista propia, independiente de las tareas) -->
+    <div style="flex:1;min-width:260px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:12px">Actividades a realizar</div>
+      ${!isViewer?`<div style="display:flex;gap:6px;margin-bottom:14px">
+        <input id="act-input" placeholder="Nueva actividad…" onkeydown="if(event.key==='Enter'){addActividad();event.preventDefault();}" style="flex:1;height:34px;font-size:13px;border:1px solid var(--border);border-radius:8px;padding:0 10px;font-family:inherit;outline:none;color:var(--text);background:var(--bg)">
+        <select id="act-who" style="height:34px;font-size:12px;border:1px solid var(--border);border-radius:8px;padding:0 8px;font-family:inherit;color:var(--text2);background:var(--bg)">
+          ${users.map(u=>`<option value="${u.name}">${u.name}</option>`).join('')}
+        </select>
+        <button onclick="addActividad()" style="height:34px;padding:0 14px;background:#2d4a7a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Agregar</button>
+      </div>`:''}
+      ${(()=>{
+        const whoMap=getWHO();
+        const pend=actividades.filter(a=>!a.done);
+        const done=actividades.filter(a=>a.done);
+        if(!actividades.length) return '<div style="color:var(--text3);font-size:12px;padding:10px 0">Sin actividades. Agrega la primera arriba.</div>';
+        const row=a=>{
+          const wd=whoMap[a.who]||{col:'#94a3b8',init:(a.who?a.who.substring(0,2).toUpperCase():'?')};
+          return `<div style="display:flex;align-items:center;gap:10px;padding:9px 11px;background:#fff;border:1px solid #e8e8e6;border-radius:8px;margin-bottom:5px">
+            <div onclick="toggleActividad('${a.id}')" title="Marcar" style="width:19px;height:19px;border-radius:50%;flex-shrink:0;cursor:pointer;transition:all .15s;border:2px solid ${a.done?'#16a34a':'#cbd5e1'};background:${a.done?'#16a34a':'none'};display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px">${a.done?'✓':''}</div>
+            <span style="font-size:12.5px;flex:1;line-height:1.35;color:${a.done?'#94a3b8':'#1e293b'};${a.done?'text-decoration:line-through':''}">${escapeHtml(a.texto)}</span>
+            ${a.who?`<div title="${a.who}" style="width:22px;height:22px;border-radius:50%;background:${wd.col};color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0">${wd.init}</div>`:''}
+            ${!isViewer?`<button onclick="delActividad('${a.id}')" title="Eliminar" style="background:none;border:none;font-size:15px;cursor:pointer;color:#cbd5e1;padding:0 2px;line-height:1">×</button>`:''}
+          </div>`;
+        };
+        let h=pend.map(row).join('');
+        if(done.length) h+=`<div style="font-size:11px;font-weight:700;color:var(--text3);margin:14px 0 8px">Completadas · ${done.length}</div>`+done.map(row).join('');
+        return h;
+      })()}
+    </div>
   </div>`;
 
   document.getElementById('global-view').innerHTML = html;
