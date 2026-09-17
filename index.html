@@ -695,6 +695,36 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
   .actas-token-chip { padding:5px 10px; border:1px solid var(--borde); border-radius:6px; font-size:12.5px; cursor:pointer; background:#fff; }
   .actas-token-chip:hover { background: var(--azul); color:#fff; border-color: var(--azul); }
   .actas-btn-enseñar { background: var(--amarillo-texto); color:#fff; border:none; border-radius:7px; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; margin-top:8px; }
+
+  /* ── Panel de registro manual de certificado ── */
+  .actas-zona-auto { border:1px solid var(--borde); border-radius:10px; padding:10px 16px; margin:-12px 0 20px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; font-size:12.5px; color:var(--texto-suave); }
+  .actas-btn-sec { background:none; border:1px solid var(--borde); border-radius:7px; padding:8px 13px; font-size:12.5px; font-weight:600; color:var(--texto-suave); cursor:pointer; font-family:inherit; display:inline-block; }
+  .actas-btn-sec:hover { background: var(--gris-calido); }
+  .cert-panel { background:#fff; border-radius:12px; width:1380px; max-width:96vw; height:92vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 10px 34px rgba(0,0,0,0.2); }
+  .cert-panel-head { padding:14px 20px; border-bottom:1px solid var(--borde); display:flex; align-items:center; justify-content:space-between; gap:16px; }
+  .cert-chip { display:flex; align-items:center; gap:7px; background:var(--gris-calido); border:1px solid var(--borde); border-radius:7px; padding:6px 10px; font-size:12px; color:var(--texto); }
+  .cert-panel-body { flex:1; display:flex; min-height:0; }
+  .cert-visor { width:46%; min-width:340px; background:#4a4844; display:flex; flex-direction:column; }
+  .cert-visor-barra { padding:8px 14px; display:flex; align-items:center; justify-content:space-between; gap:10px; border-bottom:1px solid #5d5b56; }
+  .cert-visor-btn { background:#5d5b56; border:none; border-radius:5px; min-width:26px; height:26px; color:#fff; font-size:14px; cursor:pointer; font-family:inherit; padding:0 7px; }
+  .cert-visor-hoja { flex:1; overflow:auto; padding:16px; display:flex; justify-content:center; align-items:flex-start; }
+  .cert-visor-hoja canvas { box-shadow:0 2px 10px rgba(0,0,0,0.35); background:#fff; max-width:100%; }
+  .cert-form { flex:1; display:flex; flex-direction:column; min-width:0; }
+  .cert-campos { padding:14px 20px; display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:12px; border-bottom:1px solid var(--borde); }
+  .cert-campo { display:flex; flex-direction:column; gap:5px; }
+  .cert-campo label { font-size:10.5px; font-weight:600; color:var(--texto-suave); text-transform:uppercase; letter-spacing:0.02em; }
+  .cert-campo input, .cert-campo select { height:34px; box-sizing:border-box; border:1px solid var(--borde); border-radius:7px; padding:0 9px; font-size:13px; font-family:inherit; color:var(--texto); background:#fff; }
+  .cert-lista-head { padding:12px 20px 8px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .cert-lista { flex:1; overflow-y:auto; padding:0 20px 12px; min-height:0; }
+  .cert-grupo { margin:4px 0; padding:5px 9px; background:var(--gris-calido); border-radius:6px; font-size:10.5px; font-weight:600; color:var(--texto-suave); }
+  .cert-fila { display:grid; grid-template-columns:minmax(0,1fr) 104px 128px 130px; gap:10px; align-items:center; padding:6px 9px; border-radius:7px; }
+  .cert-fila-cab { font-size:10px; font-weight:600; color:var(--texto-suave); text-transform:uppercase; letter-spacing:0.02em; padding-bottom:2px; }
+  .cert-fila input[type="checkbox"] { width:16px; height:16px; accent-color:var(--azul); cursor:pointer; margin:0; flex-shrink:0; }
+  .cert-fila .cert-nom { font-size:12.5px; color:var(--texto); cursor:pointer; }
+  .cert-fila .cert-acta { font-size:12px; color:var(--texto-suave); text-align:right; }
+  .cert-fila .cert-val { width:76px; height:30px; box-sizing:border-box; border:1px solid var(--borde); border-radius:6px; padding:0 8px; font-size:12px; font-family:inherit; text-align:right; color:var(--texto); }
+  .cert-fila .cert-estado { font-size:11px; font-weight:600; }
+  .cert-panel-pie { padding:13px 20px; border-top:1px solid var(--borde); background:var(--gris-calido); display:flex; align-items:center; justify-content:space-between; gap:16px; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
@@ -1749,10 +1779,17 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
   </div>
   <div class="actas-zona-carga">
     <div class="info">
-      Sube el certificado del proveedor. El sistema busca el mes, compara los nombres de material contra la acta y llena el peso certificado solo.
+      <b>Certificado del proveedor.</b> Sube el PDF una sola vez, léelo en pantalla y marca los materiales que cubre. Un certificado puede cubrir varios materiales.
     </div>
     <div>
-      <label class="actas-btn" for="input-cert">Adjuntar certificado (PDF)</label>
+      <label class="actas-btn" for="input-cert-manual">Registrar certificado</label>
+      <input type="file" id="input-cert-manual" accept="application/pdf" onchange="abrirPanelCertificado(event)">
+    </div>
+  </div>
+  <div class="actas-zona-auto">
+    <span>¿El PDF es de un proveedor cuyo formato ya conozco? Puedo intentar leerlo solo.</span>
+    <div>
+      <label class="actas-btn-sec" for="input-cert">Probar lectura automática</label>
       <input type="file" id="input-cert" accept="application/pdf" onchange="cargarCertificado(event)">
     </div>
   </div>
@@ -1760,6 +1797,64 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
   <input type="file" id="input-acta-manifiesto" accept="application/pdf,image/*" style="display:none" onchange="procesarActaManifiesto(event)">
   <input type="file" id="input-anexo-material" accept="application/pdf,image/*" style="display:none" onchange="procesarAnexoMaterial(event)">
   <div id="estado-carga-cert" class="actas-estado-carga"></div>
+
+  <div id="modal-cert-panel" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:70; align-items:center; justify-content:center; padding:20px;">
+    <div class="cert-panel">
+      <div class="cert-panel-head">
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+          <div>
+            <p style="margin:0; font-size:15.5px; font-weight:600; color:var(--azul);">Registrar certificado</p>
+            <p style="margin:2px 0 0; font-size:12px; color:var(--texto-suave);">Lee el PDF a la izquierda y marca a la derecha los materiales que cubre.</p>
+          </div>
+          <div id="cert-chip-archivo" class="cert-chip"></div>
+        </div>
+        <button type="button" onclick="cerrarPanelCertificado()" aria-label="Cerrar" style="background:none; border:none; cursor:pointer; font-size:20px; line-height:1; color:var(--texto-suave);">&times;</button>
+      </div>
+      <div class="cert-panel-body">
+        <div class="cert-visor">
+          <div class="cert-visor-barra">
+            <span id="cert-pag-texto" style="font-size:11.5px; color:#d6d3cc;"></span>
+            <div style="display:flex; gap:6px;">
+              <button type="button" onclick="certPagina(-1)" aria-label="Página anterior" class="cert-visor-btn">&#8249;</button>
+              <button type="button" onclick="certPagina(1)" aria-label="Página siguiente" class="cert-visor-btn">&#8250;</button>
+              <button type="button" onclick="certZoom(-1)" aria-label="Alejar" class="cert-visor-btn">&minus;</button>
+              <button type="button" onclick="certZoom(1)" aria-label="Acercar" class="cert-visor-btn">+</button>
+            </div>
+          </div>
+          <div class="cert-visor-hoja"><canvas id="cert-canvas"></canvas></div>
+        </div>
+        <div class="cert-form">
+          <div class="cert-campos">
+            <div class="cert-campo">
+              <label for="cert-num">N° de certificado</label>
+              <input id="cert-num" type="text" placeholder="0000016">
+            </div>
+            <div class="cert-campo">
+              <label for="cert-prov">Proveedor</label>
+              <select id="cert-prov" onchange="certProveedorCambio()"></select>
+              <input id="cert-prov-nuevo" type="text" placeholder="Nombre del proveedor nuevo" style="display:none; margin-top:6px;">
+            </div>
+            <div class="cert-campo">
+              <label for="cert-mes">Mes del acta</label>
+              <select id="cert-mes" onchange="certPintarMateriales()"></select>
+            </div>
+          </div>
+          <div class="cert-lista-head">
+            <p id="cert-lista-titulo" style="margin:0; font-size:12.5px; color:var(--texto-suave);"></p>
+            <button type="button" onclick="certMarcarTodos()" class="actas-btn-sec" style="padding:5px 10px; font-size:11.5px;">Marcar todos</button>
+          </div>
+          <div id="cert-lista" class="cert-lista"></div>
+        </div>
+      </div>
+      <div class="cert-panel-pie">
+        <span id="cert-resumen" style="font-size:12.5px; color:var(--texto-suave);"></span>
+        <div style="display:flex; gap:8px;">
+          <button type="button" onclick="cerrarPanelCertificado()" style="background:none; border:1px solid var(--borde); border-radius:7px; padding:9px 14px; font-size:13px; cursor:pointer; font-family:inherit; color:var(--texto);">Cancelar</button>
+          <button type="button" id="cert-btn-guardar" onclick="guardarCertificadoManual()" class="actas-btn">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div id="modal-proveedor" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:50; align-items:center; justify-content:center;">
     <div style="background:#fff; border-radius:12px; padding:20px; width:340px; max-width:90vw;">
@@ -9519,6 +9614,339 @@ function closeBackupModal(){
     guardarMaterialesSinActa();
   }
 
+  // ─── PANEL MANUAL DE CERTIFICADO ──────────────────────────
+  // Un certificado cubre varios materiales: se sube el PDF una vez,
+  // se marca a mano qué materiales cubre y se crea una entrega por cada uno.
+  let _certPanel = null;
+
+  function _certFmt(n) {
+    return Number(n).toLocaleString('es-CO');
+  }
+
+  function _certNum(txt) {
+    const limpio = String(txt == null ? '' : txt).replace(/\./g, '').replace(',', '.').trim();
+    if (limpio === '') return null;
+    const n = parseFloat(limpio);
+    return isNaN(n) ? null : n;
+  }
+
+  async function abrirPanelCertificado(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    event.target.value = '';
+    await _certAbrirDesdeArchivo(file);
+  }
+
+  async function _certAbrirDesdeArchivo(file) {
+    _certPanel = { file, urlDrive: null, pdfDoc: null, pagina: 1, escala: 1.25, sel: {}, val: {}, mats: [] };
+
+    const modal = document.getElementById('modal-cert-panel');
+    modal.style.display = 'flex';
+
+    const chip = document.getElementById('cert-chip-archivo');
+    chip.textContent = file.name;
+
+    document.getElementById('cert-num').value = '';
+    document.getElementById('cert-prov-nuevo').value = '';
+    document.getElementById('cert-prov-nuevo').style.display = 'none';
+
+    const selProv = document.getElementById('cert-prov');
+    selProv.innerHTML = proveedoresConocidos.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('')
+      + '<option value="__nuevo__">+ Agregar proveedor nuevo</option>';
+    if (proveedoresConocidos.length === 0) selProv.value = '__nuevo__';
+    certProveedorCambio();
+
+    const selMes = document.getElementById('cert-mes');
+    let mesPorDefecto = 0;
+    selMes.innerHTML = MESES.map((m, i) => {
+      const hay = actaActivaDeMes(i) !== null;
+      if (hay) mesPorDefecto = i;
+      return `<option value="${i}">${MESES_LARGOS[i].charAt(0).toUpperCase() + MESES_LARGOS[i].slice(1)} ${AÑO_ACTUAL}${hay ? '' : ' — sin acta'}</option>`;
+    }).join('');
+    selMes.value = String(mesPorDefecto);
+
+    certPintarMateriales();
+
+    try {
+      const buffer = await file.arrayBuffer();
+      _certPanel.pdfDoc = await pdfjsLib.getDocument({ data: buffer }).promise;
+      await _certRenderPagina();
+    } catch (err) {
+      document.getElementById('cert-pag-texto').textContent = 'No se pudo mostrar el PDF (igual se puede registrar).';
+      console.error('Error mostrando el PDF:', err);
+    }
+  }
+
+  async function _certRenderPagina() {
+    if (!_certPanel || !_certPanel.pdfDoc) return;
+    const doc = _certPanel.pdfDoc;
+    const page = await doc.getPage(_certPanel.pagina);
+    const viewport = page.getViewport({ scale: _certPanel.escala });
+    const canvas = document.getElementById('cert-canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    document.getElementById('cert-pag-texto').textContent = `Página ${_certPanel.pagina} de ${doc.numPages}`;
+  }
+
+  function certPagina(paso) {
+    if (!_certPanel || !_certPanel.pdfDoc) return;
+    const nueva = _certPanel.pagina + paso;
+    if (nueva < 1 || nueva > _certPanel.pdfDoc.numPages) return;
+    _certPanel.pagina = nueva;
+    _certRenderPagina();
+  }
+
+  function certZoom(paso) {
+    if (!_certPanel) return;
+    _certPanel.escala = Math.min(3, Math.max(0.6, _certPanel.escala + paso * 0.25));
+    _certRenderPagina();
+  }
+
+  function certProveedorCambio() {
+    const sel = document.getElementById('cert-prov');
+    document.getElementById('cert-prov-nuevo').style.display = sel.value === '__nuevo__' ? 'block' : 'none';
+  }
+
+  function certPintarMateriales() {
+    if (!_certPanel) return;
+    const mesIndex = parseInt(document.getElementById('cert-mes').value, 10);
+    const acta = actaActivaDeMes(mesIndex);
+
+    _certPanel.sel = {};
+    _certPanel.val = {};
+    _certPanel.mats = [];
+
+    if (acta) {
+      registros.filter(r => r.actaId === acta.id).forEach(r => {
+        _certPanel.mats.push({
+          nombre: r.nombre, grupo: r.grupo || 'Aprovechable',
+          cantidadActa: r.cantidadActa, unidad: r.unidadActa === 'Und' ? 'und' : 'kg', reg: r
+        });
+      });
+    } else {
+      materialesConocidos.forEach(n => {
+        _certPanel.mats.push({ nombre: n, grupo: 'Aprovechable', cantidadActa: null, unidad: 'kg', reg: null });
+      });
+    }
+
+    const titulo = document.getElementById('cert-lista-titulo');
+    titulo.innerHTML = acta
+      ? `Materiales del acta de <b>${MESES_LARGOS[mesIndex]} ${AÑO_ACTUAL}</b>`
+      : `<span style="color:var(--amarillo-texto);">Todavía no hay acta de ${MESES_LARGOS[mesIndex]} — lo que registres queda esperando y se conecta solo cuando subas o generes el acta.</span>`;
+
+    certRenderLista();
+  }
+
+  function certRenderLista() {
+    const cont = document.getElementById('cert-lista');
+    if (!_certPanel) return;
+
+    if (_certPanel.mats.length === 0) {
+      cont.innerHTML = '<p style="font-size:12.5px; color:var(--texto-suave); padding:10px 0;">No hay materiales para este mes. Sube o genera el acta primero, o usa la lectura automática.</p>';
+      certActualizarResumen();
+      return;
+    }
+
+    let html = '<div class="cert-fila cert-fila-cab"><span>Material</span><span style="text-align:right;">Según el acta</span><span>Certificado</span><span>Estado</span></div>';
+    let grupoActual = '';
+    _certPanel.mats.forEach((m, i) => {
+      if (m.grupo !== grupoActual) {
+        grupoActual = m.grupo;
+        html += `<div class="cert-grupo">${escapeHtml(grupoActual)}</div>`;
+      }
+      const sel = !!_certPanel.sel[i];
+      const actaTxt = m.cantidadActa === null ? '—' : `${_certFmt(m.cantidadActa)} ${m.unidad}`;
+      html += `<div class="cert-fila" id="cert-fila-${i}">
+        <div style="display:flex; align-items:center; gap:9px; min-width:0;">
+          <input type="checkbox" id="cert-chk-${i}" ${sel ? 'checked' : ''} onchange="certToggle(${i})">
+          <label class="cert-nom" for="cert-chk-${i}">${escapeHtml(m.nombre)}</label>
+        </div>
+        <span class="cert-acta">${actaTxt}</span>
+        <div style="display:flex; align-items:center; gap:5px;">
+          <input type="text" class="cert-val" id="cert-val-${i}" value="${escapeHtml(_certPanel.val[i] || '')}" ${sel ? '' : 'disabled'} oninput="certEscribir(${i}, this.value)" aria-label="Cantidad certificada">
+          <span style="font-size:11px; color:var(--texto-suave);">${m.unidad}</span>
+        </div>
+        <span class="cert-estado" id="cert-estado-${i}"></span>
+      </div>`;
+    });
+    cont.innerHTML = html;
+    _certPanel.mats.forEach((m, i) => certActualizarFila(i));
+    certActualizarResumen();
+  }
+
+  function certActualizarFila(i) {
+    const m = _certPanel.mats[i];
+    const fila = document.getElementById('cert-fila-' + i);
+    const est = document.getElementById('cert-estado-' + i);
+    if (!m || !fila || !est) return;
+
+    if (!_certPanel.sel[i]) {
+      fila.style.background = 'transparent';
+      est.textContent = '';
+      return;
+    }
+    const escrito = _certNum(_certPanel.val[i]);
+    if (escrito === null) {
+      fila.style.background = 'var(--amarillo-bg)';
+      est.style.color = 'var(--amarillo-texto)';
+      est.textContent = 'falta la cantidad';
+    } else if (m.cantidadActa === null) {
+      fila.style.background = 'var(--gris-calido)';
+      est.style.color = 'var(--texto-suave)';
+      est.textContent = 'queda esperando acta';
+    } else if (escrito === m.cantidadActa) {
+      fila.style.background = 'var(--verde-bg)';
+      est.style.color = 'var(--verde-texto)';
+      est.textContent = 'cuadra';
+    } else {
+      const dif = m.cantidadActa - escrito;
+      fila.style.background = 'var(--rojo-bg)';
+      est.style.color = 'var(--rojo-texto)';
+      est.textContent = (dif > 0 ? 'faltan ' : 'sobran ') + _certFmt(Math.abs(dif)) + ' ' + m.unidad;
+    }
+  }
+
+  function certActualizarResumen() {
+    const marcados = _certPanel.mats.filter((m, i) => _certPanel.sel[i]);
+    let totalKg = 0;
+    _certPanel.mats.forEach((m, i) => {
+      if (!_certPanel.sel[i] || m.unidad !== 'kg') return;
+      const n = _certNum(_certPanel.val[i]);
+      if (n !== null) totalKg += n;
+    });
+    document.getElementById('cert-resumen').textContent = marcados.length === 0
+      ? 'Ningún material marcado todavía'
+      : `${marcados.length} de ${_certPanel.mats.length} materiales marcados · ${_certFmt(totalKg)} kg en total`;
+    document.getElementById('cert-btn-guardar').textContent = marcados.length === 0
+      ? 'Guardar' : `Guardar ${marcados.length} material${marcados.length > 1 ? 'es' : ''}`;
+  }
+
+  function certToggle(i) {
+    if (!_certPanel) return;
+    _certPanel.sel[i] = !_certPanel.sel[i];
+    const m = _certPanel.mats[i];
+    if (_certPanel.sel[i] && !_certPanel.val[i] && m.cantidadActa !== null) {
+      _certPanel.val[i] = _certFmt(m.cantidadActa);
+    }
+    const inp = document.getElementById('cert-val-' + i);
+    if (inp) {
+      inp.disabled = !_certPanel.sel[i];
+      inp.value = _certPanel.val[i] || '';
+      if (_certPanel.sel[i]) inp.focus();
+    }
+    certActualizarFila(i);
+    certActualizarResumen();
+  }
+
+  function certEscribir(i, valor) {
+    if (!_certPanel) return;
+    _certPanel.val[i] = valor;
+    certActualizarFila(i);
+    certActualizarResumen();
+  }
+
+  function certMarcarTodos() {
+    if (!_certPanel) return;
+    _certPanel.mats.forEach((m, i) => {
+      _certPanel.sel[i] = true;
+      if (!_certPanel.val[i] && m.cantidadActa !== null) _certPanel.val[i] = _certFmt(m.cantidadActa);
+    });
+    certRenderLista();
+  }
+
+  function cerrarPanelCertificado() {
+    document.getElementById('modal-cert-panel').style.display = 'none';
+    _certPanel = null;
+  }
+
+  async function guardarCertificadoManual() {
+    if (!_certPanel) return;
+    const estadoDiv = document.getElementById('estado-carga-cert');
+    const mesIndex = parseInt(document.getElementById('cert-mes').value, 10);
+    const numero = document.getElementById('cert-num').value.trim();
+
+    const selProv = document.getElementById('cert-prov');
+    let proveedor = selProv.value === '__nuevo__'
+      ? document.getElementById('cert-prov-nuevo').value.trim()
+      : selProv.value;
+
+    const marcados = _certPanel.mats.map((m, i) => ({ m, i })).filter(x => _certPanel.sel[x.i]);
+
+    if (marcados.length === 0) { alert('Marca al menos un material del certificado.'); return; }
+    if (!proveedor) { alert('Falta indicar el proveedor.'); return; }
+    if (!numero) { alert('Falta el número del certificado.'); return; }
+
+    const faltaValor = marcados.find(x => _certNum(_certPanel.val[x.i]) === null);
+    if (faltaValor) { alert(`Falta la cantidad de "${faltaValor.m.nombre}".`); return; }
+
+    // Mismo número ya cargado: se reemplaza en vez de duplicar
+    const yaExiste = registros.some(r => r.entregas.some(e => e.numeroCertificado === numero))
+      || materialesSinActa.some(m => m.numeroCertificado === numero);
+    if (yaExiste) {
+      const ok = confirm(`El certificado N°${numero} ya está cargado.\n\n¿Quieres reemplazar lo que ya tenías con lo que acabas de marcar?`);
+      if (!ok) return;
+    }
+
+    const btn = document.getElementById('cert-btn-guardar');
+    btn.disabled = true;
+    btn.textContent = 'Subiendo a Drive…';
+
+    let urlDrive = null;
+    try {
+      urlDrive = await subirArchivoADrive(_certPanel.file, 'certificado', mesIndex, AÑO_ACTUAL, proveedor);
+    } catch (err) {
+      console.error('Error subiendo el certificado a Drive:', err);
+    }
+
+    const fecha = Date.now();
+    let cruzados = 0, esperando = 0;
+
+    marcados.forEach(({ m, i }) => {
+      const valor = _certNum(_certPanel.val[i]);
+      const esUnd = m.unidad === 'und';
+      const entrega = {
+        proveedor, numeroCertificado: numero, numeroManifiesto: null,
+        pesoKg: esUnd ? null : valor, unidades: esUnd ? valor : null,
+        urlDrive, provisional: false, fecha
+      };
+      if (m.reg) {
+        m.reg.entregas = m.reg.entregas.filter(e => e.numeroCertificado !== numero);
+        m.reg.entregas.push(entrega);
+        cruzados++;
+      } else {
+        materialesSinActa = materialesSinActa.filter(x =>
+          !(x.mesIndex === mesIndex && x.nombre === m.nombre && x.numeroCertificado === numero));
+        materialesSinActa.push(Object.assign({
+          mesIndex, anio: AÑO_ACTUAL, nombre: m.nombre
+        }, entrega));
+        esperando++;
+      }
+    });
+
+    if (!proveedoresConocidos.includes(proveedor)) {
+      proveedoresConocidos.push(proveedor);
+      guardarProveedores();
+    }
+
+    render();
+    guardarMes(mesIndex);
+    if (esperando > 0) guardarMaterialesSinActa();
+
+    btn.disabled = false;
+    cerrarPanelCertificado();
+
+    estadoDiv.className = 'actas-estado-carga actas-estado-ok';
+    estadoDiv.style.display = 'block';
+    let msg = `Certificado N°${numero} de ${proveedor} guardado`;
+    if (cruzados > 0) msg += ` — ${cruzados} material${cruzados > 1 ? 'es' : ''} cruzado${cruzados > 1 ? 's' : ''} en ${MESES_LARGOS[mesIndex]} ${AÑO_ACTUAL}`;
+    if (esperando > 0) msg += ` — ${esperando} esperando el acta de ${MESES_LARGOS[mesIndex]}`;
+    msg += '.';
+    estadoDiv.innerHTML = escapeHtml(msg) + (urlDrive
+      ? ` <a href="${urlDrive}" target="_blank" rel="noopener" style="color:var(--azul); font-weight:600;">ver en Drive</a>`
+      : ' <span style="color:var(--amarillo-texto);">(no se pudo subir el PDF a Drive)</span>');
+  }
+
   let ultimoIntentoFallido = null;
 
   async function cargarCertificado(event) {
@@ -9534,10 +9962,12 @@ function closeBackupModal(){
       const buffer = await file.arrayBuffer();
       const doc = await pdfjsLib.getDocument({ data: buffer }).promise;
 
-      // ── OCR: si el certificado es un escaneo (imagen sin texto), leerlo con OCR ──
+      // ── Escaneo sin texto: ya no se intenta OCR (era lo lento). Se abre el panel manual. ──
       const _probeCert = await extraerPalabras(await doc.getPage(1));
       if (_probeCert.length < 4) {
-        return await procesarCertificadoOCR(file, doc, estadoDiv);
+        estadoDiv.className = 'actas-estado-carga actas-estado-cargando';
+        estadoDiv.textContent = 'Este certificado es un escaneo, no tiene texto para leer. Se abrió para registrarlo a mano.';
+        return await _certAbrirDesdeArchivo(file);
       }
 
       let mesGlobalDetectado = null;
@@ -10498,6 +10928,16 @@ function closeBackupModal(){
   window.volverPaso1Ensenar = volverPaso1Ensenar;
   window.abrirEnsenarDesdeArchivo = abrirEnsenarDesdeArchivo;
   window.cargarCertificado = cargarCertificado;
+  window.abrirPanelCertificado = abrirPanelCertificado;
+  window.cerrarPanelCertificado = cerrarPanelCertificado;
+  window.certPagina = certPagina;
+  window.certZoom = certZoom;
+  window.certProveedorCambio = certProveedorCambio;
+  window.certPintarMateriales = certPintarMateriales;
+  window.certToggle = certToggle;
+  window.certEscribir = certEscribir;
+  window.certMarcarTodos = certMarcarTodos;
+  window.guardarCertificadoManual = guardarCertificadoManual;
   window.cargarPDF = cargarPDF;
   window.subirManifiestoMes = subirManifiestoMes;
   window.procesarManifiestoMes = procesarManifiestoMes;
