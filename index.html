@@ -725,6 +725,18 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
   .cert-fila .cert-val { width:76px; height:30px; box-sizing:border-box; border:1px solid var(--borde); border-radius:6px; padding:0 8px; font-size:12px; font-family:inherit; text-align:right; color:var(--texto); }
   .cert-fila .cert-estado { font-size:11px; font-weight:600; }
   .cert-panel-pie { padding:13px 20px; border-top:1px solid var(--borde); background:var(--gris-calido); display:flex; align-items:center; justify-content:space-between; gap:16px; }
+
+  /* ── Enlace al acta sobre cada material ── */
+  .actas-celda-mat { position:relative; }
+  .actas-link-acta { position:absolute; top:1px; right:2px; font-size:10px; line-height:1; color:var(--azul);
+    text-decoration:none; background:#fff; border:1px solid var(--borde); border-radius:4px; padding:2px 4px;
+    opacity:0; pointer-events:none; transition:opacity .12s; white-space:nowrap; }
+  .actas-celda-mat:hover .actas-link-acta { opacity:1; pointer-events:auto; }
+  .actas-link-acta:hover { background:var(--azul); color:#fff; border-color:var(--azul); }
+  .actas-link-doc { display:block; font-size:10.5px; color:var(--azul); margin-top:3px; text-decoration:none; font-weight:600; }
+  .actas-link-doc:hover { text-decoration:underline; }
+  .actas-regenerar { display:block; width:100%; font-size:10px; color:var(--texto-suave); margin-top:2px;
+    background:none; border:none; cursor:pointer; font-family:inherit; text-decoration:underline dotted; padding:2px; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
@@ -9124,6 +9136,11 @@ function closeBackupModal(){
         return;
       }
 
+      acta.urlReporteAhorro = data.url;
+      acta.fechaReporteAhorro = Date.now();
+      render();
+      guardarMes(mesIndex);
+
       estadoDiv.className = 'actas-estado-carga actas-estado-ok';
       let msg = `Listo (${MESES[mesIndex]}) — ${Math.round(data.totalAgua).toLocaleString('es-CO')} L de agua, ${Math.round(data.totalEnergia).toLocaleString('es-CO')} kWh y ${Math.round(data.totalCO2e).toLocaleString('es-CO')} kg CO2e evitados. `;
       msg += `<a href="${data.url}" target="_blank" rel="noopener" style="color:var(--azul); font-weight:600;">Abrir Excel en Drive</a>`;
@@ -9213,6 +9230,12 @@ function closeBackupModal(){
         return;
       }
 
+      acta.urlOrdenCompra = data.url;
+      acta.fechaOrdenCompra = Date.now();
+      acta.totalOrdenCompra = data.total;
+      render();
+      guardarMes(mesIndex);
+
       estadoDiv.className = 'actas-estado-carga actas-estado-ok';
       let msg = `Listo (${MESES[mesIndex]}) — Total: $${Math.round(data.total).toLocaleString('es-CO')}. `;
       msg += `<a href="${data.url}" target="_blank" rel="noopener" style="color:var(--azul); font-weight:600;">Abrir PDF en Drive</a>`;
@@ -9234,6 +9257,15 @@ function closeBackupModal(){
   }
 
   function generarOrdenCompraMes(mesIndex) {
+    generarOrdenCompraBase(mesIndex, document.getElementById('estado-carga'));
+  }
+
+  function regenerarOrdenCompraMes(mesIndex) {
+    const acta = actaActivaDeMes(mesIndex);
+    const fecha = acta && acta.fechaOrdenCompra ? new Date(acta.fechaOrdenCompra).toLocaleDateString('es-CO') : null;
+    const aviso = 'La orden de compra de ' + MESES_LARGOS[mesIndex] + (fecha ? ' se genero el ' + fecha : ' ya esta generada') +
+      '.\n\nSi la vuelves a generar se crea un archivo nuevo en Drive con los datos de hoy. El anterior no se borra.\n\n\u00bfSeguir?';
+    if (!confirm(aviso)) return;
     generarOrdenCompraBase(mesIndex, document.getElementById('estado-carga'));
   }
 
@@ -10217,8 +10249,19 @@ function closeBackupModal(){
       html += `<a href="${acta.urlDrive}" target="_blank" rel="noopener" style="display:block; font-size:10.5px; color:var(--azul); margin-top:3px;">ver PDF</a>`;
     }
     if (acta) {
-      html += `<button onclick="generarReporteAhorroMes(${i})" style="display:block; width:100%; font-size:12px; font-weight:600; color:#fff; margin-top:5px; background:var(--verde-texto); border:none; border-radius:6px; cursor:pointer; padding:6px 8px;">💰 Reporte ahorro</button>`;
-      html += `<button onclick="generarOrdenCompraMes(${i})" style="display:block; width:100%; font-size:12px; font-weight:600; color:#fff; margin-top:5px; background:var(--azul); border:none; border-radius:6px; cursor:pointer; padding:6px 8px;">🧾 Orden de compra</button>`;
+      // Reporte de ahorro: se puede volver a generar, y debajo queda el enlace del último
+      html += `<button onclick="generarReporteAhorroMes(${i})" style="display:block; width:100%; font-size:12px; font-weight:600; color:#fff; margin-top:5px; background:var(--verde-texto); border:none; border-radius:6px; cursor:pointer; padding:6px 8px;">💰 ${acta.urlReporteAhorro ? 'Actualizar reporte' : 'Reporte ahorro'}</button>`;
+      if (acta.urlReporteAhorro) {
+        html += `<a class="actas-link-doc" href="${acta.urlReporteAhorro}" target="_blank" rel="noopener">ver reporte de ahorro &#8599;</a>`;
+      }
+      // Orden de compra: una vez generada solo se abre; regenerar es un paso aparte
+      if (acta.urlOrdenCompra) {
+        const totalTxt = acta.totalOrdenCompra ? ' \u00b7 $' + Math.round(acta.totalOrdenCompra).toLocaleString('es-CO') : '';
+        html += `<a href="${acta.urlOrdenCompra}" target="_blank" rel="noopener" style="display:block; width:100%; box-sizing:border-box; text-align:center; text-decoration:none; font-size:12px; font-weight:600; color:#fff; margin-top:5px; background:var(--azul); border-radius:6px; padding:6px 8px;">🧾 Ver orden de compra${totalTxt}</a>`;
+        html += `<button class="actas-regenerar" onclick="regenerarOrdenCompraMes(${i})">volver a generarla</button>`;
+      } else {
+        html += `<button onclick="generarOrdenCompraMes(${i})" style="display:block; width:100%; font-size:12px; font-weight:600; color:#fff; margin-top:5px; background:var(--azul); border:none; border-radius:6px; cursor:pointer; padding:6px 8px;">🧾 Orden de compra</button>`;
+      }
       html += `<button onclick="eliminarActaDeMes(${i})" style="display:block; width:100%; font-size:11px; color:var(--rojo-texto); margin-top:5px; background:none; border:1px solid var(--rojo-texto); border-radius:6px; cursor:pointer; padding:4px 8px;">🗑️ eliminar acta</button>`;
     }
     if (versiones.length > 1) {
@@ -10226,6 +10269,16 @@ function closeBackupModal(){
     }
     html += '</td>';
     return html;
+  }
+
+  // Envuelve la celda y le agrega, al pasar por encima, el enlace al PDF
+  // del acta con la que se cruzó ese material.
+  function celdaConActa(inner, acta, mesIndex) {
+    let link = '';
+    if (acta && acta.urlDrive) {
+      link = `<a class="actas-link-acta" href="${acta.urlDrive}" target="_blank" rel="noopener" title="Abrir en Drive el acta de ${MESES_LARGOS[mesIndex]} ${AÑO_ACTUAL}">acta &#8599;</a>`;
+    }
+    return `<td class="actas-celda-mat">${inner}${link}</td>`;
   }
 
   function celdaMaterial(mat, mesIndex) {
@@ -10238,8 +10291,8 @@ function closeBackupModal(){
         const texto = totalKg > 0
           ? `${pendientes.length} manif. · ${totalKg.toLocaleString('es-CO')} kg`
           : `${pendientes.length} manif. · ${totalUnd.toLocaleString('es-CO')} und`;
-        const nombreEsc = mat.nombre.replace(/'/g, "\\'");
-        return `<td><button class="actas-badge actas-badge-azul" onclick="verMaterialesSinActa('${nombreEsc}', ${mesIndex})" title="Sin acta todavía — clic para ver el detalle de cada manifiesto">${texto}</button></td>`;
+        const nombreEscSA = mat.nombre.replace(/'/g, "\\'");
+        return `<td><button class="actas-badge actas-badge-azul" onclick="verMaterialesSinActa('${nombreEscSA}', ${mesIndex})" title="Sin acta todavía — clic para ver el detalle de cada manifiesto">${texto}</button></td>`;
       }
       return '<td><span class="actas-dif-vacio">—</span></td>';
     }
@@ -10249,19 +10302,20 @@ function closeBackupModal(){
     const nombreEsc = reg.nombre.replace(/'/g, "\\'");
     const esUnidades = reg.unidadActa === 'Und';
     const sufijoActa = esUnidades ? 'und' : 'kg';
+    const refActa = ` · acta de ${MESES_LARGOS[mesIndex]}${acta.urlDrive ? ' — pasa el mouse para abrirla en Drive' : ''}`;
 
     // Sin certificado todavía — amarillo, muestra el peso del acta
     if (reg.entregas.length === 0) {
-      const texto = `${reg.cantidadActa.toLocaleString('es-CO')} ${sufijoActa}`;
-      return `<td><button class="actas-badge actas-badge-amarillo" onclick="agregarAnexoMaterial('${nombreEsc}', '${reg.actaId}')" title="Clic para adjuntar soporte (PDF) y poner el valor">${texto}</button></td>`;
+      const textoA = `${reg.cantidadActa.toLocaleString('es-CO')} ${sufijoActa}`;
+      return celdaConActa(`<button class="actas-badge actas-badge-amarillo" onclick="agregarAnexoMaterial('${nombreEsc}', '${reg.actaId}')" title="Clic para adjuntar soporte (PDF) y poner el valor${refActa}">${textoA}</button>`, acta, mesIndex);
     }
 
     // Solo hay manifiesto(s) sin certificar todavía — azul
     const hayConfirmadas = reg.entregas.some(e => !e.provisional);
     if (!hayConfirmadas) {
       const manifiestos = [...new Set(reg.entregas.map(e => e.numeroManifiesto).filter(Boolean))];
-      const texto = manifiestos.length === 1 ? 'M°' + manifiestos[0] : (manifiestos.length > 1 ? 'Varios' : `${reg.entregas.length} manifiesto${reg.entregas.length > 1 ? 's' : ''}`);
-      return `<td><button class="actas-badge actas-badge-azul" onclick="verEntregas('${nombreEsc}', '${reg.actaId}')" title="Manifiesto recibido, esperando el certificado de destrucción">${texto}</button></td>`;
+      const textoM = manifiestos.length === 1 ? 'M°' + manifiestos[0] : (manifiestos.length > 1 ? 'Varios' : `${reg.entregas.length} manifiesto${reg.entregas.length > 1 ? 's' : ''}`);
+      return celdaConActa(`<button class="actas-badge actas-badge-azul" onclick="verEntregas('${nombreEsc}', '${reg.actaId}')" title="Manifiesto recibido, esperando el certificado de destrucción${refActa}">${textoM}</button>`, acta, mesIndex);
     }
 
     const totalKg = totalEntregasKg(reg);
@@ -10271,8 +10325,8 @@ function closeBackupModal(){
 
     // No cuadra con el acta — rojo, muestra la diferencia
     if (dif !== 0) {
-      const texto = `${dif > 0 ? '+' : ''}${dif.toLocaleString('es-CO')} ${sufijoActa}`;
-      return `<td><button class="actas-badge actas-badge-pendiente" onclick="verEntregas('${nombreEsc}', '${reg.actaId}')" title="No cuadra con el acta — clic para ver el detalle">${texto}</button></td>`;
+      const textoD = `${dif > 0 ? '+' : ''}${dif.toLocaleString('es-CO')} ${sufijoActa}`;
+      return celdaConActa(`<button class="actas-badge actas-badge-pendiente" onclick="verEntregas('${nombreEsc}', '${reg.actaId}')" title="No cuadra con el acta — clic para ver el detalle${refActa}">${textoD}</button>`, acta, mesIndex);
     }
 
     // Cuadra — verde, muestra el número de certificado
@@ -10280,7 +10334,7 @@ function closeBackupModal(){
     const texto = numerosCert.length === 1
       ? 'N°' + numerosCert[0]
       : (numerosCert.length > 1 ? 'Varias' : `${reg.entregas.length} entrega${reg.entregas.length > 1 ? 's' : ''}`);
-    return `<td><button class="actas-badge actas-badge-ok" onclick="verEntregas('${nombreEsc}', '${reg.actaId}')" title="Cuadra con el acta — clic para ver el detalle">${texto}</button></td>`;
+    return celdaConActa(`<button class="actas-badge actas-badge-ok" onclick="verEntregas('${nombreEsc}', '${reg.actaId}')" title="Cuadra con el acta — clic para ver el detalle${refActa}">${texto}</button>`, acta, mesIndex);
   }
 
   function guardarManifiestos() {
@@ -10911,6 +10965,7 @@ function closeBackupModal(){
   window.generarReporteAhorroMes = generarReporteAhorroMes;
   window.generarOrdenCompraCliente = generarOrdenCompraCliente;
   window.generarOrdenCompraMes = generarOrdenCompraMes;
+  window.regenerarOrdenCompraMes = regenerarOrdenCompraMes;
   window.borrarTodoConfirmando = borrarTodoConfirmando;
   window.eliminarActaDeMes = eliminarActaDeMes;
   window.agregarFilaMaterial = agregarFilaMaterial;
