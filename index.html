@@ -738,6 +738,8 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
   .caf-doc { font-size:11.5px; font-weight:600; border:1px solid var(--borde); border-radius:6px; padding:5px 9px;
     background:#fff; color:var(--texto-suave); cursor:pointer; font-family:inherit; text-decoration:none; display:inline-block; }
   .caf-doc:hover { background:var(--gris-calido); }
+  .caf-doc { display:inline-flex; align-items:center; gap:2px; max-width:100%; }
+  #caf-btn-parcial:disabled, #caf-btn-completo:disabled { opacity:.45; cursor:not-allowed; }
   .caf-doc-ok { background:var(--verde-bg); color:var(--verde-texto); border-color:var(--verde-texto); }
   .actas-chip-falta { display:inline-block; vertical-align:middle; margin-left:4px; font-size:10px; line-height:1;
     font-weight:700; background:var(--rojo-bg); color:var(--rojo-texto); border:1px solid var(--rojo-texto);
@@ -1807,17 +1809,28 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
   <input type="file" id="input-anexo-material" accept="application/pdf,image/*" style="display:none" onchange="procesarAnexoMaterial(event)">
   <div id="estado-carga-cert" class="actas-estado-carga"></div>
 
-  <input type="file" id="input-caf-doc" accept="application/pdf" style="display:none" onchange="procesarAdjuntoCafeteria(event)">
+  <input type="file" id="input-caf-doc" accept="application/pdf" multiple style="display:none" onchange="procesarAdjuntoCafeteria(event)">
   <input type="file" id="input-caf-unir" accept="application/pdf" multiple style="display:none" onchange="procesarUnionCafeteria(event)">
 
   <div id="modal-caf" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:65; align-items:center; justify-content:center; padding:20px;">
-    <div style="background:#fff; border-radius:12px; padding:20px; width:620px; max-width:94vw; max-height:88vh; overflow-y:auto;">
-      <p id="caf-titulo" style="font-weight:600; font-size:15px; margin:0 0 4px; color:var(--azul);"></p>
-      <p style="font-size:12px; color:var(--texto-suave); margin:0 0 14px;">Cada viaje lleva su manifiesto, su anexo y su acta. Cuando los tengas, puedes unirlos en un solo PDF.</p>
+    <div style="background:#fff; border-radius:12px; padding:20px; width:640px; max-width:94vw; max-height:88vh; overflow-y:auto;">
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+        <div>
+          <p id="caf-titulo" style="font-weight:600; font-size:15px; margin:0 0 4px; color:var(--azul);"></p>
+          <p style="font-size:12px; color:var(--texto-suave); margin:0 0 14px;">Los manifiestos, los anexos y las actas llegan por separado. Agrégalos a medida que lleguen.</p>
+        </div>
+        <span id="caf-resumen"></span>
+      </div>
       <div id="caf-lista"></div>
+      <div style="border-top:1px solid var(--borde); margin-top:14px; padding-top:14px;">
+        <p style="font-size:12.5px; color:var(--texto-suave); margin:0 0 8px;">Para unirlos hay que escoger los PDF desde tu computador: Google no deja que el navegador los vuelva a leer desde Drive. El unido se descarga y además queda una copia en Drive.</p>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" id="caf-btn-parcial" onclick="cafDescargar('parcial')" class="actas-btn-sec">Descargar Mani+Anexo</button>
+          <button type="button" id="caf-btn-completo" onclick="cafDescargar('completo')" class="actas-btn">Descargar completo (los tres)</button>
+        </div>
+      </div>
       <div id="caf-estado" class="actas-estado-carga"></div>
-      <div style="display:flex; justify-content:space-between; gap:8px; margin-top:16px;">
-        <button type="button" onclick="cafAgregar()" class="actas-btn-sec">+ Agregar viaje</button>
+      <div style="display:flex; justify-content:flex-end; margin-top:16px;">
         <button type="button" onclick="cerrarSoportesCafeteria()" style="background:none; border:1px solid var(--borde); border-radius:7px; padding:8px 14px; font-size:13px; cursor:pointer; font-family:inherit; color:var(--texto);">Cerrar</button>
       </div>
     </div>
@@ -10351,16 +10364,16 @@ function closeBackupModal(){
   }
 
   // ─── SOPORTES DE CAFETERÍA Y SANITARIOS ───────────────────
-  // Cada viaje se respalda con tres PDF: manifiesto, anexo y acta.
-  // La celda muestra hasta dónde va: Mani → Mani+Anexo → Mani+Anexo+Acta.
+  // Tres listas independientes por mes: manifiestos, anexos y actas.
+  // Cada una crece por su lado. El estado del mes sale de cuáles ya tienen algo.
   let soportesCafeteria = (() => {
     try { return JSON.parse(localStorage.getItem('hh-actas-soportes-cafeteria') || '{}'); } catch (e) { return {}; }
   })();
 
   const CAF_TIPOS = [
-    { clave: 'manifiesto', etiqueta: 'Manifiesto' },
-    { clave: 'anexo', etiqueta: 'Anexo' },
-    { clave: 'acta', etiqueta: 'Acta' }
+    { clave: 'manifiestos', singular: 'Manifiesto', corto: 'Mani' },
+    { clave: 'anexos', singular: 'Anexo', corto: 'Anexo' },
+    { clave: 'actas', singular: 'Acta', corto: 'Acta' }
   ];
 
   let _cafMes = null;
@@ -10368,6 +10381,25 @@ function closeBackupModal(){
 
   function esCafeteria(nombre) {
     return coincideNombre('Cafetería y Sanitarios', nombre);
+  }
+
+  // Compatibilidad con el formato anterior (una lista de viajes por mes)
+  function cafMes(mesIndex) {
+    let m = soportesCafeteria[mesIndex];
+    if (Array.isArray(m)) {
+      const conv = { manifiestos: [], anexos: [], actas: [] };
+      m.forEach(v => {
+        CAF_TIPOS.forEach((t, k) => {
+          const viejo = v[['manifiesto', 'anexo', 'acta'][k]];
+          if (viejo && viejo.url) conv[t.clave].push(viejo);
+        });
+      });
+      soportesCafeteria[mesIndex] = conv;
+      m = conv;
+    }
+    if (!m) m = soportesCafeteria[mesIndex] = { manifiestos: [], anexos: [], actas: [] };
+    CAF_TIPOS.forEach(t => { if (!Array.isArray(m[t.clave])) m[t.clave] = []; });
+    return m;
   }
 
   function guardarSoportesCafeteria() {
@@ -10380,21 +10412,15 @@ function closeBackupModal(){
     }
   }
 
-  function estadoCafeteria(entrada) {
-    const tiene = CAF_TIPOS.map(t => !!(entrada[t.clave] && entrada[t.clave].url));
-    if (tiene[0] && tiene[1] && tiene[2]) return { texto: 'Mani+Anexo+Acta', clase: 'ok' };
-    if (tiene[0] && tiene[1]) return { texto: 'Mani+Anexo', clase: 'medio' };
-    if (tiene[0]) return { texto: 'Mani', clase: 'medio' };
-    return { texto: 'pendiente', clase: 'falta' };
-  }
-
   function resumenCafeteria(mesIndex) {
-    const lista = soportesCafeteria[mesIndex] || [];
-    if (lista.length === 0) return { texto: 'pendiente', clase: 'falta' };
-    if (lista.length === 1) return estadoCafeteria(lista[0]);
-    const completos = lista.filter(e => estadoCafeteria(e).clase === 'ok').length;
-    if (completos === lista.length) return { texto: 'Mani+Anexo+Acta', clase: 'ok' };
-    return { texto: `${completos} de ${lista.length} completos`, clase: 'medio' };
+    if (!soportesCafeteria[mesIndex]) return { texto: 'pendiente', clase: 'falta' };
+    const m = cafMes(mesIndex);
+    const hay = CAF_TIPOS.map(t => m[t.clave].length > 0);
+    if (hay[0] && hay[1] && hay[2]) return { texto: 'Mani+Anexo+Acta', clase: 'ok' };
+    if (hay[0] && hay[1]) return { texto: 'Mani+Anexo', clase: 'medio' };
+    if (hay[0]) return { texto: 'Mani', clase: 'medio' };
+    if (hay[1] || hay[2]) return { texto: 'falta manifiesto', clase: 'medio' };
+    return { texto: 'pendiente', clase: 'falta' };
   }
 
   function abrirSoportesCafeteria(mesIndex) {
@@ -10404,6 +10430,7 @@ function closeBackupModal(){
     modal.style.display = 'flex';
     document.getElementById('caf-titulo').textContent =
       `Soportes de Cafetería y Sanitarios — ${MESES_LARGOS[mesIndex]} ${AÑO_ACTUAL}`;
+    document.getElementById('caf-estado').style.display = 'none';
     renderSoportesCafeteria();
   }
 
@@ -10414,110 +10441,118 @@ function closeBackupModal(){
 
   function renderSoportesCafeteria() {
     const cont = document.getElementById('caf-lista');
-    const lista = soportesCafeteria[_cafMes] || [];
-    if (lista.length === 0) {
-      cont.innerHTML = '<p style="font-size:12.5px; color:var(--texto-suave); padding:10px 0;">Todavía no hay ningún viaje registrado. Agrega el primero abajo.</p>';
-      return;
-    }
-    cont.innerHTML = lista.map((e, i) => {
-      const est = estadoCafeteria(e);
-      const claseBadge = est.clase === 'ok' ? 'actas-badge-ok' : (est.clase === 'medio' ? 'actas-badge-amarillo' : 'actas-badge-pendiente');
-      const docs = CAF_TIPOS.map(t => {
-        const d = e[t.clave];
-        return d && d.url
-          ? `<a href="${d.url}" target="_blank" rel="noopener" class="caf-doc caf-doc-ok" title="${escapeHtml(d.nombre || '')}">${t.etiqueta} ✓</a>`
-          : `<button type="button" class="caf-doc" onclick="cafAdjuntar(${i}, '${t.clave}')">+ ${t.etiqueta}</button>`;
-      }).join('');
-      const unido = e.combinado && e.combinado.url
-        ? `<a href="${e.combinado.url}" target="_blank" rel="noopener" class="caf-doc caf-doc-ok">PDF unido ✓</a>`
-        : `<button type="button" class="caf-doc" onclick="cafUnir(${i})">Unir en un PDF</button>`;
+    const m = cafMes(_cafMes);
+
+    cont.innerHTML = CAF_TIPOS.map(t => {
+      const lista = m[t.clave];
+      const docs = lista.length === 0
+        ? '<span style="font-size:12px; color:var(--texto-suave);">Todavía no llega ninguno.</span>'
+        : lista.map((d, i) => `<span class="caf-doc caf-doc-ok" style="cursor:default;">
+             <a href="${d.url}" target="_blank" rel="noopener" style="color:inherit; text-decoration:none;" title="${escapeHtml(d.nombre || '')}">${escapeHtml(d.nombre || t.singular)}</a>
+             <button type="button" onclick="cafQuitar('${t.clave}', ${i})" title="Quitar de la lista" style="background:none; border:none; color:inherit; cursor:pointer; font-size:12px; padding:0 0 0 4px;">&times;</button>
+           </span>`).join('');
       return `<div class="caf-fila">
-        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-          <input type="text" value="${escapeHtml(e.numero || '')}" placeholder="N° manifiesto" onchange="cafNumero(${i}, this.value)" style="width:130px; height:30px; border:1px solid var(--borde); border-radius:6px; padding:0 8px; font-size:12.5px; font-family:inherit;">
-          <span class="actas-badge ${claseBadge}" style="cursor:default;">${est.texto}</span>
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+          <strong style="font-size:13px;">${t.singular}s</strong>
+          <span style="font-size:11.5px; color:var(--texto-suave);">${lista.length}</span>
           <span style="flex-grow:1;"></span>
-          <button type="button" onclick="cafEliminar(${i})" style="background:none; border:none; color:var(--rojo-texto); font-size:11.5px; cursor:pointer; font-family:inherit;">eliminar</button>
+          <button type="button" class="caf-doc" onclick="cafAdjuntar('${t.clave}')">+ Agregar ${t.singular.toLowerCase()}</button>
         </div>
-        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">${docs}${unido}</div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">${docs}</div>
       </div>`;
     }).join('');
+
+    const res = resumenCafeteria(_cafMes);
+    const hayMani = m.manifiestos.length > 0;
+    const hayActa = m.actas.length > 0;
+    document.getElementById('caf-resumen').innerHTML =
+      `<span class="actas-badge ${res.clase === 'ok' ? 'actas-badge-ok' : (res.clase === 'medio' ? 'actas-badge-amarillo' : 'actas-badge-pendiente')}" style="cursor:default;">${res.texto}</span>`;
+
+    const btnParcial = document.getElementById('caf-btn-parcial');
+    const btnCompleto = document.getElementById('caf-btn-completo');
+    btnParcial.disabled = !hayMani;
+    btnCompleto.disabled = !(hayMani && hayActa);
+    btnParcial.title = hayMani ? 'Une manifiestos y anexos en un PDF' : 'Falta al menos un manifiesto';
+    btnCompleto.title = (hayMani && hayActa) ? 'Une manifiestos, anexos y actas en un PDF' : 'Falta el acta';
   }
 
-  function cafAgregar() {
-    if (_cafMes === null) return;
-    if (!soportesCafeteria[_cafMes]) soportesCafeteria[_cafMes] = [];
-    soportesCafeteria[_cafMes].push({ numero: '', fecha: Date.now() });
-    guardarSoportesCafeteria();
-    renderSoportesCafeteria();
-    render();
-  }
-
-  function cafNumero(i, valor) {
-    const lista = soportesCafeteria[_cafMes] || [];
-    if (!lista[i]) return;
-    lista[i].numero = String(valor).trim();
-    guardarSoportesCafeteria();
-  }
-
-  function cafEliminar(i) {
-    const lista = soportesCafeteria[_cafMes] || [];
-    if (!lista[i]) return;
-    if (!confirm('¿Eliminar este viaje y sus soportes? Los archivos ya subidos siguen en Drive.')) return;
-    lista.splice(i, 1);
-    if (lista.length === 0) delete soportesCafeteria[_cafMes];
-    guardarSoportesCafeteria();
-    renderSoportesCafeteria();
-    render();
-  }
-
-  function cafAdjuntar(i, tipo) {
-    _cafRef = { i, tipo };
+  function cafAdjuntar(tipo) {
+    _cafRef = { tipo };
     const inp = document.getElementById('input-caf-doc');
     inp.value = '';
     inp.click();
   }
 
   async function procesarAdjuntoCafeteria(event) {
-    const file = event.target.files[0];
+    const files = Array.from(event.target.files || []);
     const ref = _cafRef;
-    if (!file || !ref || _cafMes === null) return;
-    const lista = soportesCafeteria[_cafMes] || [];
-    if (!lista[ref.i]) return;
-
+    if (files.length === 0 || !ref || _cafMes === null) return;
+    const m = cafMes(_cafMes);
     const est = document.getElementById('caf-estado');
     est.style.display = 'block';
     est.className = 'actas-estado-carga actas-estado-cargando';
-    est.textContent = 'Subiendo a Drive…';
 
-    let url = null;
-    try { url = await subirArchivoADrive(file, 'certificado', _cafMes); } catch (e) { console.error(e); }
-
-    if (!url) {
-      est.className = 'actas-estado-carga actas-estado-error';
-      est.textContent = 'No se pudo subir el archivo a Drive. Intenta otra vez.';
-      return;
+    let subidos = 0;
+    for (const file of files) {
+      est.textContent = `Subiendo ${file.name} a Drive…`;
+      let url = null;
+      try { url = await subirArchivoADrive(file, 'certificado', _cafMes); } catch (e) { console.error(e); }
+      if (url) {
+        m[ref.tipo].push({ url, nombre: file.name, fecha: Date.now() });
+        subidos++;
+      }
     }
-    lista[ref.i][ref.tipo] = { url, nombre: file.name, fecha: Date.now() };
+
     guardarSoportesCafeteria();
     renderSoportesCafeteria();
     render();
-    est.className = 'actas-estado-carga actas-estado-ok';
-    est.textContent = 'Archivo guardado en Drive.';
+
+    if (subidos === files.length) {
+      est.className = 'actas-estado-carga actas-estado-ok';
+      est.textContent = subidos === 1 ? 'Archivo guardado en Drive.' : `${subidos} archivos guardados en Drive.`;
+    } else {
+      est.className = 'actas-estado-carga actas-estado-error';
+      est.textContent = `Se subieron ${subidos} de ${files.length}. Intenta otra vez con los que faltaron.`;
+    }
   }
 
-  function cafUnir(i) {
-    _cafRef = { i, tipo: 'combinado' };
+  function cafQuitar(tipo, i) {
+    const m = cafMes(_cafMes);
+    if (!m[tipo][i]) return;
+    if (!confirm('¿Quitar este documento de la lista? El archivo sigue en Drive.')) return;
+    m[tipo].splice(i, 1);
+    guardarSoportesCafeteria();
+    renderSoportesCafeteria();
+    render();
+  }
+
+  // ── Descargar unido ──
+  // Google no deja que el navegador vuelva a leer los PDF de Drive, así que
+  // se escogen los archivos del computador y se unen aquí mismo.
+  function cafDescargar(alcance) {
+    _cafRef = { alcance };
     const inp = document.getElementById('input-caf-unir');
     inp.value = '';
     inp.click();
   }
 
+  // Ordena los archivos escogidos por tipo, según el nombre con que se subieron
+  function cafOrdenar(files, alcance) {
+    const m = cafMes(_cafMes);
+    const tipos = alcance === 'parcial' ? ['manifiestos', 'anexos'] : ['manifiestos', 'anexos', 'actas'];
+    const peso = f => {
+      for (let k = 0; k < tipos.length; k++) {
+        if (m[tipos[k]].some(d => d.nombre === f.name)) return k;
+      }
+      return tipos.length;
+    };
+    return files.map((f, i) => ({ f, i })).sort((a, b) => (peso(a.f) - peso(b.f)) || (a.i - b.i)).map(x => x.f);
+  }
+
   async function procesarUnionCafeteria(event) {
-    const files = Array.from(event.target.files || []);
+    const elegidos = Array.from(event.target.files || []);
     const ref = _cafRef;
-    if (files.length === 0 || !ref || _cafMes === null) return;
-    const lista = soportesCafeteria[_cafMes] || [];
-    if (!lista[ref.i]) return;
+    if (elegidos.length === 0 || !ref || _cafMes === null) return;
 
     const est = document.getElementById('caf-estado');
     est.style.display = 'block';
@@ -10525,16 +10560,13 @@ function closeBackupModal(){
 
     if (typeof PDFLib === 'undefined') {
       est.className = 'actas-estado-carga actas-estado-error';
-      est.textContent = 'No se pudo cargar la herramienta para unir PDF. Revisa la conexión y recarga.';
-      return;
-    }
-    if (files.length < 2) {
-      est.className = 'actas-estado-carga actas-estado-error';
-      est.textContent = 'Escoge al menos dos PDF para unirlos.';
+      est.textContent = 'No se pudo cargar la herramienta para unir PDF. Revisa la conexión y recarga la página.';
       return;
     }
 
+    const files = cafOrdenar(elegidos, ref.alcance);
     est.textContent = `Uniendo ${files.length} archivos…`;
+
     try {
       const unido = await PDFLib.PDFDocument.create();
       for (const f of files) {
@@ -10544,26 +10576,44 @@ function closeBackupModal(){
         paginas.forEach(p => unido.addPage(p));
       }
       const salida = await unido.save();
-      const nombre = `Soporte_Cafeteria_${MESES[_cafMes]}_${lista[ref.i].numero || (ref.i + 1)}.pdf`;
-      const archivo = new File([salida], nombre, { type: 'application/pdf' });
+      const mm = String(_cafMes + 1).padStart(2, '0');
+      const sufijo = ref.alcance === 'parcial' ? 'Mani+Anexo' : 'Mani+Anexo+Acta';
+      const nombre = `${AÑO_ACTUAL}-${mm}_Cafeteria_${sufijo}.pdf`;
 
-      est.textContent = 'Subiendo el PDF unido a Drive…';
-      const url = await subirArchivoADrive(archivo, 'certificado', _cafMes);
-      if (!url) {
-        est.className = 'actas-estado-carga actas-estado-error';
-        est.textContent = 'Se unió el PDF pero no se pudo subir a Drive.';
-        return;
-      }
-      lista[ref.i].combinado = { url, nombre, fecha: Date.now() };
-      guardarSoportesCafeteria();
-      renderSoportesCafeteria();
-      render();
+      // 1) Se descarga al computador
+      const blob = new Blob([salida], { type: 'application/pdf' });
+      const enlace = document.createElement('a');
+      enlace.href = URL.createObjectURL(blob);
+      enlace.download = nombre;
+      document.body.appendChild(enlace);
+      enlace.click();
+      document.body.removeChild(enlace);
+      setTimeout(() => URL.revokeObjectURL(enlace.href), 2000);
+
       est.className = 'actas-estado-carga actas-estado-ok';
-      est.innerHTML = `PDF unido y guardado. <a href="${url}" target="_blank" rel="noopener" style="color:var(--azul); font-weight:600;">verlo en Drive</a>`;
+      est.textContent = `Descargado ${nombre} (${files.length} archivos en el orden: ${files.map(f => f.name).join(' · ')}). Subiendo copia a Drive…`;
+
+      // 2) Y además queda una copia en Drive
+      try {
+        const archivo = new File([salida], nombre, { type: 'application/pdf' });
+        const url = await subirArchivoADrive(archivo, 'certificado', _cafMes);
+        if (url) {
+          const m = cafMes(_cafMes);
+          if (!m.unidos) m.unidos = {};
+          m.unidos[ref.alcance] = { url, nombre, fecha: Date.now() };
+          guardarSoportesCafeteria();
+          est.innerHTML = `Listo: <b>${escapeHtml(nombre)}</b> se descargó y quedó en Drive. <a href="${url}" target="_blank" rel="noopener" style="color:var(--azul); font-weight:600;">verlo</a>`;
+        } else {
+          est.textContent = `Listo: ${nombre} se descargó a tu computador (no se pudo subir la copia a Drive).`;
+        }
+      } catch (e) {
+        est.textContent = `Listo: ${nombre} se descargó a tu computador (no se pudo subir la copia a Drive).`;
+      }
+      renderSoportesCafeteria();
     } catch (err) {
       console.error('Error uniendo PDF:', err);
       est.className = 'actas-estado-carga actas-estado-error';
-      est.textContent = 'No se pudieron unir los PDF. Revisa que todos sean PDF válidos.';
+      est.textContent = 'No se pudieron unir los PDF. Revisa que todos sean PDF válidos y que ninguno tenga contraseña.';
     }
   }
 
@@ -11239,12 +11289,10 @@ function closeBackupModal(){
   window.procesarActaManifiesto = procesarActaManifiesto;
   window.abrirSoportesCafeteria = abrirSoportesCafeteria;
   window.cerrarSoportesCafeteria = cerrarSoportesCafeteria;
-  window.cafAgregar = cafAgregar;
-  window.cafNumero = cafNumero;
-  window.cafEliminar = cafEliminar;
   window.cafAdjuntar = cafAdjuntar;
+  window.cafQuitar = cafQuitar;
   window.procesarAdjuntoCafeteria = procesarAdjuntoCafeteria;
-  window.cafUnir = cafUnir;
+  window.cafDescargar = cafDescargar;
   window.procesarUnionCafeteria = procesarUnionCafeteria;
   window.agregarAnexoMaterial = agregarAnexoMaterial;
   window.procesarAnexoMaterial = procesarAnexoMaterial;
