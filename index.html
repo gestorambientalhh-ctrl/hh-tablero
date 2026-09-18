@@ -7691,6 +7691,7 @@ const app = initializeApp({
 const db = getFirestore(app);
 const TASKS_REF   = doc(db, 'hh-socios', 'tareas');
 const MEETINGS_REF = doc(db, 'hh-socios', 'reuniones');
+const ACTIVIDADES_REF = doc(db, 'hh-socios', 'actividades');
 const DELETED_REF  = doc(db, 'hh-socios', 'eliminadas');
 const ARCHIVOS_CLIENTE_REF = doc(db, 'hh-socios', 'archivos-cliente');
 const BACKUP_REF   = doc(db, 'hh-socios', 'backup-diario');
@@ -7712,6 +7713,7 @@ window._loadBackupInfo = async function(){
 // Debounce timers
 let tasksWriteTimer = null;
 let meetingsWriteTimer = null;
+let actividadesWriteTimer = null;
 
 // ── PROTECCIÓN ANTI-SOBREESCRITURA ────────────────────────────
 function _setLocalWriteTime() {
@@ -7930,6 +7932,16 @@ window.restaurarDesdeBackup = async function(tipo) {
   } catch(e) { alert('Error al restaurar: ' + e.message); }
 };
 
+// Write actividades to Firebase (debounced 800ms)
+window.persistActividadesToFirebase = function(lista) {
+  clearTimeout(actividadesWriteTimer);
+  actividadesWriteTimer = setTimeout(async () => {
+    try {
+      await setDoc(ACTIVIDADES_REF, { actividades: lista, updatedAt: Date.now() });
+    } catch (e) { console.error('Error guardando actividades:', e); }
+  }, 800);
+};
+
 // Write meetings to Firebase (debounced 800ms)
 window.persistMeetingsToFirebase = function(meetingList) {
   clearTimeout(meetingsWriteTimer);
@@ -8012,6 +8024,21 @@ window.addEventListener('app-ready', async () => {
   });
 });
 
+// ACTIVIDADES listener - starts immediately, ONCE
+let actividadesStarted = false;
+function startActividadesListener() {
+  if (actividadesStarted) return;
+  actividadesStarted = true;
+  onSnapshot(ACTIVIDADES_REF, snap => {
+    if (!snap.exists()) return;
+    const data = snap.data();
+    if (!data.actividades || !Array.isArray(data.actividades)) return;
+    if (typeof actividades !== 'undefined') actividades = data.actividades;
+    localStorage.setItem('hh-actividades-v1', JSON.stringify(data.actividades));
+    if (typeof window.renderCurrent === 'function') window.renderCurrent();
+  }, err => console.error('Error escuchando actividades:', err));
+}
+
 // MEETINGS listener - starts immediately, ONCE
 let meetingsStarted = false;
 function startMeetingsListener() {
@@ -8033,6 +8060,13 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', startMeetingsListener);
 } else {
   startMeetingsListener();
+}
+
+// Start actividades listener after DOM ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startActividadesListener);
+} else {
+  startActividadesListener();
 }
 
 // ── TODO FIREBASE SYNC ───────────────────────────────────────
