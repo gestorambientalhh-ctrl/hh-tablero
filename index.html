@@ -5586,6 +5586,8 @@ if(!nmStore.meses) nmStore.meses = [];
 let _nmOpen = new Set();       // ids de meses desplegados
 let _nmInit = false;           // apertura inicial del último mes (una sola vez)
 let _nmAbonoFor = null;        // id de mes con el form de abono abierto
+let _nmPagoGeneralOpen = false; // form de pago global (se reparte entre meses pendientes)
+let _nmOrdenPago = 'menor';     // 'menor' = de menor a mayor saldo · 'antiguo' = el mes más viejo primero
 let nmFechaCorte = new Date().toISOString().split('T')[0]; // corte del PDF de conciliación
 const BIZ_NAMES_F = ['Gestor HH','Logístico','Montevra'];
 // Solo estas unidades de negocio se muestran como pestañas en Flujo (por índice de biz)
@@ -6085,13 +6087,16 @@ function renderNuevoMilenioView(body){
   const corteSel=ord.length?`<label style="display:flex;align-items:center;gap:5px;height:30px;font-size:11px;color:var(--text2);border:1px solid #c5d3e8;border-radius:8px;padding:0 8px;background:var(--bg)">Corte<input type="date" value="${nmFechaCorte}" onchange="nmFechaCorte=this.value" title="El PDF incluye solo meses hasta esta fecha" style="border:none;background:none;font-size:11px;font-family:inherit;color:var(--text2);outline:none"></label>`:'';
   const pdfBtn=ord.length?`<button onclick="nmDescargarConciliacion()" style="height:30px;padding:0 12px;font-size:12px;font-weight:600;background:#fff;color:#2d4a7a;border:1px solid #c5d3e8;border-radius:8px;cursor:pointer;font-family:inherit">⬇ PDF conciliación</button>`:'';
   const addBtn=!isViewer?`<button onclick="nmAddMes()" style="height:30px;padding:0 14px;font-size:12px;font-weight:600;background:#2d4a7a;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit">+ Agregar mes</button>`:'';
+  const pagoBtn=(!isViewer && ord.some(m=>nmSaldoMes(m)>0))?`<button onclick="nmTogglePagoGeneral()" style="height:30px;padding:0 14px;font-size:12px;font-weight:600;background:#16a34a;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit">${_nmPagoGeneralOpen?'Cerrar':'+ Registrar pago'}</button>`:'';
+  const pagoForm=_nmPagoGeneralOpen?nmPagoGeneralFormHtml():'';
   const meses=ord.length?ord.slice().reverse().map(m=>nmMesCard(m)).join(''):'<div style="text-align:center;padding:32px;color:var(--text3);font-size:12px">Sin meses registrados. Usa “+ Agregar mes”.</div>';
   body.innerHTML=purinaSubSelector()+`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
       <div style="font-size:13px;font-weight:700;color:#2d4a7a">Aprovechables · Nuevo Milenio</div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${corteSel}${pdfBtn}${addBtn}</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${corteSel}${pdfBtn}${pagoBtn}${addBtn}</div>
     </div>
     ${kpis}
+    ${pagoForm}
     <div style="display:flex;flex-direction:column;gap:10px">${meses}</div>`;
 }
 
@@ -6105,6 +6110,7 @@ function nmMesCard(m){
     ${nmFacturaChip(m)}
     <div style="display:flex;gap:16px;margin-left:auto;flex-wrap:wrap;align-items:center">
       ${meta('Generado',gen,'#2d4a7a')}${meta('Abonos',ab,'#16a34a')}${meta('Saldo acum.',saldo,saldo>0?'#dc2626':'#16a34a')}
+      ${isViewer?'':`<button onclick="event.stopPropagation();nmDelMes('${m.id}')" title="Eliminar este mes" style="background:none;border:none;color:#d1cdc7;font-size:16px;line-height:1;cursor:pointer;padding:0 2px">×</button>`}
     </div>
   </div>`;
   const concil=`<div style="background:#f8f9fb;border:1px solid #eaeef4;border-radius:10px;padding:2px 14px;margin-bottom:14px">
@@ -6162,6 +6168,7 @@ function nmAbonosHtml(m){
   const lista=abonos.length?abonos.map(a=>`<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 0;border-bottom:1px solid #f2f2ee">
       <span style="color:#16a34a;font-weight:700">✓</span><span>Abono</span>
       ${a.facturaNumero?`<span style="font-size:10px;color:#2d4a7a;background:#eef4ff;border:1px solid #d5e2f5;border-radius:5px;padding:1px 6px">→ Fact. ${a.facturaNumero}</span>`:''}
+      ${a.distribuido?`<span style="font-size:10px;color:#166534;background:#dcfce7;border:1px solid #bbf7d0;border-radius:5px;padding:1px 6px" title="Vino de un pago repartido entre varios meses">repartido</span>`:''}
       <span style="color:var(--text3)">${a.fecha?fmtDate(a.fecha):''}</span>
       <span style="margin-left:auto;color:#16a34a;font-weight:700">${nmMoney(a.valor)}</span>
       ${a.soporteUrl?`<a href="${a.soporteUrl}" target="_blank" style="color:#2d4a7a;text-decoration:none">↗</a>`:''}
@@ -6243,6 +6250,105 @@ function nmAddAbono(id){
   persistNM(); _nmAbonoFor=null; renderFlujoBody();
 }
 function nmDelAbono(id,aid){ const m=nmMes(id); if(!m) return; if(!confirm('¿Eliminar este abono?')) return; m.abonos=(m.abonos||[]).filter(a=>a.id!==aid); persistNM(); renderFlujoBody(); }
+// ── Pago global de Nuevo Milenio: se reparte entre los meses con saldo ──
+function nmSaldoMes(m){ return nmGenerado(m) - nmAbonado(m); }
+
+function nmPendientes(){
+  const lista = nmMesesOrden().filter(m => nmSaldoMes(m) > 0);
+  if(_nmOrdenPago === 'antiguo') return lista;                       // ya viene por fecha
+  return lista.sort((a,b) => nmSaldoMes(a) - nmSaldoMes(b));         // de menor a mayor
+}
+
+function nmDistribuirPago(valor){
+  let restante = valor; const aplicados = [];
+  for(const m of nmPendientes()){
+    if(restante <= 0) break;
+    const saldo = nmSaldoMes(m);
+    const aplica = Math.min(restante, saldo);
+    if(aplica > 0){ aplicados.push({ m, aplica, queda: saldo - aplica }); restante -= aplica; }
+  }
+  return { aplicados, sobrante: restante };
+}
+
+function nmTogglePagoGeneral(){
+  _nmPagoGeneralOpen = !_nmPagoGeneralOpen;
+  _nmAbonoFor = null;
+  renderFlujoBody();
+}
+
+function nmSetOrdenPago(v){ _nmOrdenPago = v; nmPreviewPagoGeneral(); }
+
+function nmPagoGeneralFormHtml(){
+  const hoy = new Date().toISOString().split('T')[0];
+  const inp = 'height:32px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit';
+  const lbl = 'font-size:10px;color:var(--text2);display:block;margin-bottom:3px;font-weight:500';
+  const pend = nmPendientes();
+  const total = pend.reduce((s,m)=>s+nmSaldoMes(m),0);
+  return `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px;margin-bottom:14px">
+    <div style="font-size:12px;font-weight:600;color:#166534;margin-bottom:4px">Registrar pago (se reparte entre los meses pendientes)</div>
+    <div style="font-size:11px;color:#15803d;margin-bottom:10px">Pendiente total: <strong>${nmMoney(total)}</strong> en ${pend.length} mes(es).</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+      <div><label style="${lbl}">Fecha del pago</label><input type="date" id="nm-pg-fecha" value="${hoy}" style="${inp}"></div>
+      <div><label style="${lbl}">Valor del pago</label><input type="number" id="nm-pg-valor" placeholder="0" style="${inp};width:150px" oninput="nmPreviewPagoGeneral()"></div>
+      <div><label style="${lbl}">Orden de aplicación</label>
+        <select id="nm-pg-orden" onchange="nmSetOrdenPago(this.value)" style="${inp}">
+          <option value="menor"${_nmOrdenPago==='menor'?' selected':''}>De menor a mayor saldo</option>
+          <option value="antiguo"${_nmOrdenPago==='antiguo'?' selected':''}>El mes más antiguo primero</option>
+        </select>
+      </div>
+      <div><label style="${lbl}">N° de factura (opcional)</label><input type="text" id="nm-pg-factura" placeholder="s/n" style="${inp};width:120px"></div>
+      <button onclick="nmAplicarPagoGeneral()" style="height:32px;padding:0 16px;font-size:12px;font-weight:600;background:#16a34a;color:#fff;border:none;border-radius:7px;cursor:pointer;font-family:inherit">Aplicar pago</button>
+      <button onclick="nmTogglePagoGeneral()" style="height:32px;padding:0 14px;font-size:12px;background:var(--bg2);color:var(--text2);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-family:inherit">Cancelar</button>
+    </div>
+    <div id="nm-pg-preview" style="margin-top:10px;font-size:11px;color:var(--text2)"></div>
+  </div>`;
+}
+
+function nmPreviewPagoGeneral(){
+  const el = document.getElementById('nm-pg-preview'); if(!el) return;
+  const valor = parseFloat((document.getElementById('nm-pg-valor')||{}).value) || 0;
+  if(!valor){ el.innerHTML=''; return; }
+  const { aplicados, sobrante } = nmDistribuirPago(valor);
+  if(!aplicados.length){ el.innerHTML='<span style="color:#b45309">No hay meses con saldo pendiente.</span>'; return; }
+  el.innerHTML = '<div style="font-weight:600;color:#166534;margin-bottom:3px">Se aplicará así:</div>'+
+    aplicados.map(a=>`<div>• ${a.m.label||a.m.ym}: <strong>${nmMoney(a.aplica)}</strong> ${a.queda>0?`(queda ${nmMoney(a.queda)})`:'<span style="color:#166534">→ queda saldado ✓</span>'}</div>`).join('')+
+    (sobrante>0?`<div style="color:#b45309;margin-top:3px">Sobrante sin aplicar: <strong>${nmMoney(sobrante)}</strong></div>`:'');
+}
+
+function nmAplicarPagoGeneral(){
+  const fecha = document.getElementById('nm-pg-fecha').value;
+  const valor = parseFloat(document.getElementById('nm-pg-valor').value) || 0;
+  const factura = (document.getElementById('nm-pg-factura').value||'').trim();
+  if(!valor){ alert('Ingresa el valor del pago.'); return; }
+  const { aplicados, sobrante } = nmDistribuirPago(valor);
+  if(!aplicados.length){ alert('No hay meses con saldo pendiente.'); return; }
+  const resumen = aplicados.map(a=>'• '+(a.m.label||a.m.ym)+': '+nmMoney(a.aplica)+(a.queda>0?' (queda '+nmMoney(a.queda)+')':' (saldado)')).join('\n');
+  if(!confirm('Se aplicará el pago de '+nmMoney(valor)+' así:\n\n'+resumen+(sobrante>0?'\n\nSobrante sin aplicar: '+nmMoney(sobrante):'')+'\n\n¿Confirmar?')) return;
+  aplicados.forEach(a=>{
+    if(!a.m.abonos) a.m.abonos=[];
+    a.m.abonos.push({
+      id:'nma'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+      fecha, valor:a.aplica, distribuido:true,
+      facturaNumero: factura || undefined
+    });
+  });
+  persistNM();
+  _nmPagoGeneralOpen=false;
+  renderFlujoBody();
+  alert('Pago aplicado a '+aplicados.length+' mes(es).'+(sobrante>0?' Sobrante no aplicado: '+nmMoney(sobrante):''));
+}
+
+function nmDelMes(id){
+  const m = nmMes(id); if(!m) return;
+  const ab = (m.abonos||[]).length;
+  const aviso = '¿Eliminar '+(m.label||m.ym)+'?\n\nSe borran sus materiales'+(ab?' y sus '+ab+' abono(s)':'')+
+    '. El saldo acumulado de los meses siguientes se recalcula.\n\nEsto no se puede deshacer.';
+  if(!confirm(aviso)) return;
+  nmStore.meses = nmStore.meses.filter(x=>x.id!==id);
+  _nmOpen.delete(id);
+  persistNM(); renderFlujoBody();
+}
+
 function nmAddMes(){
   const val=prompt('Mes a agregar (formato AAAA-MM, ej. 2026-07):','');
   if(!val) return;
