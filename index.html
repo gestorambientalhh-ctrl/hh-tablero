@@ -728,10 +728,10 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
   /* ── Enlace al acta sobre cada material ── */
   .actas-celda-mat { white-space:nowrap; }
   .actas-celda-mat .actas-badge { vertical-align:middle; }
-  .actas-link-acta { display:inline-block; vertical-align:middle; margin-left:4px; font-size:10px; line-height:1;
+  .actas-chip-cert { display:inline-block; vertical-align:middle; margin-left:4px; font-size:10px; line-height:1;
     font-weight:700; text-decoration:none; background:var(--verde-bg); color:var(--verde-texto);
     border:1px solid var(--verde-texto); border-radius:4px; padding:3px 5px; white-space:nowrap; }
-  .actas-link-acta:hover { background:var(--verde-texto); color:#fff; }
+  a.actas-chip-cert:hover { background:var(--verde-texto); color:#fff; }
   .actas-chip-falta { display:inline-block; vertical-align:middle; margin-left:4px; font-size:10px; line-height:1;
     font-weight:700; background:var(--rojo-bg); color:var(--rojo-texto); border:1px solid var(--rojo-texto);
     border-radius:4px; padding:3px 5px; white-space:nowrap; }
@@ -10241,70 +10241,66 @@ function closeBackupModal(){
     return html;
   }
 
-  // Al lado del valor queda un chip verde "acta" que abre en Drive
-  // el PDF del acta con la que se cruzó ese material.
-  function celdaConActa(inner, acta, mesIndex) {
-    let link = '';
-    if (acta && acta.urlDrive) {
-      link = `<a class="actas-link-acta" href="${acta.urlDrive}" target="_blank" rel="noopener" title="Abrir en Drive el acta de ${MESES_LARGOS[mesIndex]} ${AÑO_ACTUAL}">acta</a>`;
-    }
-    return `<td class="actas-celda-mat">${inner}${link}</td>`;
-  }
-
+  // Cada celda muestra la CANTIDAD del acta y, al lado, un chip:
+  // verde "certificado" (abre el PDF en Drive) cuando está soportada,
+  // rojo "pendiente" cuando no. Sin soporte, la cantidad también va en rojo.
   function celdaMaterial(mat, mesIndex) {
     const acta = actaActivaDeMes(mesIndex);
+
+    // ── El mes todavía no tiene acta ──
     if (!acta) {
       const pendientes = materialesSinActa.filter(m => m.mesIndex === mesIndex && coincideNombre(mat.nombre, m.nombre));
       if (pendientes.length > 0) {
         const totalKg = pendientes.reduce((s, m) => s + (m.pesoKg || 0), 0);
         const totalUnd = pendientes.reduce((s, m) => s + (m.unidades || 0), 0);
         const texto = totalKg > 0
-          ? `${pendientes.length} manif. · ${totalKg.toLocaleString('es-CO')} kg`
-          : `${pendientes.length} manif. · ${totalUnd.toLocaleString('es-CO')} und`;
+          ? `${totalKg.toLocaleString('es-CO')} kg`
+          : `${totalUnd.toLocaleString('es-CO')} und`;
         const nombreEscSA = mat.nombre.replace(/'/g, "\\'");
-        return `<td class="actas-celda-mat"><button class="actas-badge actas-badge-pendiente" onclick="verMaterialesSinActa('${nombreEscSA}', ${mesIndex})" title="Hay material registrado pero todavía falta el acta de ${MESES_LARGOS[mesIndex]} — clic para ver el detalle">${texto}</button><span class="actas-chip-falta" title="Falta subir o generar el acta de este mes">falta acta</span></td>`;
+        return `<td class="actas-celda-mat"><button class="actas-badge actas-badge-pendiente" onclick="verMaterialesSinActa('${nombreEscSA}', ${mesIndex})" title="Hay ${pendientes.length} soporte(s) registrado(s) pero todavía falta el acta de ${MESES_LARGOS[mesIndex]} — clic para ver el detalle">${texto}</button><span class="actas-chip-falta" title="Falta subir o generar el acta de este mes">falta acta</span></td>`;
       }
       return '<td><span class="actas-dif-vacio">—</span></td>';
     }
+
     const reg = registros.find(r => r.actaId === acta.id && r.nombre === mat.nombre && r.grupo === mat.grupo);
     if (!reg) return '<td><span class="actas-dif-vacio">—</span></td>';
 
     const nombreEsc = reg.nombre.replace(/'/g, "\\'");
     const esUnidades = reg.unidadActa === 'Und';
-    const sufijoActa = esUnidades ? 'und' : 'kg';
-    const refActa = ` · acta de ${MESES_LARGOS[mesIndex]}${acta.urlDrive ? ' — el chip verde la abre en Drive' : ''}`;
+    const sufijo = esUnidades ? 'und' : 'kg';
+    const cantidad = `${reg.cantidadActa.toLocaleString('es-CO')} ${sufijo}`;
 
-    // Sin certificado todavía — amarillo, muestra el peso del acta
-    if (reg.entregas.length === 0) {
-      const textoA = `${reg.cantidadActa.toLocaleString('es-CO')} ${sufijoActa}`;
-      return celdaConActa(`<button class="actas-badge actas-badge-amarillo" onclick="agregarAnexoMaterial('${nombreEsc}', '${reg.actaId}')" title="Clic para adjuntar soporte (PDF) y poner el valor${refActa}">${textoA}</button>`, acta, mesIndex);
-    }
+    const confirmadas = reg.entregas.filter(e => !e.provisional);
 
-    // Solo hay manifiesto(s) sin certificar todavía — azul
-    const hayConfirmadas = reg.entregas.some(e => !e.provisional);
-    if (!hayConfirmadas) {
+    // ── Sin certificado todavía ──
+    if (confirmadas.length === 0) {
       const manifiestos = [...new Set(reg.entregas.map(e => e.numeroManifiesto).filter(Boolean))];
-      const textoM = manifiestos.length === 1 ? 'M°' + manifiestos[0] : (manifiestos.length > 1 ? 'Varios' : `${reg.entregas.length} manifiesto${reg.entregas.length > 1 ? 's' : ''}`);
-      return celdaConActa(`<button class="actas-badge actas-badge-azul" onclick="verEntregas('${nombreEsc}', '${reg.actaId}')" title="Manifiesto recibido, esperando el certificado de destrucción${refActa}">${textoM}</button>`, acta, mesIndex);
+      const pista = manifiestos.length > 0
+        ? `Manifiesto ${manifiestos.map(m => 'M°' + m).join(', ')} recibido, falta el certificado`
+        : 'Todavía no tiene certificado — clic para agregar el soporte';
+      const accion = manifiestos.length > 0
+        ? `verEntregas('${nombreEsc}', '${reg.actaId}')`
+        : `agregarAnexoMaterial('${nombreEsc}', '${reg.actaId}')`;
+      return `<td class="actas-celda-mat"><button class="actas-badge actas-badge-pendiente" onclick="${accion}" title="${pista}">${cantidad}</button><span class="actas-chip-falta" title="${pista}">pendiente</span></td>`;
     }
 
-    const totalKg = totalEntregasKg(reg);
-    const totalUnd = totalEntregasUnidades(reg);
-    const base = esUnidades ? totalUnd : totalKg;
+    const base = esUnidades ? totalEntregasUnidades(reg) : totalEntregasKg(reg);
     const dif = reg.cantidadActa - base;
+    const numerosCert = [...new Set(confirmadas.map(e => e.numeroCertificado).filter(Boolean))];
+    const refCert = numerosCert.length ? ' N°' + numerosCert.join(', N°') : '';
+    const urlCert = (confirmadas.find(e => e.urlDrive) || {}).urlDrive || null;
 
-    // No cuadra con el acta — rojo, muestra la diferencia
+    // ── Certificado, pero no cuadra con el acta ──
     if (dif !== 0) {
-      const textoD = `${dif > 0 ? '+' : ''}${dif.toLocaleString('es-CO')} ${sufijoActa}`;
-      return celdaConActa(`<button class="actas-badge actas-badge-pendiente" onclick="verEntregas('${nombreEsc}', '${reg.actaId}')" title="No cuadra con el acta — clic para ver el detalle${refActa}">${textoD}</button>`, acta, mesIndex);
+      const falta = `${dif > 0 ? 'faltan ' : 'sobran '}${Math.abs(dif).toLocaleString('es-CO')} ${sufijo}`;
+      return `<td class="actas-celda-mat"><button class="actas-badge actas-badge-pendiente" onclick="verEntregas('${nombreEsc}', '${reg.actaId}')" title="Certificado${refCert} — no cuadra con el acta, clic para ver el detalle">${cantidad}</button><span class="actas-chip-falta" title="Diferencia contra la cantidad del acta">${falta}</span></td>`;
     }
 
-    // Cuadra — verde, muestra el número de certificado
-    const numerosCert = [...new Set(reg.entregas.map(e => e.numeroCertificado).filter(Boolean))];
-    const texto = numerosCert.length === 1
-      ? 'N°' + numerosCert[0]
-      : (numerosCert.length > 1 ? 'Varias' : `${reg.entregas.length} entrega${reg.entregas.length > 1 ? 's' : ''}`);
-    return celdaConActa(`<button class="actas-badge actas-badge-ok" onclick="verEntregas('${nombreEsc}', '${reg.actaId}')" title="Cuadra con el acta — clic para ver el detalle${refActa}">${texto}</button>`, acta, mesIndex);
+    // ── Cuadra: cantidad en verde y chip al certificado ──
+    const chip = urlCert
+      ? `<a class="actas-chip-cert" href="${urlCert}" target="_blank" rel="noopener" title="Abrir en Drive el certificado${refCert}">certificado</a>`
+      : `<span class="actas-chip-cert" title="Certificado${refCert} registrado (sin archivo en Drive)">certificado</span>`;
+    return `<td class="actas-celda-mat"><button class="actas-badge actas-badge-ok" onclick="verEntregas('${nombreEsc}', '${reg.actaId}')" title="Cuadra con el acta · certificado${refCert} — clic para ver el detalle">${cantidad}</button>${chip}</td>`;
   }
 
   function guardarManifiestos() {
