@@ -1585,12 +1585,9 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
         Inicio
       </button>
-      <span style="font-size:14px;font-weight:600;color:var(--text)">✅ Checklist Semanal</span>
+      <span style="font-size:14px;font-weight:600;color:var(--text)">✅ Tareas y seguimiento</span>
       <select id="ck-month" onchange="renderChecklist()" style="height:28px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;background:var(--bg);color:var(--text2)">
         <option value="">Este mes</option>
-      </select>
-      <select id="ck-who" onchange="renderChecklist()" style="height:28px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;background:var(--bg);color:var(--text2)">
-        <option value="">Todos los usuarios</option>
       </select>
       <button onclick="openCkItemModal()" style="height:30px;padding:0 12px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;margin-left:auto">
         + Agregar actividad
@@ -1613,16 +1610,13 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
         </div>
         <div style="display:flex;gap:8px">
           <div style="flex:1;display:flex;flex-direction:column;gap:4px">
-            <label style="font-size:11px;color:var(--text2)">Responsable</label>
-            <select id="cki-who" style="height:34px;font-size:13px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text);background:var(--bg2)"></select>
-          </div>
-          <div style="flex:1;display:flex;flex-direction:column;gap:4px">
-            <label style="font-size:11px;color:var(--text2)">Recurrencia</label>
+            <label style="font-size:11px;color:var(--text2)">Tipo</label>
             <select id="cki-freq" style="height:34px;font-size:13px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text);background:var(--bg2)">
+              <option value="daily">Diaria</option>
               <option value="weekly">Semanal</option>
-              <option value="biweekly">Cada 2 semanas</option>
+              <option value="biweekly">Quincenal</option>
               <option value="monthly">Mensual</option>
-              <option value="bimonthly">Bimestral</option>
+              <option value="payment">Pago del mes</option>
             </select>
           </div>
           <div style="flex:1;display:flex;flex-direction:column;gap:4px">
@@ -2808,24 +2802,96 @@ function manualRefresh(){
 
 
 // ── CHECKLIST MODULE ──────────────────────────────────────────
-let ckItems = [];    // activities/templates
-let ckChecks = {};   // {weekKey: {itemId: {userId: bool}}}
-let ckSelWeek = '';  // selected week key
+// Actividades generales del equipo (sin responsable asignado).
+// Cada tipo se controla en su propio periodo: la diaria por día,
+// la semanal por semana, la quincenal por quincena, la mensual por mes.
+let ckItems = [];    // actividades
+let ckChecks = {};   // {periodo: {itemId: veces}}
+let ckSelWeek = '';
+let ckCargado = false;
 
-function loadChecklist(){
+const CK_FREQ = {
+  daily:     { label:'Diaria',    grupo:'diarias' },
+  weekly:    { label:'Semanal',   grupo:'semanales' },
+  biweekly:  { label:'Quincenal', grupo:'quincenales' },
+  monthly:   { label:'Mensual',   grupo:'mensuales' },
+  payment:   { label:'Pago',      grupo:'pagos' }
+};
+
+const CK_POR_DEFECTO = [
+  ['Programación de actividades','daily'],
+  ['Envío de saldo luego de cargas (si se envía producto)','daily'],
+  ['Revisar horarios de llegada y salida Yahir','daily'],
+  ['Informar novedades del día','daily'],
+  ['Verificación de llegada a Purina','daily'],
+
+  ['Programación y ejecución de pagos','weekly'],
+  ['Cobro semanal Yadir','weekly'],
+  ['Programación de latas','weekly'],
+  ['Solicitud de tiquetes y latas','weekly'],
+  ['Conciliación de semana con Raúl','weekly'],
+
+  ['Pagar quincena Yahir','biweekly'],
+  ['Pagar transportador','biweekly'],
+
+  ['Pago Purina','monthly'],
+  ['Cobro','monthly'],
+
+  ['Arriendo','payment'],
+  ['Luz','payment'],
+  ['Sueldo Yahir','payment'],
+  ['Sueldo Camila','payment'],
+  ['Pago contadora','payment'],
+  ['Pago Anderson','payment'],
+  ['Programación Sinthya','payment'],
+  ['Pago Simple','payment'],
+  ['Pago Claro','payment']
+];
+
+function ckItemsPorDefecto(){
+  return CK_POR_DEFECTO.map((x,i)=>({
+    id:'ckd'+(i+1), title:x[0], freq:x[1], times:1, freqLabel:CK_FREQ[x[1]].label
+  }));
+}
+
+// Los chequeos viejos eran {itemId:{usuario:bool}}. Ahora la actividad es del
+// equipo, así que se deja un solo número: lo máximo que alguien hubiera marcado.
+function ckMigrar(checks){
+  const salida={};
+  Object.keys(checks||{}).forEach(per=>{
+    salida[per]={};
+    Object.keys(checks[per]||{}).forEach(itemId=>{
+      const v=checks[per][itemId];
+      if(typeof v==='number'){ salida[per][itemId]=v; return; }
+      if(v===true){ salida[per][itemId]=1; return; }
+      if(v && typeof v==='object'){
+        const vals=Object.values(v).map(x=>x===true?1:(typeof x==='number'?x:0));
+        salida[per][itemId]=vals.length?Math.max(...vals):0;
+      }
+    });
+  });
+  return salida;
+}
+
+function loadChecklist(forzar){
+  if(ckCargado && !forzar) return;
   const si = localStorage.getItem('hh-ck-items-v1');
-  ckItems = si ? JSON.parse(si) : [
-    {id:'cki1', title:'Reporte semanal de actividades', who:'Anderson', freq:'weekly'},
-    {id:'cki2', title:'Revisión de tareas pendientes', who:'Raul', freq:'weekly'},
-    {id:'cki3', title:'Resumen mensual de cumplimiento', who:'Anderson', freq:'monthly'},
-  ];
+  let items = si ? JSON.parse(si) : null;
+  if(!items || !items.length) items = ckItemsPorDefecto();
+  ckItems = items.map(it=>{ const {who, ...resto}=it; return resto; });
   const sc = localStorage.getItem('hh-ck-checks-v1');
-  ckChecks = sc ? JSON.parse(sc) : {};
+  ckChecks = ckMigrar(sc ? JSON.parse(sc) : {});
+  ckCargado = true;
 }
 
 function saveCkData(){
   localStorage.setItem('hh-ck-items-v1', JSON.stringify(ckItems));
   localStorage.setItem('hh-ck-checks-v1', JSON.stringify(ckChecks));
+  if(window.persistChecklistToFirebase) window.persistChecklistToFirebase(ckItems, ckChecks);
+}
+
+function ckISO(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 
 function getWeeksOfMonth(yearMonth){
@@ -2835,9 +2901,8 @@ function getWeeksOfMonth(yearMonth){
   }
   const [y,m]=yearMonth.split('-');
   const year=parseInt(y), mo=parseInt(m)-1;
-  const firstDay=new Date(year,mo,1);
   const lastDay=new Date(year,mo+1,0);
-  let d=new Date(firstDay);
+  let d=new Date(year,mo,1);
   while(d.getDay()!==1) d.setDate(d.getDate()-1);
   const MES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   const weeks=[];
@@ -2845,12 +2910,10 @@ function getWeeksOfMonth(yearMonth){
   while(d<=lastDay){
     const wStart=new Date(d), wEnd=new Date(d);
     wEnd.setDate(wEnd.getDate()+6);
-    const key=wStart.toISOString().split('T')[0];
     weeks.push({
-      key,
+      key:ckISO(wStart),
       label:`Sem ${wNum}: ${wStart.getDate()} ${MES[wStart.getMonth()]} - ${wEnd.getDate()} ${MES[wEnd.getMonth()]}`,
-      start:wStart.toISOString().split('T')[0],
-      end:wEnd.toISOString().split('T')[0]
+      start:ckISO(wStart)
     });
     d.setDate(d.getDate()+7);
     wNum++;
@@ -2859,33 +2922,38 @@ function getWeeksOfMonth(yearMonth){
 }
 
 function getCurrentWeekKey(){
-  const n=new Date();
-  let d=new Date(n);
+  const d=new Date();
   while(d.getDay()!==1) d.setDate(d.getDate()-1);
-  return d.toISOString().split('T')[0];
+  return ckISO(d);
 }
 
-function toggleCkItem(itemId, userId){
-  const wk=ckSelWeek||getCurrentWeekKey();
-  if(!ckChecks[wk]) ckChecks[wk]={};
-  if(!ckChecks[wk][itemId]) ckChecks[wk][itemId]={};
-  ckChecks[wk][itemId][userId] = !ckChecks[wk][itemId][userId];
+function ckVeces(periodo, itemId){
+  const v = ckChecks[periodo]?.[itemId];
+  if(v === true) return 1;
+  return typeof v === 'number' ? v : 0;
+}
+
+function toggleCkItem(itemId, periodo){
+  loadChecklist();
+  const it = ckItems.find(x=>x.id===itemId);
+  if(!it) return;
+  const meta = Math.max(1, parseInt(it.times)||1);
+  const actual = ckVeces(periodo, itemId);
+  if(!ckChecks[periodo]) ckChecks[periodo]={};
+  ckChecks[periodo][itemId] = actual >= meta ? 0 : actual+1;
   saveCkData();
   renderChecklist();
-  if(curSection==='dashboard') renderDashboard();
+  if(typeof curSection!=='undefined' && curSection==='dashboard') renderDashboard();
 }
 
 function deleteCkItem(id){
-  if(!confirm('¿Eliminar esta actividad?')) return;
+  if(!confirm('¿Eliminar esta actividad? Se borra para todo el equipo.')) return;
   ckItems=ckItems.filter(x=>x.id!==id);
   saveCkData();
   renderChecklist();
 }
 
 function openCkItemModal(){
-  const users=getUsers();
-  const sel=document.getElementById('cki-who');
-  if(sel) sel.innerHTML=users.map(u=>`<option value="${u.name}">${u.name}</option>`).join('');
   document.getElementById('cki-title').value='';
   document.getElementById('ck-item-overlay').style.display='flex';
   setTimeout(()=>document.getElementById('cki-title').focus(),100);
@@ -2898,31 +2966,19 @@ function closeCkItemModal(){
 function saveCkItem(){
   const title=document.getElementById('cki-title').value.trim();
   if(!title) return;
+  loadChecklist();
   const freq=document.getElementById('cki-freq').value;
   const times=parseInt(document.getElementById('cki-times').value)||1;
-  const freqLabel={weekly:'Semanal',biweekly:'C/2 semanas',monthly:'Mensual',bimonthly:'Bimestral'};
   ckItems.push({
-    id:'cki'+Date.now(),
-    title,
-    who:document.getElementById('cki-who').value,
-    freq,
-    times,
-    freqLabel:freqLabel[freq]||'Semanal',
+    id:'cki'+Date.now(), title, freq, times,
+    freqLabel:(CK_FREQ[freq]||CK_FREQ.weekly).label
   });
   saveCkData();
   closeCkItemModal();
   renderChecklist();
 }
 
-function populateCkWhoFilter(){
-  const sel=document.getElementById('ck-who');
-  if(!sel) return;
-  const cur=sel.value;
-  const users=getUsers();
-  sel.innerHTML='<option value="">Todos los usuarios</option>'+
-    users.map(u=>`<option value="${u.name}">${u.name}</option>`).join('');
-  sel.value=cur;
-}
+function populateCkWhoFilter(){ /* ya no hay responsables */ }
 
 function populateCkMonthFilter(){
   const sel=document.getElementById('ck-month');
@@ -2930,15 +2986,26 @@ function populateCkMonthFilter(){
   const cur=sel.value;
   const months=new Set();
   const n=new Date();
-  for(let i=-1;i<=2;i++){
+  for(let i=-2;i<=2;i++){
     const d=new Date(n.getFullYear(),n.getMonth()+i,1);
     months.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
   }
   const MES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  const sorted=[...months].sort();
   sel.innerHTML='<option value="">Este mes</option>'+
-    sorted.map(m=>{const[y,mo]=m.split('-');return `<option value="${m}">${MES[parseInt(mo)-1]} ${y}</option>`;}).join('');
+    [...months].sort().map(m=>{const[y,mo]=m.split('-');return `<option value="${m}">${MES[parseInt(mo)-1]} ${y}</option>`;}).join('');
   sel.value=cur;
+}
+
+function ckColorPct(p){ return p>=80?'#16a34a':p>=50?'#EF9F27':'#E24B4A'; }
+
+function ckBoton(itemId, periodo, meta, texto, ancho){
+  const v=ckVeces(periodo,itemId);
+  const lleno=v>=meta;
+  const etiqueta = v>0 ? (meta>1 ? v+'/'+meta : '✓') : texto;
+  return `<button onclick="toggleCkItem('${itemId}','${periodo}')" title="${periodo}"
+    style="min-width:${ancho};height:28px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;font-family:inherit;padding:0 8px;
+    border:1px solid ${lleno?'#16a34a':'var(--border)'};background:${lleno?'#16a34a':(v>0?'#fef3c7':'var(--bg2)')};
+    color:${lleno?'#fff':'var(--text2)'}">${etiqueta}</button>`;
 }
 
 function renderChecklist(){
@@ -2946,90 +3013,120 @@ function renderChecklist(){
   const container=document.getElementById('ck-body');
   if(!container) return;
   populateCkMonthFilter();
-  populateCkWhoFilter();
 
   const selMonth=document.getElementById('ck-month')?document.getElementById('ck-month').value:'';
-  const now=new Date();
-  const monthKey=selMonth||`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const hoy=new Date();
+  const monthKey=selMonth||`${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}`;
   const weeks=getWeeksOfMonth(monthKey);
   const curWk=getCurrentWeekKey();
-  if(!ckSelWeek||!weeks.find(w=>w.key===ckSelWeek)) ckSelWeek=curWk;
+  if(!ckSelWeek||!weeks.find(w=>w.key===ckSelWeek)) ckSelWeek=weeks.find(w=>w.key===curWk)?curWk:weeks[0].key;
+  const semana=weeks.find(w=>w.key===ckSelWeek)||weeks[0];
 
-  const ckWhoFilter=document.getElementById('ck-who')?document.getElementById('ck-who').value:'';
-  const allUsers=getUsers();
-  const users=ckWhoFilter?allUsers.filter(u=>u.name===ckWhoFilter):allUsers;
-  const uColors=['#2563eb','#0ea5e9','#7c3aed','#d97706'];
-  const MES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const DIA_CORTO=['L','M','X','J','V','S','D'];
+  const dias=[];
+  for(let k=0;k<7;k++){
+    const d=new Date(semana.start+'T00:00:00');
+    d.setDate(d.getDate()+k);
+    dias.push({iso:ckISO(d), letra:DIA_CORTO[k], num:d.getDate(), hoy:ckISO(d)===ckISO(hoy)});
+  }
+  const quincenas=[{key:'q:'+monthKey+'-1', label:'1 al 15'},{key:'q:'+monthKey+'-2', label:'16 a fin'}];
+  const perMes='m:'+monthKey;
 
-  // ── Week tabs
+  const porGrupo = g => ckItems.filter(it=>(CK_FREQ[it.freq]||CK_FREQ.weekly).grupo===g);
+  const meta = it => Math.max(1, parseInt(it.times)||1);
+
+  // ── Cumplimiento por tipo
+  function avance(g){
+    const its=porGrupo(g);
+    let hecho=0, tope=0;
+    its.forEach(it=>{
+      const m=meta(it);
+      if(g==='diarias')        dias.forEach(d=>{ tope+=m; hecho+=Math.min(m, ckVeces('d:'+d.iso,it.id)); });
+      else if(g==='semanales'){ tope+=m; hecho+=Math.min(m, ckVeces(ckSelWeek,it.id)); }
+      else if(g==='quincenales') quincenas.forEach(q=>{ tope+=m; hecho+=Math.min(m, ckVeces(q.key,it.id)); });
+      else { tope+=m; hecho+=Math.min(m, ckVeces(perMes,it.id)); }
+    });
+    return {hecho, tope, n:its.length, pct: tope?Math.round(hecho/tope*100):0};
+  }
+
+  const grupos=[
+    {g:'diarias',     titulo:'Diarias',     nota:'Una casilla por día de la semana'},
+    {g:'semanales',   titulo:'Semanales',   nota:semana.label},
+    {g:'quincenales', titulo:'Quincenales', nota:'Dos cortes en el mes'},
+    {g:'mensuales',   titulo:'Mensuales',   nota:'Una vez al mes'},
+    {g:'pagos',       titulo:'Pagos del mes', nota:'Se marcan a medida que se pagan'}
+  ];
+
   let html=`<div class="ck-week-tabs" style="margin-bottom:14px">`;
   weeks.forEach(w=>{
-    const isCur=w.key===curWk;
-    html+=`<button class="ck-week-tab${ckSelWeek===w.key?' act':''}" onclick="ckSelWeek='${w.key}';renderChecklist()">
-      ${w.label}${isCur?' 📍':''}
-    </button>`;
+    html+=`<button class="ck-week-tab${ckSelWeek===w.key?' act':''}" onclick="ckSelWeek='${w.key}';renderChecklist()">${w.label}${w.key===curWk?' 📍':''}</button>`;
   });
   html+=`</div>`;
 
-  // ── Summary card
-  const selWeekData=ckChecks[ckSelWeek]||{};
-  let summaryHtml=`<div class="ck-summary">
-    <div class="ck-summary-title">📊 Cumplimiento — ${weeks.find(w=>w.key===ckSelWeek)?.label||'Semana actual'}</div>`;
-
-  users.forEach((u,i)=>{
-    const uColor=uColors[i%uColors.length];
-    const uItems=ckItems.filter(it=>it.who===u.name||(it.freq==='weekly'));
-    const done=uItems.filter(it=>selWeekData[it.id]?.[u.name]).length;
-    const total=uItems.length||1;
-    const pct=Math.round((done/total)*100);
-    // Monthly pct
-    const monthDone=weeks.reduce((acc,w)=>{
-      const wd=ckChecks[w.key]||{};
-      return acc+uItems.filter(it=>wd[it.id]?.[u.name]).length;
-    },0);
-    const monthTotal=uItems.length*weeks.length||1;
-    const monthPct=Math.round((monthDone/monthTotal)*100);
-    summaryHtml+=`<div class="ck-user-row">
-      <div class="ck-user-dot" style="background:${uColor}22;color:${uColor};width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">${u.init}</div>
-      <span style="font-size:12px;font-weight:600;color:var(--text);width:70px;flex-shrink:0">${u.name}</span>
-      <div class="ck-user-bar">
-        <div class="ck-user-fill" style="width:${pct}%;background:${uColor}"></div>
-        <span class="ck-user-pct-label">${pct}% sem.</span>
-      </div>
-      <span style="font-size:11px;color:var(--text2);white-space:nowrap;margin-left:8px">${monthPct}% mes</span>
+  html+=`<div class="ck-summary"><div class="ck-summary-title">📊 Cumplimiento — ${semana.label}</div>`;
+  grupos.forEach(b=>{
+    const a=avance(b.g);
+    if(!a.n) return;
+    const color=ckColorPct(a.pct);
+    html+=`<div class="ck-user-row">
+      <span style="font-size:12px;font-weight:600;color:var(--text);width:110px;flex-shrink:0">${b.titulo}</span>
+      <div class="ck-user-bar"><div class="ck-user-fill" style="width:${a.pct}%;background:${color}"></div><span class="ck-user-pct-label">${a.pct}%</span></div>
+      <span style="font-size:11px;color:var(--text2);white-space:nowrap;margin-left:8px"><b style="color:${color}">${a.hecho}</b>/${a.tope}</span>
     </div>`;
   });
-  summaryHtml+=`</div>`;
-  html+=summaryHtml;
+  html+=`</div>`;
 
-  // ── Checklist by user
-  users.forEach((u,i)=>{
-    const uColor=uColors[i%uColors.length];
-    const uItems=ckItems.filter(it=>it.who===u.name);
-    if(!uItems.length) return;
-    const done=uItems.filter(it=>selWeekData[it.id]?.[u.name]).length;
-    const pct=Math.round((done/uItems.length)*100);
-    const pctColor=pct>=80?'#16a34a':pct>=50?'#EF9F27':'#E24B4A';
+  let hayAlgo=false;
+  grupos.forEach(b=>{
+    const its=porGrupo(b.g);
+    if(!its.length) return;
+    hayAlgo=true;
+    const a=avance(b.g);
     html+=`<div class="ck-card">
       <div class="ck-card-head">
-        <div class="ck-user-dot" style="background:${uColor}22;color:${uColor}">${u.init}</div>
-        <span class="ck-username">${u.name}</span>
-        <span class="ck-pct" style="color:${pctColor}">${done}/${uItems.length} — ${pct}%</span>
+        <span class="ck-username">${b.titulo}</span>
+        <span style="font-size:11px;color:var(--text3);margin-left:6px">${b.nota}</span>
+        <span class="ck-pct" style="color:${ckColorPct(a.pct)};margin-left:auto">${a.hecho}/${a.tope}</span>
       </div>
-      <div class="ck-prog-bar"><div class="ck-prog-fill" style="width:${pct}%;background:${pctColor}"></div></div>
-      ${uItems.map(it=>{
-        const isDone=selWeekData[it.id]?.[u.name]||false;
-        return `<div class="ck-item${isDone?' done':''}" onclick="toggleCkItem('${it.id}','${u.name}')">
-          <div class="ck-checkbox${isDone?' done':''}">${isDone?'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>
-          <span class="ck-item-label">${it.title}</span>
-          <span style="font-size:10px;color:var(--blue);background:var(--blue-light);padding:1px 6px;border-radius:999px;font-weight:500">${it.freqLabel||'Semanal'}${it.times>1?' x'+it.times:''}</span>
-          <button onclick="event.stopPropagation();deleteCkItem('${it.id}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;line-height:1;padding:0 2px">×</button>
-        </div>`;
-      }).join('')}
-    </div>`;
+      <div class="ck-prog-bar"><div class="ck-prog-fill" style="width:${a.pct}%;background:${ckColorPct(a.pct)}"></div></div>`;
+
+    if(b.g==='diarias'){
+      html+=`<div style="display:flex;gap:4px;justify-content:flex-end;margin:6px 0 2px">
+        ${dias.map(d=>`<span style="width:30px;text-align:center;font-size:10px;color:${d.hoy?'#2563eb':'var(--text3)'};font-weight:${d.hoy?'700':'400'}">${d.letra}</span>`).join('')}
+        <span style="width:18px"></span>
+      </div>`;
+    }
+
+    its.forEach(it=>{
+      const m=meta(it);
+      let celdas='';
+      if(b.g==='diarias'){
+        celdas=dias.map(d=>{
+          const v=ckVeces('d:'+d.iso,it.id);
+          const lleno=v>=m;
+          return `<button onclick="toggleCkItem('${it.id}','d:${d.iso}')" title="${d.iso}"
+            style="width:30px;height:28px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;font-family:inherit;
+            border:1px solid ${lleno?'#16a34a':'var(--border)'};background:${lleno?'#16a34a':(v>0?'#fef3c7':'var(--bg2)')};
+            color:${lleno?'#fff':'var(--text2)'};${d.hoy?'box-shadow:0 0 0 2px #2563eb44;':''}">${v>0?(m>1?v:'✓'):d.num}</button>`;
+        }).join('');
+      } else if(b.g==='quincenales'){
+        celdas=quincenas.map(q=>ckBoton(it.id,q.key,m,q.label,'64px')).join('');
+      } else if(b.g==='pagos'){
+        celdas=ckBoton(it.id,perMes,m,'pagar','74px');
+      } else {
+        const per = b.g==='mensuales' ? perMes : ckSelWeek;
+        celdas=ckBoton(it.id,per,m,'marcar','70px');
+      }
+      html+=`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border)">
+        <span class="ck-item-label" style="flex:1;min-width:0">${it.title}${m>1?` <span style="font-size:10px;color:var(--text3)">x${m}</span>`:''}</span>
+        <span style="display:flex;gap:4px">${celdas}</span>
+        <button onclick="deleteCkItem('${it.id}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;line-height:1;padding:0 2px;width:18px">×</button>
+      </div>`;
+    });
+    html+=`</div>`;
   });
 
-  if(!ckItems.length){
+  if(!hayAlgo){
     html+=`<div style="text-align:center;padding:40px;color:var(--text3);font-size:13px">No hay actividades aún.<br>Agrega la primera con el botón "+ Agregar actividad"</div>`;
   }
 
@@ -8023,6 +8120,48 @@ window.addEventListener('app-ready', async () => {
     if(ind){ ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0',2000); }
   });
 });
+
+// ── CHECKLIST FIREBASE SYNC ──────────────────────────────────
+const CHECKLIST_REF = doc(db, 'hh-socios', 'checklist');
+let checklistWriteTimer = null;
+window.persistChecklistToFirebase = function(items, checks) {
+  clearTimeout(checklistWriteTimer);
+  const copiaItems = JSON.parse(JSON.stringify(items || []));
+  const copiaChecks = JSON.parse(JSON.stringify(checks || {}));
+  checklistWriteTimer = setTimeout(async () => {
+    try {
+      await setDoc(CHECKLIST_REF, { items: copiaItems, checks: copiaChecks, updatedAt: Date.now() });
+    } catch (e) { console.error('Error guardando el checklist:', e); }
+  }, 800);
+};
+
+let checklistStarted = false;
+function startChecklistListener() {
+  if (checklistStarted) return;
+  checklistStarted = true;
+  onSnapshot(CHECKLIST_REF, snap => {
+    if (!snap.exists()) return;
+    const data = snap.data();
+    if (Array.isArray(data.items)) {
+      if (typeof ckItems !== 'undefined') ckItems = data.items;
+      localStorage.setItem('hh-ck-items-v1', JSON.stringify(data.items));
+    }
+    if (data.checks && typeof data.checks === 'object') {
+      if (typeof ckChecks !== 'undefined') ckChecks = data.checks;
+      localStorage.setItem('hh-ck-checks-v1', JSON.stringify(data.checks));
+    }
+    if (typeof ckCargado !== 'undefined') ckCargado = true;
+    if (typeof curSection !== 'undefined' && curSection === 'checklist' && typeof renderChecklist === 'function') {
+      renderChecklist();
+    }
+  }, err => console.error('Error escuchando el checklist:', err));
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startChecklistListener);
+} else {
+  startChecklistListener();
+}
 
 // ACTIVIDADES listener - starts immediately, ONCE
 let actividadesStarted = false;
