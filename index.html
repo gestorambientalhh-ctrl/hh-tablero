@@ -927,7 +927,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
       <!-- SECTION BAR (Tablero / Dashboard) con semáforo -->
       <div class="section-bar">
         <button class="sec-tab act" id="sec-tablero" onclick="showSection('tablero')">Tablero</button>
-        <button class="sec-tab" id="sec-reuniones" onclick="showSection('reuniones')">📋 Reuniones</button>
+        <button class="sec-tab" id="sec-reuniones" onclick="showSection('reuniones')" style="display:none">📋 Reuniones</button>
         <button class="sec-tab" id="sec-flujo" onclick="showSection('flujo')">💸 Flujo</button>
         <button class="sec-tab" id="sec-actas" onclick="showSection('actas')">📑 Actas</button>
         <div style="width:1px;height:18px;background:var(--border);margin:0 4px"></div>
@@ -1956,7 +1956,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
       Tablero
     </button>
-    <button class="mob-nav-btn" id="mobnav-reuniones" onclick="showSection('reuniones')">
+    <button class="mob-nav-btn" id="mobnav-reuniones" onclick="showSection('reuniones')" style="display:none">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
       Reuniones
     </button>
