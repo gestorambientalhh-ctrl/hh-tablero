@@ -10333,15 +10333,18 @@ function closeBackupModal(){
     const confirmadas = reg.entregas.filter(e => !e.provisional);
 
     // ── Sin certificado todavía ──
+    // Ya no se sube nada desde la celda: los certificados entran por el botón
+    // "Registrar certificado", que cubre varios materiales de una vez.
     if (confirmadas.length === 0) {
-      const manifiestos = [...new Set(reg.entregas.map(e => e.numeroManifiesto).filter(Boolean))];
-      const pista = manifiestos.length > 0
-        ? `Manifiesto ${manifiestos.map(m => 'M°' + m).join(', ')} recibido, falta el certificado`
-        : 'Todavía no tiene certificado — clic para agregar el soporte';
-      const accion = manifiestos.length > 0
-        ? `verEntregas('${nombreEsc}', '${reg.actaId}')`
-        : `agregarAnexoMaterial('${nombreEsc}', '${reg.actaId}')`;
-      return `<td class="actas-celda-mat"><button class="actas-badge actas-badge-pendiente" onclick="${accion}" title="${pista}">${cantidad}</button><span class="actas-chip-falta" title="${pista}">pendiente</span></td>`;
+      if (reg.entregas.length > 0) {
+        const manifiestos = [...new Set(reg.entregas.map(e => e.numeroManifiesto).filter(Boolean))];
+        const pista = manifiestos.length > 0
+          ? `Manifiesto ${manifiestos.map(m => 'M°' + m).join(', ')} recibido, falta el certificado — clic para ver el detalle`
+          : 'Falta el certificado — clic para ver el detalle';
+        return `<td class="actas-celda-mat"><button class="actas-badge actas-badge-pendiente" onclick="verEntregas('${nombreEsc}', '${reg.actaId}')" title="${pista}">${cantidad}</button><span class="actas-chip-falta" title="${pista}">pendiente</span></td>`;
+      }
+      const pista = 'Todavía no tiene certificado — regístralo con el botón Registrar certificado';
+      return `<td class="actas-celda-mat"><span class="actas-badge actas-badge-pendiente" style="cursor:default;" title="${pista}">${cantidad}</span><span class="actas-chip-falta" title="${pista}">pendiente</span></td>`;
     }
 
     const base = esUnidades ? totalEntregasUnidades(reg) : totalEntregasKg(reg);
