@@ -697,7 +697,6 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
   .actas-btn-enseñar { background: var(--amarillo-texto); color:#fff; border:none; border-radius:7px; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; margin-top:8px; }
 
   /* ── Panel de registro manual de certificado ── */
-  .actas-zona-auto { border:1px solid var(--borde); border-radius:10px; padding:10px 16px; margin:-12px 0 20px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; font-size:12.5px; color:var(--texto-suave); }
   .actas-btn-sec { background:none; border:1px solid var(--borde); border-radius:7px; padding:8px 13px; font-size:12.5px; font-weight:600; color:var(--texto-suave); cursor:pointer; font-family:inherit; display:inline-block; }
   .actas-btn-sec:hover { background: var(--gris-calido); }
   .cert-panel { background:#fff; border-radius:12px; width:1380px; max-width:96vw; height:92vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 10px 34px rgba(0,0,0,0.2); }
@@ -727,12 +726,15 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
   .cert-panel-pie { padding:13px 20px; border-top:1px solid var(--borde); background:var(--gris-calido); display:flex; align-items:center; justify-content:space-between; gap:16px; }
 
   /* ── Enlace al acta sobre cada material ── */
-  .actas-celda-mat { position:relative; }
-  .actas-link-acta { position:absolute; top:1px; right:2px; font-size:10px; line-height:1; color:var(--azul);
-    text-decoration:none; background:#fff; border:1px solid var(--borde); border-radius:4px; padding:2px 4px;
-    opacity:0; pointer-events:none; transition:opacity .12s; white-space:nowrap; }
-  .actas-celda-mat:hover .actas-link-acta { opacity:1; pointer-events:auto; }
-  .actas-link-acta:hover { background:var(--azul); color:#fff; border-color:var(--azul); }
+  .actas-celda-mat { white-space:nowrap; }
+  .actas-celda-mat .actas-badge { vertical-align:middle; }
+  .actas-link-acta { display:inline-block; vertical-align:middle; margin-left:4px; font-size:10px; line-height:1;
+    font-weight:700; text-decoration:none; background:var(--verde-bg); color:var(--verde-texto);
+    border:1px solid var(--verde-texto); border-radius:4px; padding:3px 5px; white-space:nowrap; }
+  .actas-link-acta:hover { background:var(--verde-texto); color:#fff; }
+  .actas-chip-falta { display:inline-block; vertical-align:middle; margin-left:4px; font-size:10px; line-height:1;
+    font-weight:700; background:var(--rojo-bg); color:var(--rojo-texto); border:1px solid var(--rojo-texto);
+    border-radius:4px; padding:3px 5px; white-space:nowrap; }
   .actas-link-doc { display:block; font-size:10.5px; color:var(--azul); margin-top:3px; text-decoration:none; font-weight:600; }
   .actas-link-doc:hover { text-decoration:underline; }
   .actas-regenerar { display:block; width:100%; font-size:10px; color:var(--texto-suave); margin-top:2px;
@@ -1722,12 +1724,6 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
     </div>
 
     <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--borde);">
-      <p style="font-size:13px; font-weight:600; margin:0 0 4px;">Faltantes</p>
-      <p style="font-size:12px; color:var(--texto-suave); margin:0 0 8px;">Materiales que ya tienen acta pero todavía no tienen ningún certificado subido.</p>
-      <div id="lista-faltantes" style="font-size:12.5px;"></div>
-    </div>
-
-    <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--borde);">
       <p style="font-size:13px; font-weight:600; margin:0 0 4px;">Materiales sin acta todavía</p>
       <p style="font-size:12px; color:var(--texto-suave); margin:0 0 8px;">Manifiestos o certificados que subiste antes de que existiera la acta de ese mes — se conectan solos apenas subas o generes esa acta.</p>
       <div id="lista-materiales-sin-acta" style="font-size:12.5px;"></div>
@@ -1796,13 +1792,6 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
     <div>
       <label class="actas-btn" for="input-cert-manual">Registrar certificado</label>
       <input type="file" id="input-cert-manual" accept="application/pdf" onchange="abrirPanelCertificado(event)">
-    </div>
-  </div>
-  <div class="actas-zona-auto">
-    <span>¿El PDF es de un proveedor cuyo formato ya conozco? Puedo intentar leerlo solo.</span>
-    <div>
-      <label class="actas-btn-sec" for="input-cert">Probar lectura automática</label>
-      <input type="file" id="input-cert" accept="application/pdf" onchange="cargarCertificado(event)">
     </div>
   </div>
   <input type="file" id="input-manifiesto-mes" accept="application/pdf,image/*" style="display:none" onchange="procesarManifiestoMes(event)">
@@ -8816,33 +8805,8 @@ function closeBackupModal(){
 
     renderManifiestosPendientes();
     renderMaterialesSinActa();
-    renderFaltantes();
     poblarSelectMesActaManual();
     renderFilasActaManual();
-  }
-
-  function renderFaltantes() {
-    const lista = document.getElementById('lista-faltantes');
-    if (!lista) return;
-
-    const faltantes = registros.filter(r => r.entregas.length === 0);
-    if (faltantes.length === 0) {
-      lista.innerHTML = '<span class="actas-dif-vacio">No hay ninguno pendiente</span>';
-      return;
-    }
-
-    const conMes = faltantes.map(r => {
-      const acta = actas.find(a => a.id === r.actaId);
-      return { r, mesIndex: acta ? acta.mesIndex : -1 };
-    }).sort((a, b) => a.mesIndex - b.mesIndex);
-
-    lista.innerHTML = conMes.map(({ r, mesIndex }) => {
-      const mes = mesIndex >= 0 ? MESES[mesIndex] : '?';
-      const sufijo = r.unidadActa === 'Und' ? 'und' : 'kg';
-      return `<div style="display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid var(--borde);">
-        <span>${r.nombre} — ${mes} 2026 — ${r.cantidadActa.toLocaleString('es-CO')} ${sufijo}</span>
-      </div>`;
-    }).join('');
   }
 
   function renderMaterialesSinActa() {
@@ -9194,11 +9158,17 @@ function closeBackupModal(){
 
     // Transporte Cafetería y sanitarios: 1 unidad por cada manifiesto/certificado de
     // Cafetería y Sanitarios con menos de 800 kg (formula acordada) — no sale de la acta.
+    // Se cotiza a PRECIO_TRANSPORTE_CAFETERIA por unidad (viaje).
     const regCafeteria = registros.find(r => r.actaId === acta.id && coincideNombre('Cafetería y Sanitarios', r.nombre));
     if (regCafeteria) {
       const viajesTransporte = regCafeteria.entregas.filter(e => (e.pesoKg || 0) < 800 && (e.pesoKg || 0) > 0).length;
       if (viajesTransporte > 0) {
-        materiales.push({ nombre: 'Transporte Cafetería y sanitarios', cantidad: viajesTransporte });
+        materiales.push({
+          nombre: 'Transporte Cafetería y sanitarios',
+          cantidad: viajesTransporte,
+          precioUnitario: PRECIO_TRANSPORTE_CAFETERIA,
+          total: viajesTransporte * PRECIO_TRANSPORTE_CAFETERIA
+        });
       }
     }
 
@@ -10271,12 +10241,12 @@ function closeBackupModal(){
     return html;
   }
 
-  // Envuelve la celda y le agrega, al pasar por encima, el enlace al PDF
-  // del acta con la que se cruzó ese material.
+  // Al lado del valor queda un chip verde "acta" que abre en Drive
+  // el PDF del acta con la que se cruzó ese material.
   function celdaConActa(inner, acta, mesIndex) {
     let link = '';
     if (acta && acta.urlDrive) {
-      link = `<a class="actas-link-acta" href="${acta.urlDrive}" target="_blank" rel="noopener" title="Abrir en Drive el acta de ${MESES_LARGOS[mesIndex]} ${AÑO_ACTUAL}">acta &#8599;</a>`;
+      link = `<a class="actas-link-acta" href="${acta.urlDrive}" target="_blank" rel="noopener" title="Abrir en Drive el acta de ${MESES_LARGOS[mesIndex]} ${AÑO_ACTUAL}">acta</a>`;
     }
     return `<td class="actas-celda-mat">${inner}${link}</td>`;
   }
@@ -10292,7 +10262,7 @@ function closeBackupModal(){
           ? `${pendientes.length} manif. · ${totalKg.toLocaleString('es-CO')} kg`
           : `${pendientes.length} manif. · ${totalUnd.toLocaleString('es-CO')} und`;
         const nombreEscSA = mat.nombre.replace(/'/g, "\\'");
-        return `<td><button class="actas-badge actas-badge-azul" onclick="verMaterialesSinActa('${nombreEscSA}', ${mesIndex})" title="Sin acta todavía — clic para ver el detalle de cada manifiesto">${texto}</button></td>`;
+        return `<td class="actas-celda-mat"><button class="actas-badge actas-badge-pendiente" onclick="verMaterialesSinActa('${nombreEscSA}', ${mesIndex})" title="Hay material registrado pero todavía falta el acta de ${MESES_LARGOS[mesIndex]} — clic para ver el detalle">${texto}</button><span class="actas-chip-falta" title="Falta subir o generar el acta de este mes">falta acta</span></td>`;
       }
       return '<td><span class="actas-dif-vacio">—</span></td>';
     }
@@ -10302,7 +10272,7 @@ function closeBackupModal(){
     const nombreEsc = reg.nombre.replace(/'/g, "\\'");
     const esUnidades = reg.unidadActa === 'Und';
     const sufijoActa = esUnidades ? 'und' : 'kg';
-    const refActa = ` · acta de ${MESES_LARGOS[mesIndex]}${acta.urlDrive ? ' — pasa el mouse para abrirla en Drive' : ''}`;
+    const refActa = ` · acta de ${MESES_LARGOS[mesIndex]}${acta.urlDrive ? ' — el chip verde la abre en Drive' : ''}`;
 
     // Sin certificado todavía — amarillo, muestra el peso del acta
     if (reg.entregas.length === 0) {
@@ -10532,6 +10502,9 @@ function closeBackupModal(){
 
   // ─── GOOGLE DRIVE (Apps Script) ───────────────────────────
   // Pega aquí la URL de deploy del Apps Script ACTAS_DRIVE_v1
+  // Precio por viaje del transporte de Cafetería y sanitarios (orden de compra)
+  const PRECIO_TRANSPORTE_CAFETERIA = 350000;
+
   const APPS_SCRIPT_DRIVE_URL = "https://script.google.com/macros/s/AKfycbxkrdZXgnkidnsKPCxMCkPyUMNju7MOxa3TMpO0afUusKo8Dd4F0LxwHq0fRzs4GXCd5Q/exec";
 
   async function subirArchivoADrive(file, tipo, mesIndex, año = AÑO_ACTUAL, proveedor = '') {
