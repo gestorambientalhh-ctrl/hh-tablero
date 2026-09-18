@@ -9568,6 +9568,21 @@ function closeBackupModal(){
     ['estibas de madera', 'estibas en buen estado']
   ];
 
+  // Nombres que son el mismo material aunque se escriban distinto.
+  // A diferencia de ALIAS_MATERIALES, aquí se compara el nombre COMPLETO:
+  // así "madera" cuadra con "Retal de Madera" y nunca con "Estibas de madera".
+  const EQUIVALENTES_EXACTOS = [
+    ['madera', 'retal de madera']
+  ];
+
+  function claveEquivalente(nombre) {
+    const k = normalizarPalabras(nombre).join(' ');
+    for (const grupo of EQUIVALENTES_EXACTOS) {
+      if (grupo.some(g => normalizarPalabras(g).join(' ') === k)) return grupo[0];
+    }
+    return null;
+  }
+
   function coincidePorAlias(nombreCert, nombreActa) {
     const nc = normalizar(nombreCert), na = normalizar(nombreActa);
     return ALIAS_MATERIALES.some(([a, b]) =>
@@ -9576,6 +9591,12 @@ function closeBackupModal(){
   }
 
   function coincideNombre(nombreCert, nombreActa) {
+    // Si alguno de los dos es un nombre con equivalencia exacta, solo cuadra
+    // con otro del mismo grupo — nunca por parecido de palabras.
+    const eqC = claveEquivalente(nombreCert);
+    const eqA = claveEquivalente(nombreActa);
+    if (eqC !== null || eqA !== null) return eqC === eqA;
+
     if (coincidePorAlias(nombreCert, nombreActa)) return true;
     const wc = normalizarPalabras(nombreCert);
     const wa = normalizarPalabras(nombreActa);
