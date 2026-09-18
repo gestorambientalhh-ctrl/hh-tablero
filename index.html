@@ -734,6 +734,11 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
     font-weight:700; text-decoration:none; background:var(--verde-bg); color:var(--verde-texto);
     border:1px solid var(--verde-texto); border-radius:4px; padding:3px 5px; white-space:nowrap; }
   a.actas-chip-cert:hover { background:var(--verde-texto); color:#fff; }
+  .caf-fila { border:1px solid var(--borde); border-radius:8px; padding:10px 12px; margin-bottom:10px; }
+  .caf-doc { font-size:11.5px; font-weight:600; border:1px solid var(--borde); border-radius:6px; padding:5px 9px;
+    background:#fff; color:var(--texto-suave); cursor:pointer; font-family:inherit; text-decoration:none; display:inline-block; }
+  .caf-doc:hover { background:var(--gris-calido); }
+  .caf-doc-ok { background:var(--verde-bg); color:var(--verde-texto); border-color:var(--verde-texto); }
   .actas-chip-falta { display:inline-block; vertical-align:middle; margin-left:4px; font-size:10px; line-height:1;
     font-weight:700; background:var(--rojo-bg); color:var(--rojo-texto); border:1px solid var(--rojo-texto);
     border-radius:4px; padding:3px 5px; white-space:nowrap; }
@@ -744,6 +749,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 </head>
@@ -1800,6 +1806,22 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
   <input type="file" id="input-acta-manifiesto" accept="application/pdf,image/*" style="display:none" onchange="procesarActaManifiesto(event)">
   <input type="file" id="input-anexo-material" accept="application/pdf,image/*" style="display:none" onchange="procesarAnexoMaterial(event)">
   <div id="estado-carga-cert" class="actas-estado-carga"></div>
+
+  <input type="file" id="input-caf-doc" accept="application/pdf" style="display:none" onchange="procesarAdjuntoCafeteria(event)">
+  <input type="file" id="input-caf-unir" accept="application/pdf" multiple style="display:none" onchange="procesarUnionCafeteria(event)">
+
+  <div id="modal-caf" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:65; align-items:center; justify-content:center; padding:20px;">
+    <div style="background:#fff; border-radius:12px; padding:20px; width:620px; max-width:94vw; max-height:88vh; overflow-y:auto;">
+      <p id="caf-titulo" style="font-weight:600; font-size:15px; margin:0 0 4px; color:var(--azul);"></p>
+      <p style="font-size:12px; color:var(--texto-suave); margin:0 0 14px;">Cada viaje lleva su manifiesto, su anexo y su acta. Cuando los tengas, puedes unirlos en un solo PDF.</p>
+      <div id="caf-lista"></div>
+      <div id="caf-estado" class="actas-estado-carga"></div>
+      <div style="display:flex; justify-content:space-between; gap:8px; margin-top:16px;">
+        <button type="button" onclick="cafAgregar()" class="actas-btn-sec">+ Agregar viaje</button>
+        <button type="button" onclick="cerrarSoportesCafeteria()" style="background:none; border:1px solid var(--borde); border-radius:7px; padding:8px 14px; font-size:13px; cursor:pointer; font-family:inherit; color:var(--texto);">Cerrar</button>
+      </div>
+    </div>
+  </div>
 
   <div id="modal-cert-panel" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:70; align-items:center; justify-content:center; padding:20px;">
     <div class="cert-panel">
@@ -10282,6 +10304,14 @@ function closeBackupModal(){
     const sufijo = esUnidades ? 'und' : 'kg';
     const cantidad = `${reg.cantidadActa.toLocaleString('es-CO')} ${sufijo}`;
 
+    // ── Cafetería y Sanitarios: soporte por etapas (manifiesto, anexo, acta) ──
+    if (esCafeteria(reg.nombre)) {
+      const res = resumenCafeteria(mesIndex);
+      const claseBadge = res.clase === 'ok' ? 'actas-badge-ok' : (res.clase === 'medio' ? 'actas-badge-amarillo' : 'actas-badge-pendiente');
+      const claseChip = res.clase === 'ok' ? 'actas-chip-cert' : 'actas-chip-falta';
+      return `<td class="actas-celda-mat"><button class="actas-badge ${claseBadge}" onclick="abrirSoportesCafeteria(${mesIndex})" title="Clic para ver y adjuntar manifiesto, anexo y acta">${cantidad}</button><span class="${claseChip}" title="Estado de los soportes de este mes">${res.texto}</span></td>`;
+    }
+
     // ── Concepto que no lleva certificado: solo la cantidad, en gris ──
     if (esConceptoSinCertificado(reg.nombre)) {
       return `<td class="actas-celda-mat"><span class="actas-badge" style="background:var(--gris-calido); color:var(--texto-suave); cursor:default;" title="Concepto de facturación — no lleva certificado">${cantidad}</span></td>`;
@@ -10318,6 +10348,223 @@ function closeBackupModal(){
       ? `<a class="actas-chip-cert" href="${urlCert}" target="_blank" rel="noopener" title="Abrir en Drive el certificado${refCert}">certificado</a>`
       : `<span class="actas-chip-cert" title="Certificado${refCert} registrado (sin archivo en Drive)">certificado</span>`;
     return `<td class="actas-celda-mat"><button class="actas-badge actas-badge-ok" onclick="verEntregas('${nombreEsc}', '${reg.actaId}')" title="Cuadra con el acta · certificado${refCert} — clic para ver el detalle">${cantidad}</button>${chip}</td>`;
+  }
+
+  // ─── SOPORTES DE CAFETERÍA Y SANITARIOS ───────────────────
+  // Cada viaje se respalda con tres PDF: manifiesto, anexo y acta.
+  // La celda muestra hasta dónde va: Mani → Mani+Anexo → Mani+Anexo+Acta.
+  let soportesCafeteria = (() => {
+    try { return JSON.parse(localStorage.getItem('hh-actas-soportes-cafeteria') || '{}'); } catch (e) { return {}; }
+  })();
+
+  const CAF_TIPOS = [
+    { clave: 'manifiesto', etiqueta: 'Manifiesto' },
+    { clave: 'anexo', etiqueta: 'Anexo' },
+    { clave: 'acta', etiqueta: 'Acta' }
+  ];
+
+  let _cafMes = null;
+  let _cafRef = null;
+
+  function esCafeteria(nombre) {
+    return coincideNombre('Cafetería y Sanitarios', nombre);
+  }
+
+  function guardarSoportesCafeteria() {
+    try { localStorage.setItem('hh-actas-soportes-cafeteria', JSON.stringify(soportesCafeteria)); } catch (e) {}
+    if (db && firestoreFns) {
+      try {
+        const { doc, setDoc } = firestoreFns;
+        setDoc(doc(db, 'hh-actas-meta', 'soportes_cafeteria'), { mapa: soportesCafeteria });
+      } catch (e) { console.error('Error guardando soportes de cafetería:', e); }
+    }
+  }
+
+  function estadoCafeteria(entrada) {
+    const tiene = CAF_TIPOS.map(t => !!(entrada[t.clave] && entrada[t.clave].url));
+    if (tiene[0] && tiene[1] && tiene[2]) return { texto: 'Mani+Anexo+Acta', clase: 'ok' };
+    if (tiene[0] && tiene[1]) return { texto: 'Mani+Anexo', clase: 'medio' };
+    if (tiene[0]) return { texto: 'Mani', clase: 'medio' };
+    return { texto: 'pendiente', clase: 'falta' };
+  }
+
+  function resumenCafeteria(mesIndex) {
+    const lista = soportesCafeteria[mesIndex] || [];
+    if (lista.length === 0) return { texto: 'pendiente', clase: 'falta' };
+    if (lista.length === 1) return estadoCafeteria(lista[0]);
+    const completos = lista.filter(e => estadoCafeteria(e).clase === 'ok').length;
+    if (completos === lista.length) return { texto: 'Mani+Anexo+Acta', clase: 'ok' };
+    return { texto: `${completos} de ${lista.length} completos`, clase: 'medio' };
+  }
+
+  function abrirSoportesCafeteria(mesIndex) {
+    _cafMes = mesIndex;
+    const modal = document.getElementById('modal-caf');
+    if (modal.parentNode !== document.body) document.body.appendChild(modal);
+    modal.style.display = 'flex';
+    document.getElementById('caf-titulo').textContent =
+      `Soportes de Cafetería y Sanitarios — ${MESES_LARGOS[mesIndex]} ${AÑO_ACTUAL}`;
+    renderSoportesCafeteria();
+  }
+
+  function cerrarSoportesCafeteria() {
+    document.getElementById('modal-caf').style.display = 'none';
+    _cafMes = null;
+  }
+
+  function renderSoportesCafeteria() {
+    const cont = document.getElementById('caf-lista');
+    const lista = soportesCafeteria[_cafMes] || [];
+    if (lista.length === 0) {
+      cont.innerHTML = '<p style="font-size:12.5px; color:var(--texto-suave); padding:10px 0;">Todavía no hay ningún viaje registrado. Agrega el primero abajo.</p>';
+      return;
+    }
+    cont.innerHTML = lista.map((e, i) => {
+      const est = estadoCafeteria(e);
+      const claseBadge = est.clase === 'ok' ? 'actas-badge-ok' : (est.clase === 'medio' ? 'actas-badge-amarillo' : 'actas-badge-pendiente');
+      const docs = CAF_TIPOS.map(t => {
+        const d = e[t.clave];
+        return d && d.url
+          ? `<a href="${d.url}" target="_blank" rel="noopener" class="caf-doc caf-doc-ok" title="${escapeHtml(d.nombre || '')}">${t.etiqueta} ✓</a>`
+          : `<button type="button" class="caf-doc" onclick="cafAdjuntar(${i}, '${t.clave}')">+ ${t.etiqueta}</button>`;
+      }).join('');
+      const unido = e.combinado && e.combinado.url
+        ? `<a href="${e.combinado.url}" target="_blank" rel="noopener" class="caf-doc caf-doc-ok">PDF unido ✓</a>`
+        : `<button type="button" class="caf-doc" onclick="cafUnir(${i})">Unir en un PDF</button>`;
+      return `<div class="caf-fila">
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <input type="text" value="${escapeHtml(e.numero || '')}" placeholder="N° manifiesto" onchange="cafNumero(${i}, this.value)" style="width:130px; height:30px; border:1px solid var(--borde); border-radius:6px; padding:0 8px; font-size:12.5px; font-family:inherit;">
+          <span class="actas-badge ${claseBadge}" style="cursor:default;">${est.texto}</span>
+          <span style="flex-grow:1;"></span>
+          <button type="button" onclick="cafEliminar(${i})" style="background:none; border:none; color:var(--rojo-texto); font-size:11.5px; cursor:pointer; font-family:inherit;">eliminar</button>
+        </div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">${docs}${unido}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function cafAgregar() {
+    if (_cafMes === null) return;
+    if (!soportesCafeteria[_cafMes]) soportesCafeteria[_cafMes] = [];
+    soportesCafeteria[_cafMes].push({ numero: '', fecha: Date.now() });
+    guardarSoportesCafeteria();
+    renderSoportesCafeteria();
+    render();
+  }
+
+  function cafNumero(i, valor) {
+    const lista = soportesCafeteria[_cafMes] || [];
+    if (!lista[i]) return;
+    lista[i].numero = String(valor).trim();
+    guardarSoportesCafeteria();
+  }
+
+  function cafEliminar(i) {
+    const lista = soportesCafeteria[_cafMes] || [];
+    if (!lista[i]) return;
+    if (!confirm('¿Eliminar este viaje y sus soportes? Los archivos ya subidos siguen en Drive.')) return;
+    lista.splice(i, 1);
+    if (lista.length === 0) delete soportesCafeteria[_cafMes];
+    guardarSoportesCafeteria();
+    renderSoportesCafeteria();
+    render();
+  }
+
+  function cafAdjuntar(i, tipo) {
+    _cafRef = { i, tipo };
+    const inp = document.getElementById('input-caf-doc');
+    inp.value = '';
+    inp.click();
+  }
+
+  async function procesarAdjuntoCafeteria(event) {
+    const file = event.target.files[0];
+    const ref = _cafRef;
+    if (!file || !ref || _cafMes === null) return;
+    const lista = soportesCafeteria[_cafMes] || [];
+    if (!lista[ref.i]) return;
+
+    const est = document.getElementById('caf-estado');
+    est.style.display = 'block';
+    est.className = 'actas-estado-carga actas-estado-cargando';
+    est.textContent = 'Subiendo a Drive…';
+
+    let url = null;
+    try { url = await subirArchivoADrive(file, 'certificado', _cafMes); } catch (e) { console.error(e); }
+
+    if (!url) {
+      est.className = 'actas-estado-carga actas-estado-error';
+      est.textContent = 'No se pudo subir el archivo a Drive. Intenta otra vez.';
+      return;
+    }
+    lista[ref.i][ref.tipo] = { url, nombre: file.name, fecha: Date.now() };
+    guardarSoportesCafeteria();
+    renderSoportesCafeteria();
+    render();
+    est.className = 'actas-estado-carga actas-estado-ok';
+    est.textContent = 'Archivo guardado en Drive.';
+  }
+
+  function cafUnir(i) {
+    _cafRef = { i, tipo: 'combinado' };
+    const inp = document.getElementById('input-caf-unir');
+    inp.value = '';
+    inp.click();
+  }
+
+  async function procesarUnionCafeteria(event) {
+    const files = Array.from(event.target.files || []);
+    const ref = _cafRef;
+    if (files.length === 0 || !ref || _cafMes === null) return;
+    const lista = soportesCafeteria[_cafMes] || [];
+    if (!lista[ref.i]) return;
+
+    const est = document.getElementById('caf-estado');
+    est.style.display = 'block';
+    est.className = 'actas-estado-carga actas-estado-cargando';
+
+    if (typeof PDFLib === 'undefined') {
+      est.className = 'actas-estado-carga actas-estado-error';
+      est.textContent = 'No se pudo cargar la herramienta para unir PDF. Revisa la conexión y recarga.';
+      return;
+    }
+    if (files.length < 2) {
+      est.className = 'actas-estado-carga actas-estado-error';
+      est.textContent = 'Escoge al menos dos PDF para unirlos.';
+      return;
+    }
+
+    est.textContent = `Uniendo ${files.length} archivos…`;
+    try {
+      const unido = await PDFLib.PDFDocument.create();
+      for (const f of files) {
+        const bytes = await f.arrayBuffer();
+        const src = await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true });
+        const paginas = await unido.copyPages(src, src.getPageIndices());
+        paginas.forEach(p => unido.addPage(p));
+      }
+      const salida = await unido.save();
+      const nombre = `Soporte_Cafeteria_${MESES[_cafMes]}_${lista[ref.i].numero || (ref.i + 1)}.pdf`;
+      const archivo = new File([salida], nombre, { type: 'application/pdf' });
+
+      est.textContent = 'Subiendo el PDF unido a Drive…';
+      const url = await subirArchivoADrive(archivo, 'certificado', _cafMes);
+      if (!url) {
+        est.className = 'actas-estado-carga actas-estado-error';
+        est.textContent = 'Se unió el PDF pero no se pudo subir a Drive.';
+        return;
+      }
+      lista[ref.i].combinado = { url, nombre, fecha: Date.now() };
+      guardarSoportesCafeteria();
+      renderSoportesCafeteria();
+      render();
+      est.className = 'actas-estado-carga actas-estado-ok';
+      est.innerHTML = `PDF unido y guardado. <a href="${url}" target="_blank" rel="noopener" style="color:var(--azul); font-weight:600;">verlo en Drive</a>`;
+    } catch (err) {
+      console.error('Error uniendo PDF:', err);
+      est.className = 'actas-estado-carga actas-estado-error';
+      est.textContent = 'No se pudieron unir los PDF. Revisa que todos sean PDF válidos.';
+    }
   }
 
   function guardarManifiestos() {
@@ -10665,6 +10912,11 @@ function closeBackupModal(){
       const manDoc = await getDoc(doc(db, 'hh-actas-meta', 'manifiestos'));
       if (manDoc.exists() && manDoc.data().mapa) manifiestosPorMes = manDoc.data().mapa;
     } catch (err) { /* sin manifiestos guardados aún */ }
+
+    try {
+      const cafDoc = await getDoc(doc(db, 'hh-actas-meta', 'soportes_cafeteria'));
+      if (cafDoc.exists() && cafDoc.data().mapa) soportesCafeteria = cafDoc.data().mapa;
+    } catch (err) { /* sin soportes de cafetería guardados aún */ }
   }
 
   async function iniciar() {
@@ -10985,6 +11237,15 @@ function closeBackupModal(){
   window.eliminarManifiesto = eliminarManifiesto;
   window.adjuntarActaManifiesto = adjuntarActaManifiesto;
   window.procesarActaManifiesto = procesarActaManifiesto;
+  window.abrirSoportesCafeteria = abrirSoportesCafeteria;
+  window.cerrarSoportesCafeteria = cerrarSoportesCafeteria;
+  window.cafAgregar = cafAgregar;
+  window.cafNumero = cafNumero;
+  window.cafEliminar = cafEliminar;
+  window.cafAdjuntar = cafAdjuntar;
+  window.procesarAdjuntoCafeteria = procesarAdjuntoCafeteria;
+  window.cafUnir = cafUnir;
+  window.procesarUnionCafeteria = procesarUnionCafeteria;
   window.agregarAnexoMaterial = agregarAnexoMaterial;
   window.procesarAnexoMaterial = procesarAnexoMaterial;
 })();
