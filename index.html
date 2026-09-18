@@ -10795,12 +10795,16 @@ function closeBackupModal(){
       html += '</tr>';
     });
 
-    // Fila especial: Manifiestos (clic en un mes para subir y leer número + fecha)
-    html += `<tr class="actas-fila-grupo"><td colspan="${MESES.length + 2}">Manifiestos</td></tr>`;
-    html += '<tr style="background:#faf7ff"><td class="actas-nombre-material" style="color:#6d5ad6;font-weight:700">📄 Manifiestos</td>';
-    for (let i = 0; i < MESES.length; i++) html += celdaManifiesto(i);
-    const totalMani = Object.values(manifiestosPorMes).reduce((s, a) => s + (Array.isArray(a) ? a.length : 0), 0);
-    html += `<td class="actas-total"><span style="color:#6d5ad6;font-weight:700">${totalMani || '—'}</span></td></tr>`;
+    // Fila especial: Manifiestos — reemplazada por el flujo de Cafetería y Sanitarios
+    // (manifiestos + anexos + actas). Se deja apagada, no borrada: los datos siguen
+    // en Firebase y en 'Manifiestos sin certificado' dentro de Configuración.
+    if (MOSTRAR_FILA_MANIFIESTOS) {
+      html += `<tr class="actas-fila-grupo"><td colspan="${MESES.length + 2}">Manifiestos</td></tr>`;
+      html += '<tr style="background:#faf7ff"><td class="actas-nombre-material" style="color:#6d5ad6;font-weight:700">📄 Manifiestos</td>';
+      for (let i = 0; i < MESES.length; i++) html += celdaManifiesto(i);
+      const totalMani = Object.values(manifiestosPorMes).reduce((s, a) => s + (Array.isArray(a) ? a.length : 0), 0);
+      html += `<td class="actas-total"><span style="color:#6d5ad6;font-weight:700">${totalMani || '—'}</span></td></tr>`;
+    }
 
     if (materialesOrdenados.length === 0) {
       html += `<tr><td colspan="${MESES.length + 2}" style="text-align:center; padding:24px; color:var(--texto-suave);">Sube el primer PDF de acta para empezar a llenar la tabla</td></tr>`;
@@ -10812,6 +10816,10 @@ function closeBackupModal(){
 
   // ─── GOOGLE DRIVE (Apps Script) ───────────────────────────
   // Pega aquí la URL de deploy del Apps Script ACTAS_DRIVE_v1
+  // La fila de Manifiestos en la sábana quedó reemplazada por el flujo de
+  // Cafetería y Sanitarios. Poner en true para volver a mostrarla.
+  const MOSTRAR_FILA_MANIFIESTOS = false;
+
   // Precio por viaje del transporte de Cafetería y sanitarios (orden de compra)
   const PRECIO_TRANSPORTE_CAFETERIA = 350000;
 
