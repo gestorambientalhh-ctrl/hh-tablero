@@ -3837,11 +3837,28 @@ function persistActividades(){
   localStorage.setItem('hh-actividades-v1', JSON.stringify(actividades));
   if(window.persistActividadesToFirebase) window.persistActividadesToFirebase([...actividades]);
 }
+let _actFreqSel = '';   // último tipo escogido en el formulario de actividades
+function actFreqCambio(v){
+  _actFreqSel = v || '';
+  const who=document.getElementById('act-who');
+  if(who) who.style.display = _actFreqSel ? 'none' : '';
+}
 function addActividad(){
   const inp=document.getElementById('act-input');
   const who=document.getElementById('act-who');
   const texto=(inp?.value||'').trim();
   if(!texto) return;
+  const freq=(document.getElementById('act-freq')||{}).value||'';
+  if(freq){
+    // Recurrente: va al checklist del equipo (sin responsable) y se reinicia en su periodo
+    if(typeof loadChecklist==='function') loadChecklist();
+    ckItems.push({ id:'cki'+Date.now(), title:texto, freq, times:1, freqLabel:(CK_FREQ[freq]||CK_FREQ.weekly).label });
+    saveCkData();
+    if(inp) inp.value='';
+    if(typeof renderGlobal==='function') renderGlobal();
+    setTimeout(()=>document.getElementById('act-input')?.focus(),30);
+    return;
+  }
   actividades.push({id:Date.now()+'', texto, who: who?who.value:'', done:false, ts:Date.now()});
   persistActividades();
   if(inp) inp.value='';
@@ -5242,7 +5259,11 @@ function renderGlobal(){
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:12px">Actividades a realizar</div>
       ${!isViewer?`<div style="display:flex;gap:6px;margin-bottom:14px">
         <input id="act-input" placeholder="Nueva actividad…" onkeydown="if(event.key==='Enter'){addActividad();event.preventDefault();}" style="flex:1;height:34px;font-size:13px;border:1px solid var(--border);border-radius:8px;padding:0 10px;font-family:inherit;outline:none;color:var(--text);background:var(--bg)">
-        <select id="act-who" style="height:34px;font-size:12px;border:1px solid var(--border);border-radius:8px;padding:0 8px;font-family:inherit;color:var(--text2);background:var(--bg)">
+        <select id="act-freq" onchange="actFreqCambio(this.value)" title="¿Se hace una vez o se repite?" style="height:34px;font-size:12px;border:1px solid var(--border);border-radius:8px;padding:0 8px;font-family:inherit;color:var(--text2);background:var(--bg)">
+          ${[['','Una vez'],['daily','Diaria'],['weekly','Semanal'],['biweekly','Quincenal'],['monthly','Mensual'],['payment','Pago del mes']]
+            .map(([v,l])=>`<option value="${v}"${_actFreqSel===v?' selected':''}>${l}</option>`).join('')}
+        </select>
+        <select id="act-who" style="height:34px;font-size:12px;border:1px solid var(--border);border-radius:8px;padding:0 8px;font-family:inherit;color:var(--text2);background:var(--bg);${_actFreqSel?'display:none;':''}">
           ${users.map(u=>`<option value="${u.name}">${u.name}</option>`).join('')}
         </select>
         <button onclick="addActividad()" style="height:34px;padding:0 14px;background:#2d4a7a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Agregar</button>
@@ -8362,7 +8383,7 @@ window.persistChecklistToFirebase = function(items, checks) {
   const copiaChecks = JSON.parse(JSON.stringify(checks || {}));
   checklistWriteTimer = setTimeout(async () => {
     try {
-      await setDoc(CHECKLIST_REF, { items: copiaItems, checks: copiaChecks, updatedAt: Date.now() });
+      await setDoc(CHECKLIST_REF, { items: copiaItems, checks: copiaChecks, baseCargada: true, updatedAt: Date.now() });
     } catch (e) { console.error('Error guardando el checklist:', e); }
   }, 800);
 };
@@ -8389,6 +8410,14 @@ function startChecklistListener() {
         const ids = new Set(items.map(x => x.id));
         const extra = locItems.filter(x => x && x.id && !ids.has(x.id) && !String(x.id).startsWith('ckd'));
         if (extra.length) { items = [...items, ...extra]; cambio = true; }
+      }
+      // La lista base del equipo entra UNA vez (si alguien la borra después, no vuelve)
+      if (!data.baseCargada && typeof ckItemsPorDefecto === 'function') {
+        const titulos = new Set(items.map(x => String(x.title || '').trim().toLowerCase()));
+        const ids2 = new Set(items.map(x => x.id));
+        const base = ckItemsPorDefecto().filter(x => !ids2.has(x.id) && !titulos.has(x.title.trim().toLowerCase()));
+        if (base.length) { items = [...items, ...base]; }
+        cambio = true;   // se escribe aunque no falte nada, para dejar la marca baseCargada
       }
       // Marcas: por cada casilla queda la mayor (nadie pierde lo que marcó)
       const unidas = JSON.parse(JSON.stringify(checks || {}));
