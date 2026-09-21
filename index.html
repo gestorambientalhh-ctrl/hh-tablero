@@ -2988,6 +2988,7 @@ function toggleCkItem(itemId, periodo){
   saveCkData();
   renderChecklist();
   if(typeof curSection!=='undefined' && curSection==='dashboard') renderDashboard();
+  else if(typeof window.renderCurrent==='function' && (typeof curSection==='undefined' || curSection!=='checklist')) window.renderCurrent();
 }
 
 function deleteCkItem(id){
@@ -3050,6 +3051,56 @@ function ckBoton(itemId, periodo, meta, texto, ancho){
     style="min-width:${ancho};height:28px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;font-family:inherit;padding:0 8px;
     border:1px solid ${lleno?'#16a34a':'var(--border)'};background:${lleno?'#16a34a':(v>0?'#fef3c7':'var(--bg2)')};
     color:${lleno?'#fff':'var(--text2)'}">${etiqueta}</button>`;
+}
+
+// Versión compacta para el Tablero: lo que toca HOY, esta semana, esta quincena y este mes
+function ckHoyHtml(){
+  loadChecklist();
+  const hoy=new Date();
+  const dia='d:'+ckISO(hoy);
+  const semana=getCurrentWeekKey();
+  const mesKey=`${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}`;
+  const quincena='q:'+mesKey+'-'+(hoy.getDate()<=15?1:2);
+  const mes='m:'+mesKey;
+  const grupos=[
+    {g:'diarias',     titulo:'Hoy',            per:dia},
+    {g:'semanales',   titulo:'Esta semana',    per:semana},
+    {g:'quincenales', titulo:'Esta quincena',  per:quincena},
+    {g:'mensuales',   titulo:'Este mes',       per:mes},
+    {g:'pagos',       titulo:'Pagos del mes',  per:mes}
+  ];
+  const ro = typeof isViewer!=='undefined' && isViewer;
+  let html='';
+  grupos.forEach(b=>{
+    const its=ckItems.filter(it=>(CK_FREQ[it.freq]||CK_FREQ.weekly).grupo===b.g);
+    if(!its.length) return;
+    const meta=it=>Math.max(1,parseInt(it.times)||1);
+    const hechos=its.filter(it=>ckVeces(b.per,it.id)>=meta(it)).length;
+    const completo=hechos===its.length;
+    const color=completo?'#16a34a':(hechos?'#EF9F27':'#94a3b8');
+    html+=`<details ${completo?'':'open'} style="margin-bottom:6px;background:#fff;border:1px solid #e8e8e6;border-radius:8px;padding:0 10px">
+      <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding:8px 0;font-size:12px;font-weight:700;color:var(--text)">
+        <span>${b.titulo}</span>
+        <span style="margin-left:auto;font-size:11px;font-weight:700;color:${color}">${hechos}/${its.length}</span>
+      </summary>
+      <div style="padding-bottom:6px">
+      ${its.map(it=>{
+        const v=ckVeces(b.per,it.id), m=meta(it), ok=v>=m;
+        const click = ro ? '' : `onclick="toggleCkItem('${it.id}','${b.per}')"`;
+        return `<div style="display:flex;align-items:center;gap:9px;padding:5px 0;border-top:1px solid #f1f1ef">
+          <div ${click} title="${ro?'':'Marcar'}" style="width:17px;height:17px;border-radius:50%;flex-shrink:0;${ro?'':'cursor:pointer;'}border:2px solid ${ok?'#16a34a':(v>0?'#EF9F27':'#cbd5e1')};background:${ok?'#16a34a':'none'};display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px">${ok?'✓':''}</div>
+          <span style="font-size:12px;flex:1;line-height:1.35;color:${ok?'#94a3b8':'#1e293b'};${ok?'text-decoration:line-through':''}">${escapeHtml(it.title)}</span>
+          ${m>1?`<span style="font-size:10px;color:var(--text3)">${v}/${m}</span>`:''}
+        </div>`;
+      }).join('')}
+      </div>
+    </details>`;
+  });
+  if(!html) return '';
+  return `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin:22px 0 10px;display:flex;align-items:center;gap:8px">
+      Checklist <span style="font-weight:500;text-transform:none;letter-spacing:0">· ${hoy.toLocaleDateString('es-CO',{weekday:'long',day:'numeric',month:'short'})}</span>
+      <a href="#" onclick="showSection('checklist');return false;" style="margin-left:auto;font-size:11px;font-weight:600;text-transform:none;letter-spacing:0;color:#2d4a7a;text-decoration:none">ver completo →</a>
+    </div>${html}`;
 }
 
 function renderChecklist(){
@@ -5214,6 +5265,7 @@ function renderGlobal(){
         if(done.length) h+=`<div style="font-size:11px;font-weight:700;color:var(--text3);margin:14px 0 8px">Completadas · ${done.length}</div>`+done.map(row).join('');
         return h;
       })()}
+      ${typeof ckHoyHtml==='function' ? ckHoyHtml() : ''}
     </div>
   </div>`;
 
@@ -8319,20 +8371,53 @@ let checklistStarted = false;
 function startChecklistListener() {
   if (checklistStarted) return;
   checklistStarted = true;
+  let primeraLectura = true;
   onSnapshot(CHECKLIST_REF, snap => {
-    if (!snap.exists()) return;
-    const data = snap.data();
-    if (Array.isArray(data.items)) {
-      if (typeof ckItems !== 'undefined') ckItems = data.items;
-      localStorage.setItem('hh-ck-items-v1', JSON.stringify(data.items));
+    const data = snap.exists() ? snap.data() : {};
+    let items = Array.isArray(data.items) ? data.items : null;
+    let checks = (data.checks && typeof data.checks === 'object') ? data.checks : null;
+
+    if (primeraLectura) {
+      primeraLectura = false;
+      if (typeof loadChecklist === 'function') loadChecklist();
+      const locItems = (typeof ckItems !== 'undefined' && Array.isArray(ckItems)) ? ckItems : [];
+      const locChecks = (typeof ckChecks !== 'undefined' && ckChecks) ? ckChecks : {};
+      let cambio = false;
+      // Actividades: se suman las que solo existen aquí
+      if (!items) { items = locItems; cambio = locItems.length > 0; }
+      else {
+        const ids = new Set(items.map(x => x.id));
+        const extra = locItems.filter(x => x && x.id && !ids.has(x.id) && !String(x.id).startsWith('ckd'));
+        if (extra.length) { items = [...items, ...extra]; cambio = true; }
+      }
+      // Marcas: por cada casilla queda la mayor (nadie pierde lo que marcó)
+      const unidas = JSON.parse(JSON.stringify(checks || {}));
+      Object.keys(locChecks).forEach(per => {
+        Object.keys(locChecks[per] || {}).forEach(id => {
+          const lv = locChecks[per][id];
+          const l = lv === true ? 1 : (typeof lv === 'number' ? lv : 0);
+          const rv = unidas[per] && unidas[per][id];
+          const r = rv === true ? 1 : (typeof rv === 'number' ? rv : 0);
+          if (l > r) { (unidas[per] = unidas[per] || {})[id] = l; cambio = true; }
+        });
+      });
+      checks = unidas;
+      if (cambio && window.persistChecklistToFirebase) window.persistChecklistToFirebase(items, checks);
     }
-    if (data.checks && typeof data.checks === 'object') {
-      if (typeof ckChecks !== 'undefined') ckChecks = data.checks;
-      localStorage.setItem('hh-ck-checks-v1', JSON.stringify(data.checks));
+
+    if (items) {
+      if (typeof ckItems !== 'undefined') ckItems = items;
+      localStorage.setItem('hh-ck-items-v1', JSON.stringify(items));
+    }
+    if (checks) {
+      if (typeof ckChecks !== 'undefined') ckChecks = checks;
+      localStorage.setItem('hh-ck-checks-v1', JSON.stringify(checks));
     }
     if (typeof ckCargado !== 'undefined') ckCargado = true;
     if (typeof curSection !== 'undefined' && curSection === 'checklist' && typeof renderChecklist === 'function') {
       renderChecklist();
+    } else if (typeof window.renderCurrent === 'function') {
+      window.renderCurrent();
     }
   }, err => console.error('Error escuchando el checklist:', err));
 }
@@ -8348,12 +8433,28 @@ let actividadesStarted = false;
 function startActividadesListener() {
   if (actividadesStarted) return;
   actividadesStarted = true;
+  let primeraLectura = true;
   onSnapshot(ACTIVIDADES_REF, snap => {
+    const remoto = (snap.exists() && Array.isArray(snap.data().actividades)) ? snap.data().actividades : [];
+    // La primera vez: lo que este navegador tenía guardado solo aquí se suma
+    // a lo de Firebase (no lo reemplaza), y se sube para que todos lo vean.
+    if (primeraLectura) {
+      primeraLectura = false;
+      const locales = (typeof actividades !== 'undefined' && Array.isArray(actividades)) ? actividades : [];
+      const ids = new Set(remoto.map(a => a.id));
+      const soloAqui = locales.filter(a => a && a.id && !ids.has(a.id));
+      if (soloAqui.length) {
+        const unida = [...remoto, ...soloAqui];
+        actividades = unida;
+        localStorage.setItem('hh-actividades-v1', JSON.stringify(unida));
+        window.persistActividadesToFirebase(unida);
+        if (typeof window.renderCurrent === 'function') window.renderCurrent();
+        return;
+      }
+    }
     if (!snap.exists()) return;
-    const data = snap.data();
-    if (!data.actividades || !Array.isArray(data.actividades)) return;
-    if (typeof actividades !== 'undefined') actividades = data.actividades;
-    localStorage.setItem('hh-actividades-v1', JSON.stringify(data.actividades));
+    if (typeof actividades !== 'undefined') actividades = remoto;
+    localStorage.setItem('hh-actividades-v1', JSON.stringify(remoto));
     if (typeof window.renderCurrent === 'function') window.renderCurrent();
   }, err => console.error('Error escuchando actividades:', err));
 }
@@ -10770,17 +10871,17 @@ function closeBackupModal(){
     const sufijo = esUnidades ? 'und' : 'kg';
     const cantidad = `${reg.cantidadActa.toLocaleString('es-CO')} ${sufijo}`;
 
+    // ── Concepto que no lleva certificado: solo la cantidad, en gris ──
+    if (esConceptoSinCertificado(reg.nombre)) {
+      return `<td class="actas-celda-mat"><span class="actas-badge" style="background:var(--gris-calido); color:var(--texto-suave); cursor:default;" title="Cantidad del acta para la orden de compra — no lleva certificado ni soportes">${cantidad}</span></td>`;
+    }
+
     // ── Cafetería y Sanitarios: soporte por etapas (manifiesto, anexo, acta) ──
     if (esCafeteria(reg.nombre)) {
       const res = resumenCafeteria(mesIndex);
       const claseBadge = res.clase === 'ok' ? 'actas-badge-ok' : (res.clase === 'medio' ? 'actas-badge-amarillo' : 'actas-badge-pendiente');
       const claseChip = res.clase === 'ok' ? 'actas-chip-cert' : 'actas-chip-falta';
       return `<td class="actas-celda-mat"><button class="actas-badge ${claseBadge}" onclick="cafToggle()" title="Clic para ${_cafExpandido ? 'recoger' : 'desplegar'} manifiestos, anexos y actas">${_cafExpandido ? '▾' : '▸'} ${cantidad}</button><span class="${claseChip}" title="Estado de los soportes de este mes">${res.texto}</span></td>`;
-    }
-
-    // ── Concepto que no lleva certificado: solo la cantidad, en gris ──
-    if (esConceptoSinCertificado(reg.nombre)) {
-      return `<td class="actas-celda-mat"><span class="actas-badge" style="background:var(--gris-calido); color:var(--texto-suave); cursor:default;" title="Concepto de facturación — no lleva certificado">${cantidad}</span></td>`;
     }
 
     const confirmadas = reg.entregas.filter(e => !e.provisional);
@@ -10836,6 +10937,9 @@ function closeBackupModal(){
   let _cafRef = null;
 
   function esCafeteria(nombre) {
+    // "Transporte Cafetería y sanitarios" contiene las mismas palabras, pero es
+    // otro renglón: solo cantidad para la O.C., sin manifiestos ni actas.
+    if (esConceptoSinCertificado(nombre)) return false;
     return coincideNombre('Cafetería y Sanitarios', nombre);
   }
 
