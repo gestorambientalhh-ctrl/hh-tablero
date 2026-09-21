@@ -857,10 +857,10 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
       <button class="proj-tab act" id="pt0" onclick="setBiz(0)">
         <span class="proj-tab-dot" style="background:#639922"></span>Gestor HH
       </button>
-      <button class="proj-tab" id="pt1" onclick="setBiz(1)">
+      <button class="proj-tab" id="pt1" onclick="setBiz(1)" style="display:none">
         <span class="proj-tab-dot" style="background:#378ADD"></span>Logístico
       </button>
-      <button class="proj-tab" id="pt2" onclick="setBiz(2)">
+      <button class="proj-tab" id="pt2" onclick="setBiz(2)" style="display:none">
         <span class="proj-tab-dot" style="background:#D85A30"></span>Montevra
       </button>
       <button class="proj-tab" id="pt3" onclick="setBiz(3)">
@@ -910,10 +910,10 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
           <button class="proj-tab act" id="mpt0" onclick="setBiz(0)" style="font-size:12px;padding:5px 12px;border-width:1.5px">
             <span class="proj-tab-dot" style="background:#639922"></span>Gestor
           </button>
-          <button class="proj-tab" id="mpt1" onclick="setBiz(1)" style="font-size:12px;padding:5px 12px;border-width:1.5px">
+          <button class="proj-tab" id="mpt1" onclick="setBiz(1)" style="display:none;font-size:12px;padding:5px 12px;border-width:1.5px">
             <span class="proj-tab-dot" style="background:#378ADD"></span>Log.
           </button>
-          <button class="proj-tab" id="mpt2" onclick="setBiz(2)" style="font-size:12px;padding:5px 12px;border-width:1.5px">
+          <button class="proj-tab" id="mpt2" onclick="setBiz(2)" style="display:none;font-size:12px;padding:5px 12px;border-width:1.5px">
             <span class="proj-tab-dot" style="background:#D85A30"></span>Mont.
           </button>
           <button class="proj-tab" id="mpt3" onclick="setBiz(3)" style="font-size:12px;padding:5px 12px;border-width:1.5px">
@@ -973,7 +973,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
           </div>
           <div class="form-field" id="fa-biz-wrap">
             <label>Proyecto</label>
-            <select id="fa-biz"><option value="0">Gestor HH</option><option value="1">Logístico</option><option value="2">Montevra</option></select>
+            <select id="fa-biz"><option value="0">Gestor HH</option><option value="1" hidden>Logístico</option><option value="2" hidden>Montevra</option></select>
           </div>
           <div class="form-field">
             <label>↻ Repetir</label>
@@ -1047,7 +1047,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
               <option>Anderson</option><option>Raul</option><option>Ambos</option>
             </select>
             <select id="rec-biz" style="height:32px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit">
-              <option value="0">Gestor HH</option><option value="1">Logístico</option><option value="2">Montevra</option>
+              <option value="0">Gestor HH</option><option value="1" hidden>Logístico</option><option value="2" hidden>Montevra</option>
             </select>
             <select id="rec-day" style="height:32px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit">
               <option value="1">Día 1 del mes</option><option value="5">Día 5 del mes</option>
@@ -1104,8 +1104,8 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
           <select id="mt-biz" style="height:34px;font-size:13px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text);background:var(--bg2)">
             <option value="">General</option>
             <option value="0">Gestor HH</option>
-            <option value="1">Logístico</option>
-            <option value="2">Montevra</option>
+            <option value="1" hidden>Logístico</option>
+            <option value="2" hidden>Montevra</option>
           </select>
         </div>
       </div>
@@ -1247,8 +1247,8 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
             <label>Proyecto</label>
             <select id="edit-biz">
               <option value="0">Gestor HH</option>
-              <option value="1">Logístico</option>
-              <option value="2">Montevra</option>
+              <option value="1" hidden>Logístico</option>
+              <option value="2" hidden>Montevra</option>
             </select>
           </div>
         </div>
@@ -1410,8 +1410,8 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
             <select id="nota-input-biz" style="font-size:11px;border:0.5px solid #e2e8f0;border-radius:6px;padding:3px 6px;font-family:inherit;color:var(--text2);background:var(--bg2);flex:1">
               <option value="">General</option>
               <option value="0">Gestor HH</option>
-              <option value="1">Logístico</option>
-              <option value="2">Montevra</option>
+              <option value="1" hidden>Logístico</option>
+              <option value="2" hidden>Montevra</option>
             </select>
             <button onclick="quickSaveNota()" style="height:28px;padding:0 10px;font-size:11px;font-weight:500;background:#2d4a7a;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;white-space:nowrap">Guardar</button>
           </div>
@@ -1467,8 +1467,8 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
             <select id="me-biz" style="width:100%;height:34px;font-size:13px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text);background:var(--bg2);box-sizing:border-box">
               <option value="">General</option>
               <option value="0">Gestor HH</option>
-              <option value="1">Logístico</option>
-              <option value="2">Montevra</option>
+              <option value="1" hidden>Logístico</option>
+              <option value="2" hidden>Montevra</option>
             </select>
           </div>
         </div>
@@ -1654,8 +1654,8 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
         <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:5px">Proyecto</label>
         <select id="hito-biz" style="width:100%;height:34px;border:1px solid var(--border);border-radius:8px;font-size:13px;padding:0 10px;font-family:inherit">
           <option value="0">Gestor HH</option>
-          <option value="1">Logístico</option>
-          <option value="2">Montevra</option>
+          <option value="1" hidden>Logístico</option>
+          <option value="2" hidden>Montevra</option>
         </select>
       </div>
       <!-- Form nuevo hito -->
@@ -1682,7 +1682,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
   <div class="actas-encabezado">
     <div>
       <h1>Actas — Nestlé Purina</h1>
-      <p>Sábana anual 2026 — cada acta queda con su propio id y su historial de versiones</p>
+      <p>Sábana anual 2026 — un acta por mes; si subes otra del mismo mes, la reemplaza</p>
     </div>
     <div style="display:flex; align-items:center; gap:10px;">
       <button onclick="toggleCrearActa()" style="background:var(--azul); color:#fff; border:none; border-radius:7px; padding:7px 12px; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap;">📝 Crear acta</button>
@@ -1782,7 +1782,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 
   <div class="actas-zona-carga">
     <div class="info">
-      Sube el PDF del acta del mes. Si ya existía una acta para ese mes, la nueva queda como versión activa y la anterior se guarda como historial — no se pierde nada.
+      Sube el PDF del acta del mes. Si ya existía una acta para ese mes, la nueva la reemplaza y los certificados que ya tenías registrados se pasan solos a la nueva.
     </div>
     <div>
       <label class="actas-btn" for="input-pdf">Adjuntar acta (PDF)</label>
@@ -1803,7 +1803,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
   <input type="file" id="input-anexo-material" accept="application/pdf,image/*" style="display:none" onchange="procesarAnexoMaterial(event)">
   <div id="estado-carga-cert" class="actas-estado-carga"></div>
 
-  <input type="file" id="input-caf-doc" accept="application/pdf" multiple style="display:none" onchange="procesarAdjuntoCafeteria(event)">
+  <input type="file" id="input-caf-doc" accept="application/pdf" style="display:none" onchange="procesarAdjuntoCafeteria(event)">
   <input type="file" id="input-caf-unir" accept="application/pdf" multiple style="display:none" onchange="procesarUnionCafeteria(event)">
 
   <div id="modal-caf" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:65; align-items:center; justify-content:center; padding:20px;">
@@ -1811,11 +1811,12 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
       <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
         <div>
           <p id="caf-titulo" style="font-weight:600; font-size:15px; margin:0 0 4px; color:var(--azul);"></p>
-          <p style="font-size:12px; color:var(--texto-suave); margin:0 0 14px;">Los manifiestos, los anexos y las actas llegan por separado. Agrégalos a medida que lleguen.</p>
+          <p style="font-size:12px; color:var(--texto-suave); margin:0 0 14px;">Cada manifiesto despliega su anexo y su acta. Súbelos a medida que lleguen.</p>
         </div>
         <span id="caf-resumen"></span>
       </div>
       <div id="caf-lista"></div>
+      <button type="button" onclick="cafAgregar()" class="actas-btn-sec" style="margin-top:4px;">+ Agregar manifiesto</button>
       <div style="border-top:1px solid var(--borde); margin-top:14px; padding-top:14px;">
         <p style="font-size:12.5px; color:var(--texto-suave); margin:0 0 8px;">Para unirlos hay que escoger los PDF desde tu computador: Google no deja que el navegador los vuelva a leer desde Drive. El unido se descarga y además queda una copia en Drive.</p>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -4610,8 +4611,8 @@ function createFixedNotesPanel(){
           <select id="nota-input-biz2" style="font-size:10px;border:1px solid var(--border);border-radius:5px;padding:3px 5px;font-family:inherit;color:var(--text2);background:var(--bg);flex:1">
             <option value="">General</option>
             <option value="0">Gestor HH</option>
-            <option value="1">Logístico</option>
-            <option value="2">Montevra</option>
+            <option value="1" hidden>Logístico</option>
+            <option value="2" hidden>Montevra</option>
           </select>
           <button onclick="quickSaveNota2()" style="height:26px;padding:0 10px;font-size:11px;font-weight:500;background:#2d4a7a;color:#fff;border:none;border-radius:5px;cursor:pointer;font-family:inherit">Guardar</button>
           <button onclick="toggleFormNotaFija()" style="height:26px;padding:0 7px;font-size:11px;background:none;border:1px solid var(--border);border-radius:5px;cursor:pointer;color:var(--text2)">✕</button>
@@ -5114,8 +5115,8 @@ function renderGlobal(){
     <div style="width:1px;height:18px;background:var(--border)"></div>
     <button class="resp-btn${_globalBizFilter===''?' act':''}" onclick="setGlobalBizFilter('')">Todos los proyectos</button>
     <button class="resp-btn${_globalBizFilter==='0'?' act':''}" onclick="setGlobalBizFilter('0')" style="${_globalBizFilter==='0'?'background:#63992218;color:#639922;border-color:#639922;font-weight:600':''}">Gestor HH</button>
-    <button class="resp-btn${_globalBizFilter==='1'?' act':''}" onclick="setGlobalBizFilter('1')" style="${_globalBizFilter==='1'?'background:#378ADD18;color:#378ADD;border-color:#378ADD;font-weight:600':''}">Logístico</button>
-    <button class="resp-btn${_globalBizFilter==='2'?' act':''}" onclick="setGlobalBizFilter('2')" style="${_globalBizFilter==='2'?'background:#D85A3018;color:#D85A30;border-color:#D85A30;font-weight:600':''}">Montevra</button>
+
+
     <div style="width:1px;height:18px;background:var(--border)"></div>
     <select onchange="setGlobalMonth(this.value)" style="height:28px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:${monthFilter?'#2d4a7a':'var(--text2)'};background:${monthFilter?'#eef2f9':'var(--bg)'};font-weight:${monthFilter?'600':'400'}" id="g-month">
       <option value="">Todos los meses</option>
@@ -5372,8 +5373,8 @@ function renderDashboard(){
       <select id="db-biz" onchange="setDashFilter('biz',this.value)" style="height:28px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text2);background:var(--bg)">
         <option value="">Todos los proyectos</option>
         <option value="0">Gestor HH</option>
-        <option value="1">Logístico</option>
-        <option value="2">Montevra</option>
+        <option value="1" hidden>Logístico</option>
+        <option value="2" hidden>Montevra</option>
       </select>
       <select id="db-month" onchange="onDbMonthChange()" style="height:28px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;color:var(--text2);background:var(--bg)">
         <option value="">Todos los meses</option>
@@ -5441,6 +5442,7 @@ function renderDashboard(){
   <!-- PROYECTOS ROW -->
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:16px">
   ${BIZ.map((bz,bi)=>{
+    if(bi===1||bi===2) return '';   // Logístico y Montevra ya no se usan
     const bt=filtered.filter(t=>t.biz===bi);
     const bp=bt.filter(t=>t.status==='p').length;
     const be=bt.filter(t=>t.status==='e').length;
@@ -5570,7 +5572,7 @@ let _purinaHistOpen = new Set(); // ids de facturas con el historial de pagos de
 const NM_CATALOGO = [ // [nombre, precio unitario por defecto]
   ['Plástico',1100],['Chatarra',550],['Cartón',500],['Cobre encauchetado',7000],
   ['Empaque',200],['Estibas (buen estado)',2600],['Plegadiza',100],['Lonas en mal estado',80],
-  ['Bolsas LAD',0],['Retal de madera',0]
+  ['Bolsas LAD',0],['Retal/Madera',0]
 ];
 const _NM_SEED = {
   precios: Object.fromEntries(NM_CATALOGO),
@@ -5581,6 +5583,35 @@ const _NM_SEED = {
   ]
 };
 let nmStore = JSON.parse(localStorage.getItem('hh-nm-v1')||'null') || _NM_SEED;
+
+// Retal de madera y Madera son el mismo material: se unifican como Retal/Madera.
+// Devuelve true si cambió algo (para guardar solo cuando haga falta).
+function nmUnificarMadera(store){
+  if(!store) return false;
+  const viejos=['Retal de madera','Retal de Madera','Madera','madera','Retal madera'];
+  const NUEVO='Retal/Madera';
+  let cambio=false;
+  if(store.precios){
+    viejos.forEach(v=>{
+      if(store.precios[v]!==undefined){
+        if(store.precios[NUEVO]===undefined || Number(store.precios[NUEVO])===0) store.precios[NUEVO]=store.precios[v];
+        delete store.precios[v]; cambio=true;
+      }
+    });
+  }
+  (store.meses||[]).forEach(m=>{
+    if(!m.items || typeof m.items!=='object') return;
+    viejos.forEach(v=>{
+      if(m.items[v]!==undefined){
+        const previo=Number(m.items[NUEVO])||0;
+        m.items[NUEVO]=previo+(Number(m.items[v])||0);
+        delete m.items[v]; cambio=true;
+      }
+    });
+  });
+  return cambio;
+}
+nmUnificarMadera(nmStore);
 if(!nmStore.precios) nmStore.precios = Object.fromEntries(NM_CATALOGO);
 if(!nmStore.meses) nmStore.meses = [];
 let _nmOpen = new Set();       // ids de meses desplegados
@@ -8414,8 +8445,10 @@ onSnapshot(NM_REF, snap => {
   if(!snap.exists()) return;
   const data = snap.data();
   if(!data.store || typeof data.store !== 'object') return;
+  const _nmCambio = (typeof nmUnificarMadera === 'function') ? nmUnificarMadera(data.store) : false;
   if(typeof nmStore !== 'undefined') nmStore = data.store;
   localStorage.setItem('hh-nm-v1', JSON.stringify(data.store));
+  if(_nmCambio && window.persistNMToFirebase) window.persistNMToFirebase(JSON.parse(JSON.stringify(data.store)));
   if(typeof flujoSub !== 'undefined' && flujoSub === 'nuevomilenio' && typeof renderFlujoBody === 'function') renderFlujoBody();
 });
 
@@ -8568,9 +8601,25 @@ function closeBackupModal(){
     return actas.filter(a => a.mesIndex === mesIndex && a.año === año).sort((a, b) => a.fechaCarga - b.fechaCarga);
   }
 
+  // Certificados del acta que se está reemplazando, para pasarlos a la nueva
+  let _traspasoEntregas = null;   // { actaId, previos: [{ nombre, grupo, entregas }] }
+
   function crearActaParaMes(mesIndex, año = AÑO_ACTUAL) {
-    // Archivar cualquier acta activa previa de ese mes y año
-    actas.forEach(a => { if (a.mesIndex === mesIndex && a.año === año && a.activa) a.activa = false; });
+    // El acta nueva REEMPLAZA a la anterior del mismo mes: no se guardan
+    // versiones ni se suman. Los certificados ya registrados no se pierden:
+    // se pasan a la nueva por nombre de material (ver agregarRegistro).
+    const viejas = actas.filter(a => a.mesIndex === mesIndex && a.año === año);
+    const activa = viejas.find(a => a.activa) || viejas[viejas.length - 1] || null;
+    const idsViejos = new Set(viejas.map(a => a.id));
+
+    const previos = activa
+      ? registros.filter(r => r.actaId === activa.id && Array.isArray(r.entregas) && r.entregas.length > 0)
+          .map(r => ({ nombre: r.nombre, grupo: r.grupo, entregas: r.entregas }))
+      : [];
+
+    actas = actas.filter(a => !idsViejos.has(a.id));
+    registros = registros.filter(r => !idsViejos.has(r.actaId));
+
     const nueva = {
       id: 'acta-' + año + '-' + mesIndex + '-' + Date.now(),
       mesIndex,
@@ -8579,11 +8628,22 @@ function closeBackupModal(){
       activa: true
     };
     actas.push(nueva);
+    _traspasoEntregas = previos.length ? { actaId: nueva.id, previos } : null;
     return nueva;
   }
 
   function agregarRegistro(actaId, grupo, nombre, cantidad, unidad) {
-    registros.push({ actaId, grupo, nombre, cantidadActa: cantidad, unidadActa: (unidad || 'Kg'), entregas: [] });
+    let entregas = [];
+    if (_traspasoEntregas && _traspasoEntregas.actaId === actaId) {
+      const prev = _traspasoEntregas.previos;
+      let i = prev.findIndex(p => p.grupo === grupo && coincideNombre(p.nombre, nombre));
+      if (i < 0) i = prev.findIndex(p => coincideNombre(p.nombre, nombre));
+      if (i >= 0) {
+        entregas = _traspasoEntregas.previos[i].entregas;
+        _traspasoEntregas.previos.splice(i, 1);   // cada certificado se traspasa una sola vez
+      }
+    }
+    registros.push({ actaId, grupo, nombre, cantidadActa: cantidad, unidadActa: (unidad || 'Kg'), entregas });
   }
 
   function totalEntregasKg(reg) {
@@ -8597,8 +8657,9 @@ function closeBackupModal(){
   function nombresUnicosDeMateriales() {
     const vistos = new Map();
     registros.forEach(r => {
-      const key = r.grupo + '||' + normalizar(r.nombre);
-      if (!vistos.has(key)) vistos.set(key, { grupo: r.grupo, nombre: r.nombre });
+      const canon = nombreCanonico(r.nombre);
+      const key = r.grupo + '||' + normalizar(canon);
+      if (!vistos.has(key)) vistos.set(key, { grupo: r.grupo, nombre: canon });
     });
     return [...vistos.values()];
   }
@@ -8739,7 +8800,7 @@ function closeBackupModal(){
 
       const eraCorreccion = actaActivaDeMes(mesDetectado) !== null;
       if (eraCorreccion) {
-        const confirmar = confirm(`Ya existe una acta cargada para ${MESES[mesDetectado]} 2026.\n\n¿Quieres reemplazarla con esta nueva? La versión anterior queda guardada en el historial, no se pierde.`);
+        const confirmar = confirm(`Ya existe una acta cargada para ${MESES[mesDetectado]} 2026.\n\n¿Quieres reemplazarla con esta nueva? La anterior se sobrescribe; los certificados ya registrados se conservan.`);
         if (!confirmar) {
           estadoDiv.className = 'actas-estado-carga actas-estado-error';
           estadoDiv.textContent = 'Carga cancelada — se mantuvo la acta que ya tenías.';
@@ -8752,7 +8813,7 @@ function closeBackupModal(){
 
       estadoDiv.className = 'actas-estado-carga actas-estado-ok';
       estadoDiv.textContent = eraCorreccion
-        ? `Listo — se cargó una nueva versión de ${MESES[mesDetectado]} 2026 (${materialesExtraidos.length} materiales). La versión anterior queda guardada como historial.`
+        ? `Listo — el acta de ${MESES[mesDetectado]} 2026 se reemplazó (${materialesExtraidos.length} materiales). Los certificados que ya tenías se conservaron.`
         : `Listo — se cargaron ${materialesExtraidos.length} materiales de ${MESES[mesDetectado]} 2026 automáticamente.`;
       render();
       guardarMes(mesDetectado);
@@ -9314,7 +9375,7 @@ function closeBackupModal(){
     }
 
     if (actaActivaDeMes(mesIndex) !== null) {
-      const confirmar = confirm(`Ya existe una acta cargada para ${MESES[mesIndex]} 2026.\n\n¿Quieres reemplazarla con esta nueva (escrita a mano)? La anterior queda guardada en el historial.`);
+      const confirmar = confirm(`Ya existe una acta cargada para ${MESES[mesIndex]} 2026.\n\n¿Quieres reemplazarla con esta nueva (escrita a mano)? La anterior se sobrescribe; los certificados ya registrados se conservan.`);
       if (!confirmar) return;
     }
 
@@ -9816,16 +9877,30 @@ function closeBackupModal(){
   // Nombres que son el mismo material aunque se escriban distinto.
   // A diferencia de ALIAS_MATERIALES, aquí se compara el nombre COMPLETO:
   // así "madera" cuadra con "Retal de Madera" y nunca con "Estibas de madera".
+  // El primero de cada grupo es el nombre con que se muestra en la sábana.
   const EQUIVALENTES_EXACTOS = [
-    ['madera', 'retal de madera']
+    ['Retal/Madera', 'madera', 'retal de madera', 'retal madera']
   ];
 
   function claveEquivalente(nombre) {
-    const k = normalizarPalabras(nombre).join(' ');
+    const k = normalizarPalabras(String(nombre).replace(/\//g, ' ')).join(' ');
     for (const grupo of EQUIVALENTES_EXACTOS) {
-      if (grupo.some(g => normalizarPalabras(g).join(' ') === k)) return grupo[0];
+      if (grupo.some(g => normalizarPalabras(g.replace(/\//g, ' ')).join(' ') === k)) return normalizar(grupo[0]);
     }
     return null;
+  }
+
+  // Nombre con que se muestra un material: los equivalentes se unifican
+  function nombreCanonico(nombre) {
+    for (const grupo of EQUIVALENTES_EXACTOS) {
+      const k = claveEquivalente(nombre);
+      if (k !== null && k === normalizar(grupo[0])) return grupo[0];
+    }
+    return nombre;
+  }
+
+  function mismoMaterial(a, b) {
+    return normalizar(nombreCanonico(a)) === normalizar(nombreCanonico(b));
   }
 
   function coincidePorAlias(nombreCert, nombreActa) {
@@ -10063,7 +10138,7 @@ function closeBackupModal(){
         });
       });
     } else {
-      materialesConocidos.forEach(n => {
+      materialesConocidos.filter(n => !esConceptoSinCertificado(n)).forEach(n => {
         _certPanel.mats.push({ nombre: n, grupo: 'Aprovechable', cantidadActa: null, unidad: 'kg', reg: null });
       });
     }
@@ -10596,6 +10671,8 @@ function closeBackupModal(){
 
     // ── El mes todavía no tiene acta ──
     if (!acta) {
+      // El transporte es un concepto de facturación: no se verifica contra acta
+      if (esConceptoSinCertificado(mat.nombre)) return '<td><span class="actas-dif-vacio">—</span></td>';
       const pendientes = materialesSinActa.filter(m => m.mesIndex === mesIndex && coincideNombre(mat.nombre, m.nombre));
       if (pendientes.length > 0) {
         const totalKg = pendientes.reduce((s, m) => s + (m.pesoKg || 0), 0);
@@ -10609,7 +10686,7 @@ function closeBackupModal(){
       return '<td><span class="actas-dif-vacio">—</span></td>';
     }
 
-    const reg = registros.find(r => r.actaId === acta.id && r.nombre === mat.nombre && r.grupo === mat.grupo);
+    const reg = registros.find(r => r.actaId === acta.id && mismoMaterial(r.nombre, mat.nombre) && r.grupo === mat.grupo);
     if (!reg) return '<td><span class="actas-dif-vacio">—</span></td>';
 
     const nombreEsc = reg.nombre.replace(/'/g, "\\'");
@@ -10667,16 +10744,16 @@ function closeBackupModal(){
   }
 
   // ─── SOPORTES DE CAFETERÍA Y SANITARIOS ───────────────────
-  // Tres listas independientes por mes: manifiestos, anexos y actas.
-  // Cada una crece por su lado. El estado del mes sale de cuáles ya tienen algo.
+  // Regla: cada manifiesto despliega su anexo y su acta (uno a uno).
+  // El estado de cada manifiesto es Mani → Mani+Anexo → Mani+Anexo+Acta.
   let soportesCafeteria = (() => {
     try { return JSON.parse(localStorage.getItem('hh-actas-soportes-cafeteria') || '{}'); } catch (e) { return {}; }
   })();
 
-  const CAF_TIPOS = [
-    { clave: 'manifiestos', singular: 'Manifiesto', corto: 'Mani' },
-    { clave: 'anexos', singular: 'Anexo', corto: 'Anexo' },
-    { clave: 'actas', singular: 'Acta', corto: 'Acta' }
+  const CAF_PARTES = [
+    { clave: 'manifiesto', etiqueta: 'Manifiesto' },
+    { clave: 'anexo', etiqueta: 'Anexo' },
+    { clave: 'acta', etiqueta: 'Acta' }
   ];
 
   let _cafMes = null;
@@ -10686,22 +10763,29 @@ function closeBackupModal(){
     return coincideNombre('Cafetería y Sanitarios', nombre);
   }
 
-  // Compatibilidad con el formato anterior (una lista de viajes por mes)
+  // Normaliza cualquier formato anterior a { items: [{id, numero, manifiesto, anexo, acta}] }
   function cafMes(mesIndex) {
     let m = soportesCafeteria[mesIndex];
+    let items = null;
     if (Array.isArray(m)) {
-      const conv = { manifiestos: [], anexos: [], actas: [] };
-      m.forEach(v => {
-        CAF_TIPOS.forEach((t, k) => {
-          const viejo = v[['manifiesto', 'anexo', 'acta'][k]];
-          if (viejo && viejo.url) conv[t.clave].push(viejo);
-        });
-      });
-      soportesCafeteria[mesIndex] = conv;
-      m = conv;
+      // formato 1: lista de viajes
+      items = m.map((v, k) => ({ id: 'cm' + k + Date.now(), numero: v.numero || '',
+        manifiesto: v.manifiesto || null, anexo: v.anexo || null, acta: v.acta || null }));
+    } else if (m && Array.isArray(m.manifiestos)) {
+      // formato 2: tres listas sueltas → se emparejan por posición
+      const n = Math.max(m.manifiestos.length, (m.anexos || []).length, (m.actas || []).length);
+      items = [];
+      for (let k = 0; k < n; k++) {
+        items.push({ id: 'cm' + k + Date.now(), numero: '',
+          manifiesto: m.manifiestos[k] || null, anexo: (m.anexos || [])[k] || null, acta: (m.actas || [])[k] || null });
+      }
     }
-    if (!m) m = soportesCafeteria[mesIndex] = { manifiestos: [], anexos: [], actas: [] };
-    CAF_TIPOS.forEach(t => { if (!Array.isArray(m[t.clave])) m[t.clave] = []; });
+    if (items) {
+      soportesCafeteria[mesIndex] = { items, unidos: (m && m.unidos) || {} };
+      m = soportesCafeteria[mesIndex];
+    }
+    if (!m) m = soportesCafeteria[mesIndex] = { items: [], unidos: {} };
+    if (!Array.isArray(m.items)) m.items = [];
     return m;
   }
 
@@ -10715,15 +10799,24 @@ function closeBackupModal(){
     }
   }
 
+  function cafTiene(parte) { return !!(parte && parte.url); }
+
+  function estadoManifiesto(it) {
+    const m = cafTiene(it.manifiesto), a = cafTiene(it.anexo), c = cafTiene(it.acta);
+    if (m && a && c) return { texto: 'Mani+Anexo+Acta', clase: 'ok' };
+    if (m && a) return { texto: 'Mani+Anexo', clase: 'medio' };
+    if (m) return { texto: 'Mani', clase: 'medio' };
+    return { texto: 'falta manifiesto', clase: 'falta' };
+  }
+
   function resumenCafeteria(mesIndex) {
     if (!soportesCafeteria[mesIndex]) return { texto: 'pendiente', clase: 'falta' };
-    const m = cafMes(mesIndex);
-    const hay = CAF_TIPOS.map(t => m[t.clave].length > 0);
-    if (hay[0] && hay[1] && hay[2]) return { texto: 'Mani+Anexo+Acta', clase: 'ok' };
-    if (hay[0] && hay[1]) return { texto: 'Mani+Anexo', clase: 'medio' };
-    if (hay[0]) return { texto: 'Mani', clase: 'medio' };
-    if (hay[1] || hay[2]) return { texto: 'falta manifiesto', clase: 'medio' };
-    return { texto: 'pendiente', clase: 'falta' };
+    const items = cafMes(mesIndex).items;
+    if (items.length === 0) return { texto: 'pendiente', clase: 'falta' };
+    if (items.length === 1) return estadoManifiesto(items[0]);
+    const completos = items.filter(it => estadoManifiesto(it).clase === 'ok').length;
+    if (completos === items.length) return { texto: 'Mani+Anexo+Acta', clase: 'ok' };
+    return { texto: `${completos} de ${items.length} completos`, clase: 'medio' };
   }
 
   function abrirSoportesCafeteria(mesIndex) {
@@ -10742,91 +10835,119 @@ function closeBackupModal(){
     _cafMes = null;
   }
 
+  function cafClaseBadge(clase) {
+    return clase === 'ok' ? 'actas-badge-ok' : (clase === 'medio' ? 'actas-badge-amarillo' : 'actas-badge-pendiente');
+  }
+
+  function cafRenglon(it, i, parte, sangria) {
+    const d = it[parte.clave];
+    const flecha = sangria ? '<span style="color:var(--texto-suave); margin-right:4px;">↳</span>' : '';
+    const contenido = cafTiene(d)
+      ? `<a href="${d.url}" target="_blank" rel="noopener" class="caf-doc caf-doc-ok" title="${escapeHtml(d.nombre || '')}">${escapeHtml(d.nombre || parte.etiqueta)} ↗</a>
+         <button type="button" onclick="cafAdjuntar(${i}, '${parte.clave}')" title="Cambiar el archivo" style="background:none; border:none; color:var(--texto-suave); font-size:11px; cursor:pointer; font-family:inherit; text-decoration:underline dotted;">cambiar</button>`
+      : `<button type="button" class="caf-doc" onclick="cafAdjuntar(${i}, '${parte.clave}')">+ Subir ${parte.etiqueta.toLowerCase()}</button>`;
+    return `<div style="display:flex; align-items:center; gap:8px; padding:5px 0; ${sangria ? 'padding-left:18px;' : ''}">
+      ${flecha}<span style="font-size:12px; width:78px; color:var(--texto-suave);">${parte.etiqueta}</span>
+      <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; min-width:0;">${contenido}</div>
+    </div>`;
+  }
+
   function renderSoportesCafeteria() {
     const cont = document.getElementById('caf-lista');
     const m = cafMes(_cafMes);
 
-    cont.innerHTML = CAF_TIPOS.map(t => {
-      const lista = m[t.clave];
-      const docs = lista.length === 0
-        ? '<span style="font-size:12px; color:var(--texto-suave);">Todavía no llega ninguno.</span>'
-        : lista.map((d, i) => `<span class="caf-doc caf-doc-ok" style="cursor:default;">
-             <a href="${d.url}" target="_blank" rel="noopener" style="color:inherit; text-decoration:none;" title="${escapeHtml(d.nombre || '')}">${escapeHtml(d.nombre || t.singular)}</a>
-             <button type="button" onclick="cafQuitar('${t.clave}', ${i})" title="Quitar de la lista" style="background:none; border:none; color:inherit; cursor:pointer; font-size:12px; padding:0 0 0 4px;">&times;</button>
-           </span>`).join('');
-      return `<div class="caf-fila">
-        <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-          <strong style="font-size:13px;">${t.singular}s</strong>
-          <span style="font-size:11.5px; color:var(--texto-suave);">${lista.length}</span>
-          <span style="flex-grow:1;"></span>
-          <button type="button" class="caf-doc" onclick="cafAdjuntar('${t.clave}')">+ Agregar ${t.singular.toLowerCase()}</button>
-        </div>
-        <div style="display:flex; gap:6px; flex-wrap:wrap;">${docs}</div>
-      </div>`;
-    }).join('');
+    if (m.items.length === 0) {
+      cont.innerHTML = '<p style="font-size:12.5px; color:var(--texto-suave); padding:10px 0;">Todavía no hay manifiestos este mes. Agrega el primero abajo: cada uno despliega su anexo y su acta.</p>';
+    } else {
+      cont.innerHTML = m.items.map((it, i) => {
+        const est = estadoManifiesto(it);
+        return `<div class="caf-fila">
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:4px;">
+            <strong style="font-size:13px;">Manifiesto ${i + 1}</strong>
+            <input type="text" value="${escapeHtml(it.numero || '')}" placeholder="N° (opcional)" onchange="cafNumero(${i}, this.value)" style="width:120px; height:28px; border:1px solid var(--borde); border-radius:6px; padding:0 8px; font-size:12px; font-family:inherit;">
+            <span class="actas-badge ${cafClaseBadge(est.clase)}" style="cursor:default;">${est.texto}</span>
+            <span style="flex-grow:1;"></span>
+            <button type="button" onclick="cafEliminar(${i})" style="background:none; border:none; color:var(--rojo-texto); font-size:11.5px; cursor:pointer; font-family:inherit;">eliminar</button>
+          </div>
+          ${cafRenglon(it, i, CAF_PARTES[0], false)}
+          ${cafRenglon(it, i, CAF_PARTES[1], true)}
+          ${cafRenglon(it, i, CAF_PARTES[2], true)}
+        </div>`;
+      }).join('');
+    }
 
     const res = resumenCafeteria(_cafMes);
-    const hayMani = m.manifiestos.length > 0;
-    const hayActa = m.actas.length > 0;
     document.getElementById('caf-resumen').innerHTML =
-      `<span class="actas-badge ${res.clase === 'ok' ? 'actas-badge-ok' : (res.clase === 'medio' ? 'actas-badge-amarillo' : 'actas-badge-pendiente')}" style="cursor:default;">${res.texto}</span>`;
+      `<span class="actas-badge ${cafClaseBadge(res.clase)}" style="cursor:default;">${res.texto}</span>`;
 
-    const btnParcial = document.getElementById('caf-btn-parcial');
-    const btnCompleto = document.getElementById('caf-btn-completo');
-    btnParcial.disabled = !hayMani;
-    btnCompleto.disabled = !(hayMani && hayActa);
-    btnParcial.title = hayMani ? 'Une manifiestos y anexos en un PDF' : 'Falta al menos un manifiesto';
-    btnCompleto.title = (hayMani && hayActa) ? 'Une manifiestos, anexos y actas en un PDF' : 'Falta el acta';
+    const hayParcial = m.items.some(it => cafTiene(it.manifiesto));
+    const hayCompleto = m.items.some(it => cafTiene(it.manifiesto) && cafTiene(it.acta));
+    const bp = document.getElementById('caf-btn-parcial');
+    const bc = document.getElementById('caf-btn-completo');
+    bp.disabled = !hayParcial;
+    bc.disabled = !hayCompleto;
+    bp.title = hayParcial ? 'Une cada manifiesto con su anexo' : 'Falta al menos un manifiesto';
+    bc.title = hayCompleto ? 'Une cada manifiesto con su anexo y su acta' : 'Falta al menos un acta';
   }
 
-  function cafAdjuntar(tipo) {
-    _cafRef = { tipo };
+  function cafAgregar() {
+    const m = cafMes(_cafMes);
+    m.items.push({ id: 'cm' + Date.now(), numero: '', manifiesto: null, anexo: null, acta: null });
+    guardarSoportesCafeteria();
+    renderSoportesCafeteria();
+    cafAdjuntar(m.items.length - 1, 'manifiesto');
+  }
+
+  function cafNumero(i, valor) {
+    const m = cafMes(_cafMes);
+    if (!m.items[i]) return;
+    m.items[i].numero = String(valor).trim();
+    guardarSoportesCafeteria();
+  }
+
+  function cafEliminar(i) {
+    const m = cafMes(_cafMes);
+    if (!m.items[i]) return;
+    if (!confirm('¿Eliminar este manifiesto con su anexo y su acta? Los archivos siguen en Drive.')) return;
+    m.items.splice(i, 1);
+    guardarSoportesCafeteria();
+    renderSoportesCafeteria();
+    render();
+  }
+
+  function cafAdjuntar(i, parte) {
+    _cafRef = { i, parte };
     const inp = document.getElementById('input-caf-doc');
     inp.value = '';
     inp.click();
   }
 
   async function procesarAdjuntoCafeteria(event) {
-    const files = Array.from(event.target.files || []);
+    const file = (event.target.files || [])[0];
     const ref = _cafRef;
-    if (files.length === 0 || !ref || _cafMes === null) return;
+    if (!file || !ref || _cafMes === null) return;
     const m = cafMes(_cafMes);
+    const it = m.items[ref.i];
+    if (!it) return;
+
     const est = document.getElementById('caf-estado');
     est.style.display = 'block';
     est.className = 'actas-estado-carga actas-estado-cargando';
+    est.textContent = `Subiendo ${file.name} a Drive…`;
 
-    let subidos = 0;
-    for (const file of files) {
-      est.textContent = `Subiendo ${file.name} a Drive…`;
-      let url = null;
-      try { url = await subirArchivoADrive(file, 'certificado', _cafMes); } catch (e) { console.error(e); }
-      if (url) {
-        m[ref.tipo].push({ url, nombre: file.name, fecha: Date.now() });
-        subidos++;
-      }
-    }
-
-    guardarSoportesCafeteria();
-    renderSoportesCafeteria();
-    render();
-
-    if (subidos === files.length) {
-      est.className = 'actas-estado-carga actas-estado-ok';
-      est.textContent = subidos === 1 ? 'Archivo guardado en Drive.' : `${subidos} archivos guardados en Drive.`;
-    } else {
+    let url = null;
+    try { url = await subirArchivoADrive(file, 'certificado', _cafMes); } catch (e) { console.error(e); }
+    if (!url) {
       est.className = 'actas-estado-carga actas-estado-error';
-      est.textContent = `Se subieron ${subidos} de ${files.length}. Intenta otra vez con los que faltaron.`;
+      est.textContent = 'No se pudo subir el archivo a Drive. Intenta otra vez.';
+      return;
     }
-  }
-
-  function cafQuitar(tipo, i) {
-    const m = cafMes(_cafMes);
-    if (!m[tipo][i]) return;
-    if (!confirm('¿Quitar este documento de la lista? El archivo sigue en Drive.')) return;
-    m[tipo].splice(i, 1);
+    it[ref.parte] = { url, nombre: file.name, fecha: Date.now() };
     guardarSoportesCafeteria();
     renderSoportesCafeteria();
     render();
+    est.className = 'actas-estado-carga actas-estado-ok';
+    est.textContent = 'Archivo guardado en Drive.';
   }
 
   // ── Descargar unido ──
@@ -10839,17 +10960,20 @@ function closeBackupModal(){
     inp.click();
   }
 
-  // Ordena los archivos escogidos por tipo, según el nombre con que se subieron
+  // Orden final: manifiesto 1, su anexo, su acta; luego manifiesto 2, y así
   function cafOrdenar(files, alcance) {
     const m = cafMes(_cafMes);
-    const tipos = alcance === 'parcial' ? ['manifiestos', 'anexos'] : ['manifiestos', 'anexos', 'actas'];
-    const peso = f => {
-      for (let k = 0; k < tipos.length; k++) {
-        if (m[tipos[k]].some(d => d.nombre === f.name)) return k;
+    const partes = alcance === 'parcial' ? ['manifiesto', 'anexo'] : ['manifiesto', 'anexo', 'acta'];
+    const pos = f => {
+      for (let k = 0; k < m.items.length; k++) {
+        for (let p = 0; p < partes.length; p++) {
+          const d = m.items[k][partes[p]];
+          if (d && d.nombre === f.name) return k * 10 + p;
+        }
       }
-      return tipos.length;
+      return 100000;
     };
-    return files.map((f, i) => ({ f, i })).sort((a, b) => (peso(a.f) - peso(b.f)) || (a.i - b.i)).map(x => x.f);
+    return files.map((f, i) => ({ f, i })).sort((a, b) => (pos(a.f) - pos(b.f)) || (a.i - b.i)).map(x => x.f);
   }
 
   async function procesarUnionCafeteria(event) {
@@ -10873,8 +10997,7 @@ function closeBackupModal(){
     try {
       const unido = await PDFLib.PDFDocument.create();
       for (const f of files) {
-        const bytes = await f.arrayBuffer();
-        const src = await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true });
+        const src = await PDFLib.PDFDocument.load(await f.arrayBuffer(), { ignoreEncryption: true });
         const paginas = await unido.copyPages(src, src.getPageIndices());
         paginas.forEach(p => unido.addPage(p));
       }
@@ -10883,7 +11006,6 @@ function closeBackupModal(){
       const sufijo = ref.alcance === 'parcial' ? 'Mani+Anexo' : 'Mani+Anexo+Acta';
       const nombre = `${AÑO_ACTUAL}-${mm}_Cafeteria_${sufijo}.pdf`;
 
-      // 1) Se descarga al computador
       const blob = new Blob([salida], { type: 'application/pdf' });
       const enlace = document.createElement('a');
       enlace.href = URL.createObjectURL(blob);
@@ -10894,12 +11016,10 @@ function closeBackupModal(){
       setTimeout(() => URL.revokeObjectURL(enlace.href), 2000);
 
       est.className = 'actas-estado-carga actas-estado-ok';
-      est.textContent = `Descargado ${nombre} (${files.length} archivos en el orden: ${files.map(f => f.name).join(' · ')}). Subiendo copia a Drive…`;
+      est.textContent = `Descargado ${nombre}. Orden: ${files.map(f => f.name).join(' · ')}. Subiendo copia a Drive…`;
 
-      // 2) Y además queda una copia en Drive
       try {
-        const archivo = new File([salida], nombre, { type: 'application/pdf' });
-        const url = await subirArchivoADrive(archivo, 'certificado', _cafMes);
+        const url = await subirArchivoADrive(new File([salida], nombre, { type: 'application/pdf' }), 'certificado', _cafMes);
         if (url) {
           const m = cafMes(_cafMes);
           if (!m.unidos) m.unidos = {};
@@ -10907,12 +11027,11 @@ function closeBackupModal(){
           guardarSoportesCafeteria();
           est.innerHTML = `Listo: <b>${escapeHtml(nombre)}</b> se descargó y quedó en Drive. <a href="${url}" target="_blank" rel="noopener" style="color:var(--azul); font-weight:600;">verlo</a>`;
         } else {
-          est.textContent = `Listo: ${nombre} se descargó a tu computador (no se pudo subir la copia a Drive).`;
+          est.textContent = `Listo: ${nombre} se descargó (no se pudo subir la copia a Drive).`;
         }
       } catch (e) {
-        est.textContent = `Listo: ${nombre} se descargó a tu computador (no se pudo subir la copia a Drive).`;
+        est.textContent = `Listo: ${nombre} se descargó (no se pudo subir la copia a Drive).`;
       }
-      renderSoportesCafeteria();
     } catch (err) {
       console.error('Error uniendo PDF:', err);
       est.className = 'actas-estado-carga actas-estado-error';
@@ -11076,7 +11195,7 @@ function closeBackupModal(){
         html += `<tr class="actas-fila-grupo"><td colspan="${MESES.length + 2}">${grupoActual}</td></tr>`;
       }
       html += `<tr><td class="actas-nombre-material">${mat.nombre}${(() => {
-        const conEntrega = registros.find(r => r.nombre === mat.nombre && r.grupo === mat.grupo && r.entregas.length > 0);
+        const conEntrega = registros.find(r => mismoMaterial(r.nombre, mat.nombre) && r.grupo === mat.grupo && r.entregas.length > 0);
         const proveedores = conEntrega ? [...new Set(conEntrega.entregas.map(e => e.proveedor).filter(Boolean))] : [];
         return proveedores.length ? `<div class="actas-proveedor">${proveedores.join(', ')}</div>` : '';
       })()}</td>`;
@@ -11085,7 +11204,7 @@ function closeBackupModal(){
         html += celdaMaterial(mat, i);
         const acta = actaActivaDeMes(i);
         if (acta) {
-          const reg = registros.find(r => r.actaId === acta.id && r.nombre === mat.nombre && r.grupo === mat.grupo);
+          const reg = registros.find(r => r.actaId === acta.id && mismoMaterial(r.nombre, mat.nombre) && r.grupo === mat.grupo);
           if (reg && reg.entregas.length > 0) {
             const esUnidades = reg.unidadActa === 'Und';
             sufijoTotal = esUnidades ? 'und' : 'kg';
@@ -11531,7 +11650,7 @@ function closeBackupModal(){
 
     const estadoDiv = document.getElementById('estado-carga');
     const eraCorreccion = actaActivaDeMes(mesIndex) !== null;
-    if (eraCorreccion && !confirm('Ya existe una acta para ' + MESES[mesIndex] + ' ' + AÑO_ACTUAL + '.\n\n¿Reemplazarla? La versión anterior queda guardada en el historial.')) return;
+    if (eraCorreccion && !confirm('Ya existe una acta para ' + MESES[mesIndex] + ' ' + AÑO_ACTUAL + '.\n\n¿Reemplazarla? La anterior se sobrescribe; los certificados ya registrados se conservan.')) return;
     const nuevaActa = crearActaParaMes(mesIndex);
     filas.forEach(f => agregarRegistro(nuevaActa.id, f.grupo, f.nombre, f.cantidad, 'Kg'));
     reconciliarMaterialesSinActa(mesIndex);
@@ -11601,7 +11720,9 @@ function closeBackupModal(){
   window.abrirSoportesCafeteria = abrirSoportesCafeteria;
   window.cerrarSoportesCafeteria = cerrarSoportesCafeteria;
   window.cafAdjuntar = cafAdjuntar;
-  window.cafQuitar = cafQuitar;
+  window.cafAgregar = cafAgregar;
+  window.cafNumero = cafNumero;
+  window.cafEliminar = cafEliminar;
   window.procesarAdjuntoCafeteria = procesarAdjuntoCafeteria;
   window.cafDescargar = cafDescargar;
   window.procesarUnionCafeteria = procesarUnionCafeteria;
