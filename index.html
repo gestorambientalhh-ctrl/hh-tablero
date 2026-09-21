@@ -1604,7 +1604,10 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
       <select id="ck-month" onchange="renderChecklist()" style="height:28px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:inherit;background:var(--bg);color:var(--text2)">
         <option value="">Este mes</option>
       </select>
-      <button onclick="openCkItemModal()" style="height:30px;padding:0 12px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;margin-left:auto">
+      <span style="margin-left:auto;display:flex;gap:4px;align-items:center">
+        <button onclick="ckPdf()" title="Informe de una hoja con la semana y el mes seleccionados" style="height:28px;padding:0 11px;font-size:11.5px;font-weight:600;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text2);cursor:pointer;font-family:inherit">📄 Informe PDF</button>
+      </span>
+      <button onclick="openCkItemModal()" style="height:30px;padding:0 12px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit">
         + Agregar actividad
       </button>
     </div>
@@ -2992,10 +2995,13 @@ function toggleCkItem(itemId, periodo){
 }
 
 function deleteCkItem(id){
-  if(!confirm('¿Eliminar esta actividad? Se borra para todo el equipo.')) return;
+  loadChecklist();
+  const it=ckItems.find(x=>x.id===id);
+  if(!confirm('¿Eliminar "'+(it?it.title:'esta actividad')+'"?\n\nSe borra del checklist para todo el equipo. Lo que ya se había marcado en semanas anteriores se pierde del PDF.')) return;
   ckItems=ckItems.filter(x=>x.id!==id);
   saveCkData();
   renderChecklist();
+  if(typeof window.renderCurrent==='function' && (typeof curSection==='undefined' || curSection!=='checklist')) window.renderCurrent();
 }
 
 function openCkItemModal(){
@@ -3053,6 +3059,203 @@ function ckBoton(itemId, periodo, meta, texto, ancho){
     color:${lleno?'#fff':'var(--text2)'}">${etiqueta}</button>`;
 }
 
+// ── Informe gerencial del checklist (una sola hoja) ──────────────
+// Por defecto: la semana y el mes EN CURSO. Si en "ver completo" se
+// escogió otra semana u otro mes, el informe sale de esa selección.
+function ckPdf(){
+  const jsPDFctor=(window.jspdf||{}).jsPDF;
+  if(!jsPDFctor){ alert('No se pudo cargar la herramienta de PDF. Recarga la página.'); return; }
+  loadChecklist();
+  if(!ckItems.length){ alert('No hay actividades en el checklist todavía.'); return; }
+
+  const MES_L=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const hoy=new Date();
+  const hoyIso=ckISO(hoy);
+  const enChecklist = typeof curSection!=='undefined' && curSection==='checklist';
+  const selMes = enChecklist ? ((document.getElementById('ck-month')||{}).value||'') : '';
+  const mesKey = selMes || `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}`;
+  const [anio,mm] = mesKey.split('-').map(Number);
+  const semanas = getWeeksOfMonth(mesKey);
+  const semActual = getCurrentWeekKey();
+  const semKey = (enChecklist && ckSelWeek && semanas.find(w=>w.key===ckSelWeek)) ? ckSelWeek
+               : (semanas.find(w=>w.key===semActual) ? semActual : semanas[semanas.length-1].key);
+  const semIdx = semanas.findIndex(w=>w.key===semKey);
+  const semIni = new Date(semKey+'T00:00:00'), semFin = new Date(semKey+'T00:00:00'); semFin.setDate(semFin.getDate()+6);
+  const fCorta = d => d.getDate()+' '+MES_L[d.getMonth()].slice(0,3).toLowerCase();
+  const perMes='m:'+mesKey, q1='q:'+mesKey+'-1', q2='q:'+mesKey+'-2';
+  const esMesActual = anio===hoy.getFullYear() && mm===hoy.getMonth()+1;
+  const qKey = (esMesActual ? hoy.getDate() : semFin.getDate())<=15 ? q1 : q2;
+
+  const grupo=it=>(CK_FREQ[it.freq]||CK_FREQ.weekly).grupo;
+  const meta=it=>Math.max(1,parseInt(it.times)||1);
+  const hecho=(per,it)=>ckVeces(per,it.id)>=meta(it);
+  const por=g=>ckItems.filter(it=>grupo(it)===g);
+  const pct=(a,b)=>b?Math.round(a/b*100):null;
+
+  // ── Números del tablero de mando
+  const dias=[]; const L=['L','M','X','J','V','S','D'];
+  for(let k=0;k<7;k++){ const d=new Date(semKey+'T00:00:00'); d.setDate(d.getDate()+k); dias.push({iso:ckISO(d), l:L[k], n:d.getDate()}); }
+  const diasVivos=dias.filter(d=>d.iso<=hoyIso);
+  const dI=por('diarias'), sI=por('semanales'), qI=por('quincenales'), mI=por('mensuales'), pI=por('pagos');
+  let dOk=0; dI.forEach(it=>diasVivos.forEach(d=>{ if(hecho('d:'+d.iso,it)) dOk++; }));
+  const dTot=dI.length*diasVivos.length;
+  const sOk=sI.filter(it=>hecho(semKey,it)).length;
+  const qOk=qI.filter(it=>hecho(qKey,it)).length;
+  const mOk=mI.filter(it=>hecho(perMes,it)).length, pOk=pI.filter(it=>hecho(perMes,it)).length;
+  const kpis=[
+    {t:'Diarias', s:'semana en curso', a:dOk, b:dTot},
+    {t:'Semanales', s:'semana en curso', a:sOk, b:sI.length},
+    {t:'Quincenales', s:qKey===q1?'1 al 15':'16 a fin de mes', a:qOk, b:qI.length},
+    {t:'Mensuales', s:'mes en curso', a:mOk, b:mI.length},
+    {t:'Pagos', s:'mes en curso', a:pOk, b:pI.length}
+  ].filter(k=>k.b>0);
+  const gA=kpis.reduce((s,k)=>s+k.a,0), gB=kpis.reduce((s,k)=>s+k.b,0);
+
+  // ── Hoja
+  const doc=new jsPDFctor({orientation:'landscape', unit:'mm', format:'a4'});
+  const W=doc.internal.pageSize.getWidth(), H=doc.internal.pageSize.getHeight();
+  const AZUL=[45,74,122], AZUL_S=[230,237,245], GRIS=[107,106,101], LINEA=[226,221,211];
+  const VERDE=[22,163,74], AMBAR=[217,119,6], ROJO=[185,28,28];
+  const colorPct=p=>p===null?GRIS:(p>=80?VERDE:(p>=50?AMBAR:ROJO));
+
+  // Encabezado
+  doc.setFillColor(...AZUL); doc.rect(0,0,W,24,'F');
+  doc.setTextColor(255); doc.setFont('helvetica','bold'); doc.setFontSize(15);
+  doc.text('Informe de gestión de actividades',12,11);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  doc.text('HH Gestor Ambiental · Checklist del equipo',12,17.5);
+  const cajas=[
+    ['FECHA', hoy.toLocaleDateString('es-CO',{weekday:'long',day:'numeric',month:'long',year:'numeric'})],
+    ['SEMANA '+(semKey===semActual?'EN CURSO':'SELECCIONADA'), 'Sem '+(semIdx+1)+' · '+fCorta(semIni)+' – '+fCorta(semFin)],
+    ['MES '+(esMesActual?'EN CURSO':'SELECCIONADO'), MES_L[mm-1]+' '+anio]
+  ];
+  let cx=W-12;
+  [...cajas].reverse().forEach(([lbl,val])=>{
+    doc.setFontSize(9.5); doc.setFont('helvetica','bold');
+    const w=Math.max(doc.getTextWidth(val), 28)+8;
+    cx-=w;
+    doc.setFillColor(62,94,145); doc.roundedRect(cx,4.5,w,15,1.5,1.5,'F');
+    doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(200,214,235);
+    doc.text(lbl,cx+4,9.5);
+    doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(255);
+    doc.text(val,cx+4,15.8);
+    cx-=3;
+  });
+
+  // Tarjetas de indicadores
+  const tarjetas=[{t:'Cumplimiento global', s:'todos los bloques', a:gA, b:gB, global:true}, ...kpis];
+  const gap=4, x0=12, ancho=(W-24-gap*(tarjetas.length-1))/tarjetas.length, y0=29, alto=25;
+  tarjetas.forEach((k,i)=>{
+    const x=x0+i*(ancho+gap), p=pct(k.a,k.b), col=colorPct(p);
+    doc.setFillColor(...(k.global?AZUL_S:[255,255,255])); doc.setDrawColor(...LINEA);
+    doc.roundedRect(x,y0,ancho,alto,2,2,'FD');
+    doc.setFillColor(...col); doc.rect(x,y0+2,1.2,alto-4,'F');
+    doc.setTextColor(...GRIS); doc.setFont('helvetica','bold'); doc.setFontSize(7.2);
+    doc.text(k.t.toUpperCase(),x+4,y0+5.5);
+    doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.text(k.s,x+4,y0+9);
+    doc.setTextColor(...col); doc.setFont('helvetica','bold'); doc.setFontSize(18);
+    doc.text(p===null?'—':p+'%',x+4,y0+18);
+    doc.setTextColor(...GRIS); doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
+    doc.text(k.a+' de '+k.b,x+ancho-4,y0+18,{align:'right'});
+    doc.setFillColor(238,236,231); doc.rect(x+4,y0+20.5,ancho-8,1.6,'F');
+    if(p) { doc.setFillColor(...col); doc.rect(x+4,y0+20.5,(ancho-8)*Math.min(1,p/100),1.6,'F'); }
+  });
+
+  // Estados dibujados (círculos) en las tablas
+  const ESTADO='__e:';
+  const est=(per,it)=>{ const v=ckVeces(per,it.id), m=meta(it); return ESTADO+(v>=m?'ok':(v>0?'par':'pen')); };
+  const dibujar=d=>{
+    const raw=d.cell.raw;
+    const txt = (raw && typeof raw==='object') ? raw.content : raw;
+    if(typeof txt!=='string' || !txt.startsWith(ESTADO)) return;
+    const e=txt.slice(ESTADO.length), cx2=d.cell.x+d.cell.width/2, cy=d.cell.y+d.cell.height/2;
+    if(e==='fut') return;
+    doc.setLineWidth(0.35);
+    if(e==='ok'){ doc.setFillColor(...VERDE); doc.circle(cx2,cy,1.35,'F'); }
+    else if(e==='par'){ doc.setDrawColor(...AMBAR); doc.setFillColor(254,243,199); doc.circle(cx2,cy,1.35,'FD'); }
+    else { doc.setDrawColor(...ROJO); doc.circle(cx2,cy,1.35,'S'); }
+  };
+  const limpiar=d=>{
+    const raw=d.cell.raw; const txt=(raw && typeof raw==='object')?raw.content:raw;
+    if(typeof txt==='string' && txt.startsWith(ESTADO)) d.cell.text=[''];
+  };
+  const estiloTabla={ theme:'plain', styles:{fontSize:7.6,cellPadding:{top:1.25,bottom:1.25,left:2,right:2},textColor:[44,43,40],lineColor:LINEA,lineWidth:{bottom:0.1}},
+    headStyles:{fillColor:AZUL,textColor:255,fontStyle:'bold',fontSize:7.2,halign:'center'},
+    didParseCell:limpiar, didDrawCell:dibujar };
+  const titulo=(txt,x,y,a,b)=>{
+    const p=pct(a,b);
+    doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(...AZUL); doc.text(txt,x,y);
+    const anchoTitulo = doc.getTextWidth(txt);   // medir ANTES de cambiar el tamaño
+    if(b){ doc.setFontSize(8); doc.setTextColor(...colorPct(p)); doc.text(a+'/'+b+'  ·  '+p+'%', x+anchoTitulo+3, y); }
+  };
+
+  // Columna izquierda: diarias de la semana
+  const xL=12, wL=150, yT=y0+alto+9;
+  titulo('Diarias · semana en curso', xL, yT, dOk, dTot);
+  const cuerpoD=dI.map(it=>{
+    const mesN=(()=>{ const ult=new Date(anio,mm,0).getDate(); const hasta=esMesActual?hoy.getDate():ult; let n=0;
+      for(let d=1; d<=hasta; d++){ if(hecho('d:'+ckISO(new Date(anio,mm-1,d)),it)) n++; } return n+'/'+hasta; })();
+    return [it.title, ...dias.map(d=> d.iso>hoyIso ? ESTADO+'fut' : est('d:'+d.iso,it)), mesN];
+  });
+  doc.autoTable({ ...estiloTabla, startY:yT+2, margin:{left:xL}, tableWidth:wL,
+    head:[['Actividad', ...dias.map(d=>d.l+' '+d.n), 'Mes']], body:cuerpoD,
+    columnStyles:{0:{cellWidth:74,halign:'left'}, 8:{halign:'center',textColor:GRIS}},
+    didParseCell:d=>{ limpiar(d); if(d.section==='body' && d.column.index>0 && d.column.index<8) d.cell.styles.halign='center';
+      if(d.section==='head' && dias[d.column.index-1] && dias[d.column.index-1].iso===hoyIso) d.cell.styles.fillColor=[62,94,145]; } });
+  let yL=doc.lastAutoTable.finalY+7;
+
+  // Pendientes prioritarios (debajo, izquierda)
+  const pend=[];
+  dI.forEach(it=>{ if(!hecho('d:'+hoyIso,it) && dias.some(d=>d.iso===hoyIso)) pend.push(['Hoy',it.title]); });
+  sI.forEach(it=>{ if(!hecho(semKey,it)) pend.push(['Semana',it.title]); });
+  qI.forEach(it=>{ if(!hecho(qKey,it)) pend.push(['Quincena',it.title]); });
+  mI.forEach(it=>{ if(!hecho(perMes,it)) pend.push(['Mes',it.title]); });
+  pI.forEach(it=>{ if(!hecho(perMes,it)) pend.push(['Pago',it.title]); });
+  titulo('Pendientes', xL, yL, 0, 0);
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...GRIS);
+  doc.text(pend.length? pend.length+' actividad'+(pend.length>1?'es':'')+' sin cerrar en el periodo' : 'Todo al día en el periodo', xL+24, yL);
+  const maxPend = Math.max(0, Math.floor((H-14-(yL+3))/5.2)-1);
+  const listaPend = pend.slice(0, maxPend);
+  if(pend.length>maxPend && maxPend>0) listaPend[maxPend-1]=['…','y '+(pend.length-maxPend+1)+' más'];
+  if(listaPend.length){
+    doc.autoTable({ ...estiloTabla, startY:yL+2, margin:{left:xL}, tableWidth:wL, head:[], body:listaPend,
+      columnStyles:{0:{cellWidth:22,textColor:AMBAR,fontStyle:'bold'},1:{halign:'left'}} });
+  }
+
+  // Columna derecha: semanales, quincenales, mensuales y pagos en una sola tabla
+  const xR=xL+wL+8, wR=W-12-xR;
+  const bloques=[
+    ['Semanales · semana en curso', sI, semKey, sOk],
+    ['Quincenales · '+(qKey===q1?'1 al 15':'16 a fin de mes'), qI, qKey, qOk],
+    ['Mensuales', mI, perMes, mOk],
+    ['Pagos del mes', pI, perMes, pOk]
+  ].filter(b=>b[1].length);
+  const cuerpoR=[];
+  bloques.forEach(([nom,its,per,ok])=>{
+    const p=pct(ok,its.length);
+    cuerpoR.push([{content:nom, styles:{fontStyle:'bold',textColor:AZUL,fillColor:AZUL_S,fontSize:7.6}},
+                  {content:ok+'/'+its.length+' · '+p+'%', styles:{fontStyle:'bold',textColor:colorPct(p),fillColor:AZUL_S,halign:'right',fontSize:7.4}}]);
+    its.forEach(it=>cuerpoR.push([it.title, est(per,it)]));
+  });
+  doc.autoTable({ ...estiloTabla, startY:yT+2, margin:{left:xR}, tableWidth:wR,
+    head:[[{content:'Actividad',styles:{halign:'left'}},'Estado']], body:cuerpoR,
+    columnStyles:{0:{halign:'left'},1:{cellWidth:24,halign:'center'}} });
+  doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(...AZUL);
+  doc.text('Periódicas', xR, yT);
+
+  // Pie: leyenda y fuente
+  const yP=H-7;
+  doc.setDrawColor(...LINEA); doc.setLineWidth(0.2); doc.line(12,yP-4,W-12,yP-4);
+  doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(...GRIS);
+  doc.setFillColor(...VERDE); doc.circle(14,yP-1.2,1.2,'F'); doc.text('Cumplida',17,yP);
+  doc.setDrawColor(...AMBAR); doc.setFillColor(254,243,199); doc.circle(35,yP-1.2,1.2,'FD'); doc.text('Parcial',38,yP);
+  doc.setDrawColor(...ROJO); doc.circle(53,yP-1.2,1.2,'S'); doc.text('Pendiente',56,yP);
+  doc.text('Días sin marca en la cuadrícula: todavía no llegan.',74,yP);
+  doc.text('Generado '+hoy.toLocaleDateString('es-CO')+' '+hoy.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})+' · Tablero HH',W-12,yP,{align:'right'});
+
+  doc.save(`${hoyIso}_Checklist_Informe_Sem${semIdx+1}_${mesKey}.pdf`);
+}
+
 // Versión compacta para el Tablero: lo que toca HOY, esta semana, esta quincena y este mes
 function ckHoyHtml(){
   loadChecklist();
@@ -3091,6 +3294,7 @@ function ckHoyHtml(){
           <div ${click} title="${ro?'':'Marcar'}" style="width:17px;height:17px;border-radius:50%;flex-shrink:0;${ro?'':'cursor:pointer;'}border:2px solid ${ok?'#16a34a':(v>0?'#EF9F27':'#cbd5e1')};background:${ok?'#16a34a':'none'};display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px">${ok?'✓':''}</div>
           <span style="font-size:12px;flex:1;line-height:1.35;color:${ok?'#94a3b8':'#1e293b'};${ok?'text-decoration:line-through':''}">${escapeHtml(it.title)}</span>
           ${m>1?`<span style="font-size:10px;color:var(--text3)">${v}/${m}</span>`:''}
+          ${ro?'':`<button onclick="deleteCkItem('${it.id}')" title="Eliminar esta actividad del checklist" style="background:none;border:none;font-size:15px;cursor:pointer;color:#cbd5e1;padding:0 2px;line-height:1">×</button>`}
         </div>`;
       }).join('')}
       </div>
@@ -3099,7 +3303,10 @@ function ckHoyHtml(){
   if(!html) return '';
   return `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin:22px 0 10px;display:flex;align-items:center;gap:8px">
       Checklist <span style="font-weight:500;text-transform:none;letter-spacing:0">· ${hoy.toLocaleDateString('es-CO',{weekday:'long',day:'numeric',month:'short'})}</span>
-      <a href="#" onclick="showSection('checklist');return false;" style="margin-left:auto;font-size:11px;font-weight:600;text-transform:none;letter-spacing:0;color:#2d4a7a;text-decoration:none">ver completo →</a>
+      <span style="margin-left:auto;display:flex;gap:4px;align-items:center;text-transform:none;letter-spacing:0">
+        <button onclick="ckPdf()" title="Informe de una hoja con la semana y el mes en curso" style="height:22px;padding:0 9px;font-size:10.5px;font-weight:600;border:1px solid #c5d3e8;border-radius:6px;background:#fff;color:#2d4a7a;cursor:pointer;font-family:inherit">📄 Informe PDF</button>
+        <a href="#" onclick="showSection('checklist');return false;" style="margin-left:6px;font-size:11px;font-weight:600;color:#2d4a7a;text-decoration:none">ver completo →</a>
+      </span>
     </div>${html}`;
 }
 
