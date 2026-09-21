@@ -9985,8 +9985,8 @@ function closeBackupModal(){
 
     const identificadorGlobal = numeroCertificado || numeroManifiesto;
     if (identificadorGlobal) {
-      const yaExiste = registros.some(r => r.entregas.some(e => (e.numeroCertificado || e.numeroManifiesto) === identificadorGlobal))
-        || materialesSinActa.some(m => (m.numeroCertificado || m.numeroManifiesto) === identificadorGlobal);
+      const yaExiste = registros.some(r => r.entregas.some(e => mismoCert(e.numeroCertificado || e.numeroManifiesto, identificadorGlobal)))
+        || materialesSinActa.some(m => mismoCert(m.numeroCertificado || m.numeroManifiesto, identificadorGlobal));
       if (yaExiste) {
         const tipoTexto = numeroCertificado ? 'certificado' : 'manifiesto';
         const confirmarReemplazo = confirm(`El ${tipoTexto} N°${identificadorGlobal} ya está cargado en el sistema.\n\n¿Quieres subirlo de nuevo y reemplazar lo que ya tenías?`);
@@ -10342,8 +10342,8 @@ function closeBackupModal(){
     if (faltaValor) { alert(`Falta la cantidad de "${faltaValor.m.nombre}".`); return; }
 
     // Mismo número ya cargado: se reemplaza en vez de duplicar
-    const yaExiste = registros.some(r => r.entregas.some(e => e.numeroCertificado === numero))
-      || materialesSinActa.some(m => m.numeroCertificado === numero);
+    const yaExiste = registros.some(r => r.entregas.some(e => mismoCert(e.numeroCertificado, numero)))
+      || materialesSinActa.some(m => mismoCert(m.numeroCertificado, numero));
     if (yaExiste) {
       const ok = confirm(`El certificado N°${numero} ya está cargado.\n\n¿Quieres reemplazar lo que ya tenías con lo que acabas de marcar?`);
       if (!ok) return;
@@ -10372,7 +10372,7 @@ function closeBackupModal(){
         urlDrive, provisional: false, fecha
       };
       if (m.reg) {
-        m.reg.entregas = m.reg.entregas.filter(e => e.numeroCertificado !== numero);
+        m.reg.entregas = m.reg.entregas.filter(e => !mismoCert(e.numeroCertificado, numero));
         m.reg.entregas.push(entrega);
         cruzados++;
       } else {
@@ -10598,6 +10598,23 @@ function closeBackupModal(){
     document.getElementById('modal-entregas').style.display = 'flex';
   }
 
+  function eliminarEntrega(nombreMat, actaId, i) {
+    const reg = registros.find(r => r.actaId === actaId && r.nombre === nombreMat);
+    if (!reg || !reg.entregas[i]) return;
+    const e = reg.entregas[i];
+    const desc = (e.numeroCertificado ? 'certificado N°' + e.numeroCertificado : 'sin número') +
+      (e.pesoKg != null ? ' · ' + e.pesoKg.toLocaleString('es-CO') + ' kg' : '') +
+      (e.unidades != null ? ' · ' + e.unidades.toLocaleString('es-CO') + ' und' : '');
+    if (!confirm('¿Eliminar esta entrega de "' + reg.nombre + '"?\n\n' + desc +
+      '\n\nDeja de contar en la sábana. El PDF en Drive no se toca.')) return;
+    reg.entregas.splice(i, 1);
+    const acta = actas.find(a => a.id === actaId);
+    render();
+    if (acta) guardarMes(acta.mesIndex, acta.año);
+    if (reg.entregas.length > 0) verEntregas(nombreMat, actaId);
+    else document.getElementById('modal-entregas').style.display = 'none';
+  }
+
   function verEntregas(nombreMat, actaId) {
     const reg = registros.find(r => r.actaId === actaId && r.nombre === nombreMat);
     if (!reg || reg.entregas.length === 0) return;
@@ -10614,8 +10631,13 @@ function closeBackupModal(){
       if (e.pesoKg !== null && e.pesoKg !== undefined) partes.push(`${e.pesoKg.toLocaleString('es-CO')} kg`);
       if (e.unidades !== null && e.unidades !== undefined) partes.push(`${e.unidades.toLocaleString('es-CO')} und`);
       const link = e.urlDrive ? `<a href="${e.urlDrive}" target="_blank" rel="noopener" style="color:var(--azul);">ver PDF en Drive</a>` : '<span class="actas-dif-vacio">sin PDF guardado</span>';
+      const repetido = e.numeroCertificado && reg.entregas.some((o, j) => j !== i && mismoCert(o.numeroCertificado, e.numeroCertificado));
+      const aviso = repetido ? ' <span style="color:var(--rojo-texto); font-weight:700;">· repetido</span>' : '';
+      const borrar = (typeof isViewer !== 'undefined' && isViewer) ? '' :
+        `<button type="button" onclick="eliminarEntrega('${reg.nombre.replace(/'/g, "\\'")}', '${reg.actaId}', ${i})" style="float:right; background:none; border:1px solid var(--borde); border-radius:6px; color:var(--rojo-texto); font-size:11px; padding:3px 8px; cursor:pointer; font-family:inherit;">eliminar</button>`;
       return `<div style="padding:8px 0; border-bottom:1px solid var(--borde); font-size:12.5px;">
-        <div>${i + 1}. ${e.proveedor || 'Sin proveedor'} — ${cert}${manif}${etiquetaProvisional}</div>
+        ${borrar}
+        <div>${i + 1}. ${e.proveedor || 'Sin proveedor'} — ${cert}${manif}${etiquetaProvisional}${aviso}</div>
         <div style="color:var(--texto-suave);">${partes.join(' · ')} — ${fecha}</div>
         <div style="margin-top:3px;">${link}</div>
       </div>`;
@@ -10702,6 +10724,17 @@ function closeBackupModal(){
 
   // Conceptos de facturacion que no son material fisico: se cobran, pero
   // nunca llevan certificado de destruccion (transporte, fletes, etc.).
+  // "N° 0000021", "21" y "000021" son el mismo certificado
+  function normCert(n) {
+    return String(n == null ? '' : n).toLowerCase()
+      .replace(/n[°º.o]*\s*/g, '').replace(/[^0-9a-z]/g, '').replace(/^0+(?=.)/, '');
+  }
+
+  function mismoCert(a, b) {
+    const x = normCert(a), y = normCert(b);
+    return x !== '' && x === y;
+  }
+
   function esConceptoSinCertificado(nombre) {
     return normalizar(nombre).includes('transporte');
   }
@@ -11290,6 +11323,9 @@ function closeBackupModal(){
     if (valorStr === null) { if (estadoDiv) estadoDiv.style.display = 'none'; return; }
     const val = parseFloat(String(valorStr).replace(/\./g, '').replace(',', '.'));
     if (isNaN(val)) { alert('Valor inválido.'); return; }
+    if (numero && reg.entregas.some(e => mismoCert(e.numeroCertificado, numero))) {
+      if (!confirm('El soporte N°' + numero.trim() + ' ya está registrado en "' + reg.nombre + '".\n\nSi lo agregas otra vez se va a contar dos veces. ¿Agregarlo de todas formas?')) return;
+    }
     reg.entregas.push({ proveedor: 'Manual', numeroCertificado: numero ? numero.trim() : null, numeroManifiesto: null, pesoKg: esUnd ? null : val, unidades: esUnd ? val : null, urlDrive, provisional: false, fecha: Date.now() });
     render();
     if (acta) guardarMes(acta.mesIndex, acta.año);
@@ -12007,6 +12043,7 @@ function closeBackupModal(){
   window.procesarAdjuntoCafeteria = procesarAdjuntoCafeteria;
   window.cafDescargar = cafDescargar;
   window.procesarUnionCafeteria = procesarUnionCafeteria;
+  window.eliminarEntrega = eliminarEntrega;
   window.agregarAnexoMaterial = agregarAnexoMaterial;
   window.procesarAnexoMaterial = procesarAnexoMaterial;
 })();
