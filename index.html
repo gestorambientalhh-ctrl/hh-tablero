@@ -734,6 +734,21 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
     font-weight:700; text-decoration:none; background:var(--verde-bg); color:var(--verde-texto);
     border:1px solid var(--verde-texto); border-radius:4px; padding:3px 5px; white-space:nowrap; }
   a.actas-chip-cert:hover { background:var(--verde-texto); color:#fff; }
+  tr.caf-sub td { background:#f7f9fc; padding-top:4px; padding-bottom:4px; }
+  .caf-sub-nombre { padding-left:26px !important; font-size:12px; color:var(--texto-suave); }
+  .caf-sub-celda { white-space:nowrap; }
+  .caf-chip { display:inline-block; font-size:10.5px; font-weight:700; line-height:1; padding:4px 6px; margin:1px 2px;
+    border-radius:5px; border:1px solid var(--borde); background:#fff; color:var(--texto-suave); cursor:pointer;
+    font-family:inherit; text-decoration:none; }
+  .caf-chip-ok { background:var(--verde-bg); color:var(--verde-texto); border-color:var(--verde-texto); }
+  .caf-chip-falta { background:var(--amarillo-bg); color:var(--amarillo-texto); border-color:var(--amarillo-texto); }
+  .caf-chip-nuevo { color:var(--azul); border-style:dashed; }
+  .caf-chip:hover { filter:brightness(0.96); }
+  .obs-caja { border:1px solid var(--borde); border-radius:10px; padding:16px; margin-top:18px; background:#fff; }
+  .obs-item { border-top:1px solid var(--borde); padding:10px 0; }
+  .obs-item:first-child { border-top:none; }
+  .obs-tag { font-size:10.5px; font-weight:600; padding:2px 7px; border-radius:5px; background:var(--azul-bg, #e6edf5); color:var(--azul); }
+  .obs-tag-gen { background:var(--gris-calido); color:var(--texto-suave); }
   .caf-fila { border:1px solid var(--borde); border-radius:8px; padding:10px 12px; margin-bottom:10px; }
   .caf-doc { font-size:11.5px; font-weight:600; border:1px solid var(--borde); border-radius:6px; padding:5px 9px;
     background:#fff; color:var(--texto-suave); cursor:pointer; font-family:inherit; text-decoration:none; display:inline-block; }
@@ -1931,9 +1946,37 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
 
   <p class="actas-nota">
     Haz clic en el badge de "Acta de conciliación" para marcar OK/Pendiente a mano.
-    Si un mes tiene más de una versión, aparece "(v2 · ver historial)" — haz clic para ver las versiones anteriores.
-    Haz clic en el peso de un material para anotar el peso certificado por el proveedor.
+    Los certificados se registran con el botón "Registrar certificado". Si subes otra acta del mismo mes, reemplaza a la anterior y conserva los certificados.
   </p>
+
+  <div class="obs-caja">
+    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+      <strong style="font-size:14px; color:var(--azul);">Observaciones</strong>
+      <span id="obs-contador" style="font-size:11.5px; color:var(--texto-suave);"></span>
+      <span style="flex-grow:1;"></span>
+      <label style="font-size:11.5px; color:var(--texto-suave);">Ver
+        <select id="obs-filtro" onchange="renderObservaciones()" style="height:28px; border:1px solid var(--borde); border-radius:6px; font-size:12px; font-family:inherit; margin-left:4px;">
+          <option value="">Todas</option>
+          <option value="0">Enero</option><option value="1">Febrero</option><option value="2">Marzo</option>
+          <option value="3">Abril</option><option value="4">Mayo</option><option value="5">Junio</option>
+          <option value="6">Julio</option><option value="7">Agosto</option><option value="8">Septiembre</option>
+          <option value="9">Octubre</option><option value="10">Noviembre</option><option value="11">Diciembre</option>
+        </select>
+      </label>
+    </div>
+    <div id="obs-form" style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
+      <textarea id="obs-texto" rows="3" onkeydown="obsTeclado(event)" placeholder="Ej: Quedamos en que Madera y Retal de Madera se registran como Retal/Madera. (Ctrl+Enter para guardar)"
+        style="width:100%; box-sizing:border-box; border:1px solid var(--borde); border-radius:8px; padding:9px 11px; font-size:13px; font-family:inherit; resize:vertical;"></textarea>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <select id="obs-autor" aria-label="Quién escribe" style="height:32px; border:1px solid var(--borde); border-radius:7px; font-size:12.5px; font-family:inherit; padding:0 8px;"></select>
+        <select id="obs-mes" aria-label="Mes" style="height:32px; border:1px solid var(--borde); border-radius:7px; font-size:12.5px; font-family:inherit; padding:0 8px;"></select>
+        <span style="flex-grow:1;"></span>
+        <button type="button" id="obs-btn" onclick="agregarObservacion()" class="actas-btn">Guardar observación</button>
+      </div>
+    </div>
+    <div id="obs-estado" class="actas-estado-carga actas-estado-error" style="display:none;"></div>
+    <div id="obs-lista"></div>
+  </div>
 
 </div>
 
@@ -10699,7 +10742,7 @@ function closeBackupModal(){
       const res = resumenCafeteria(mesIndex);
       const claseBadge = res.clase === 'ok' ? 'actas-badge-ok' : (res.clase === 'medio' ? 'actas-badge-amarillo' : 'actas-badge-pendiente');
       const claseChip = res.clase === 'ok' ? 'actas-chip-cert' : 'actas-chip-falta';
-      return `<td class="actas-celda-mat"><button class="actas-badge ${claseBadge}" onclick="abrirSoportesCafeteria(${mesIndex})" title="Clic para ver y adjuntar manifiesto, anexo y acta">${cantidad}</button><span class="${claseChip}" title="Estado de los soportes de este mes">${res.texto}</span></td>`;
+      return `<td class="actas-celda-mat"><button class="actas-badge ${claseBadge}" onclick="cafToggle()" title="Clic para ${_cafExpandido ? 'recoger' : 'desplegar'} manifiestos, anexos y actas">${_cafExpandido ? '▾' : '▸'} ${cantidad}</button><span class="${claseChip}" title="Estado de los soportes de este mes">${res.texto}</span></td>`;
     }
 
     // ── Concepto que no lleva certificado: solo la cantidad, en gris ──
@@ -10927,11 +10970,10 @@ function closeBackupModal(){
     const ref = _cafRef;
     if (!file || !ref || _cafMes === null) return;
     const m = cafMes(_cafMes);
-    const it = m.items[ref.i];
-    if (!it) return;
+    const esNuevo = ref.i === 'nuevo';
+    if (!esNuevo && !m.items[ref.i]) return;
 
-    const est = document.getElementById('caf-estado');
-    est.style.display = 'block';
+    const est = cafEstadoDiv();
     est.className = 'actas-estado-carga actas-estado-cargando';
     est.textContent = `Subiendo ${file.name} a Drive…`;
 
@@ -10942,12 +10984,16 @@ function closeBackupModal(){
       est.textContent = 'No se pudo subir el archivo a Drive. Intenta otra vez.';
       return;
     }
-    it[ref.parte] = { url, nombre: file.name, fecha: Date.now() };
+    const archivo = { url, nombre: file.name, fecha: Date.now() };
+    if (esNuevo) {
+      m.items.push({ id: 'cm' + Date.now(), numero: '', manifiesto: archivo, anexo: null, acta: null });
+    } else {
+      m.items[ref.i][ref.parte] = archivo;
+    }
     guardarSoportesCafeteria();
-    renderSoportesCafeteria();
     render();
     est.className = 'actas-estado-carga actas-estado-ok';
-    est.textContent = 'Archivo guardado en Drive.';
+    est.textContent = `${file.name} quedó guardado en Drive (${MESES_LARGOS[_cafMes]}).`;
   }
 
   // ── Descargar unido ──
@@ -10981,8 +11027,7 @@ function closeBackupModal(){
     const ref = _cafRef;
     if (elegidos.length === 0 || !ref || _cafMes === null) return;
 
-    const est = document.getElementById('caf-estado');
-    est.style.display = 'block';
+    const est = cafEstadoDiv();
     est.className = 'actas-estado-carga actas-estado-cargando';
 
     if (typeof PDFLib === 'undefined') {
@@ -11026,6 +11071,7 @@ function closeBackupModal(){
           m.unidos[ref.alcance] = { url, nombre, fecha: Date.now() };
           guardarSoportesCafeteria();
           est.innerHTML = `Listo: <b>${escapeHtml(nombre)}</b> se descargó y quedó en Drive. <a href="${url}" target="_blank" rel="noopener" style="color:var(--azul); font-weight:600;">verlo</a>`;
+          render();
         } else {
           est.textContent = `Listo: ${nombre} se descargó (no se pudo subir la copia a Drive).`;
         }
@@ -11037,6 +11083,96 @@ function closeBackupModal(){
       est.className = 'actas-estado-carga actas-estado-error';
       est.textContent = 'No se pudieron unir los PDF. Revisa que todos sean PDF válidos y que ninguno tenga contraseña.';
     }
+  }
+
+  // ── Cafetería desplegable en la sábana (como agrupar filas en Excel) ──
+  // Clic en el valor de Cafetería → aparecen debajo Manifiestos, Anexos y Actas.
+  let _cafExpandido = localStorage.getItem('hh-caf-expandido') === '1';
+
+  function cafToggle() {
+    _cafExpandido = !_cafExpandido;
+    try { localStorage.setItem('hh-caf-expandido', _cafExpandido ? '1' : '0'); } catch (e) {}
+    render();
+  }
+
+  // Estado visible: la franja de mensajes de arriba de la sábana
+  function cafEstadoDiv() {
+    const est = document.getElementById('estado-carga');
+    est.style.display = 'block';
+    return est;
+  }
+
+  function cafMesTieneCafeteria(mesIndex) {
+    const acta = actaActivaDeMes(mesIndex);
+    if (acta && registros.some(r => r.actaId === acta.id && esCafeteria(r.nombre))) return true;
+    return !!(soportesCafeteria[mesIndex] && cafMes(mesIndex).items.length);
+  }
+
+  function cafSubir(mesIndex, k, parte) {
+    _cafMes = mesIndex;
+    cafAdjuntar(k, parte);
+  }
+
+  function cafNuevoManifiesto(mesIndex) {
+    _cafMes = mesIndex;
+    _cafRef = { i: 'nuevo', parte: 'manifiesto' };
+    const inp = document.getElementById('input-caf-doc');
+    inp.value = '';
+    inp.click();
+  }
+
+  function cafDescargarMes(mesIndex, alcance) {
+    _cafMes = mesIndex;
+    cafDescargar(alcance);
+  }
+
+  function cafCeldaParte(mesIndex, parte) {
+    if (!cafMesTieneCafeteria(mesIndex)) return '<td><span class="actas-dif-vacio">—</span></td>';
+    const items = soportesCafeteria[mesIndex] ? cafMes(mesIndex).items : [];
+    let chips = items.map((it, k) => {
+      const d = it[parte];
+      if (cafTiene(d)) {
+        return `<a class="caf-chip caf-chip-ok" href="${d.url}" target="_blank" rel="noopener" title="${escapeHtml(d.nombre || '')}${it.numero ? ' · N° ' + escapeHtml(it.numero) : ''}">${k + 1} ✓</a>`;
+      }
+      // anexo y acta solo se piden cuando su manifiesto ya existe (regla uno a uno)
+      if (parte !== 'manifiesto' && cafTiene(it.manifiesto)) {
+        return `<button type="button" class="caf-chip caf-chip-falta" onclick="cafSubir(${mesIndex}, ${k}, '${parte}')" title="Subir ${parte} del manifiesto ${k + 1}">${k + 1} +</button>`;
+      }
+      return '';
+    }).join('');
+    if (parte === 'manifiesto') {
+      chips += `<button type="button" class="caf-chip caf-chip-nuevo" onclick="cafNuevoManifiesto(${mesIndex})" title="Agregar un manifiesto">+</button>`;
+    }
+    return `<td class="caf-sub-celda">${chips || '<span class="actas-dif-vacio">—</span>'}</td>`;
+  }
+
+  function cafCeldaDescarga(mesIndex) {
+    const items = soportesCafeteria[mesIndex] ? cafMes(mesIndex).items : [];
+    const hayMani = items.some(it => cafTiene(it.manifiesto));
+    const hayActa = items.some(it => cafTiene(it.manifiesto) && cafTiene(it.acta));
+    if (!hayMani) return '<td><span class="actas-dif-vacio">—</span></td>';
+    return `<td class="caf-sub-celda">
+      <button type="button" class="caf-chip" onclick="cafDescargarMes(${mesIndex}, 'parcial')" title="Une cada manifiesto con su anexo en un PDF">M+A</button>
+      ${hayActa ? `<button type="button" class="caf-chip" onclick="cafDescargarMes(${mesIndex}, 'completo')" title="Une manifiesto, anexo y acta en un PDF">Todo</button>` : ''}
+    </td>`;
+  }
+
+  function cafSubFilas() {
+    const filas = [
+      { parte: 'manifiesto', etiqueta: 'Manifiestos' },
+      { parte: 'anexo', etiqueta: 'Anexos' },
+      { parte: 'acta', etiqueta: 'Actas' }
+    ];
+    let html = '';
+    filas.forEach(f => {
+      html += `<tr class="caf-sub"><td class="actas-nombre-material caf-sub-nombre">↳ ${f.etiqueta}</td>`;
+      for (let i = 0; i < MESES.length; i++) html += cafCeldaParte(i, f.parte);
+      html += '<td></td></tr>';
+    });
+    html += `<tr class="caf-sub"><td class="actas-nombre-material caf-sub-nombre">↳ Descargar unido</td>`;
+    for (let i = 0; i < MESES.length; i++) html += cafCeldaDescarga(i);
+    html += '<td></td></tr>';
+    return html;
   }
 
   function guardarManifiestos() {
@@ -11215,6 +11351,7 @@ function closeBackupModal(){
       }
       html += `<td class="actas-total">${conCert ? `<span class="${total === 0 ? 'actas-dif-ok' : 'actas-dif-mal'}">${total.toLocaleString('es-CO')} ${sufijoTotal}</span>` : '<span class="actas-dif-vacio">—</span>'}</td>`;
       html += '</tr>';
+      if (_cafExpandido && esCafeteria(mat.nombre)) html += cafSubFilas();
     });
 
     // Fila especial: Manifiestos — reemplazada por el flujo de Cafetería y Sanitarios
@@ -11399,6 +11536,140 @@ function closeBackupModal(){
     } catch (err) { /* sin soportes de cafetería guardados aún */ }
   }
 
+  // ─── OBSERVACIONES COMPARTIDAS ────────────────────────────
+  // Bitácora de acuerdos al pie de la sábana. Vive en Firebase y se
+  // escucha en vivo: lo que escriba uno lo ven todos al instante.
+  let observaciones = [];
+  let _obsEscuchando = false;
+
+  function obsRef() {
+    const { doc } = firestoreFns;
+    return doc(db, 'hh-actas-meta', 'observaciones');
+  }
+
+  function escucharObservaciones() {
+    if (_obsEscuchando || !db || !firestoreFns) return;
+    _obsEscuchando = true;
+    firestoreFns.onSnapshot(obsRef(), snap => {
+      const d = snap.exists() ? snap.data() : null;
+      observaciones = d && Array.isArray(d.lista) ? d.lista : [];
+      renderObservaciones();
+    }, err => {
+      console.error('Error escuchando observaciones:', err);
+      const e = document.getElementById('obs-estado');
+      if (e) { e.style.display = 'block'; e.textContent = 'Se perdió la conexión con las observaciones. Recarga la página.'; }
+    });
+  }
+
+  function obsPintarFormulario() {
+    const selAutor = document.getElementById('obs-autor');
+    const selMes = document.getElementById('obs-mes');
+    if (!selAutor || !selMes) return;
+    if (!selAutor.options.length) {
+      const nombres = (typeof getUsers === 'function' ? getUsers() : []).map(u => u.name).filter(Boolean);
+      selAutor.innerHTML = nombres.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+      const ultimo = localStorage.getItem('hh-obs-autor');
+      if (ultimo && nombres.includes(ultimo)) selAutor.value = ultimo;
+    }
+    if (!selMes.options.length) {
+      selMes.innerHTML = '<option value="">General</option>' +
+        MESES.map((m, i) => `<option value="${i}">${MESES_LARGOS[i].charAt(0).toUpperCase() + MESES_LARGOS[i].slice(1)}</option>`).join('');
+    }
+    const soloLectura = typeof isViewer !== 'undefined' && isViewer;
+    document.getElementById('obs-form').style.display = soloLectura ? 'none' : 'flex';
+  }
+
+  function renderObservaciones() {
+    const cont = document.getElementById('obs-lista');
+    if (!cont) return;
+    obsPintarFormulario();
+    const filtro = (document.getElementById('obs-filtro') || {}).value || '';
+    const soloLectura = typeof isViewer !== 'undefined' && isViewer;
+
+    let lista = [...observaciones].sort((a, b) => (b.fecha || 0) - (a.fecha || 0));
+    if (filtro !== '') lista = lista.filter(o => String(o.mes) === filtro);
+
+    document.getElementById('obs-contador').textContent = observaciones.length
+      ? `${observaciones.length} observación${observaciones.length > 1 ? 'es' : ''}` : '';
+
+    if (!lista.length) {
+      cont.innerHTML = `<p style="font-size:12.5px; color:var(--texto-suave); margin:6px 0;">${observaciones.length ? 'No hay observaciones para ese mes.' : 'Todavía no hay observaciones. Anota aquí lo que se acuerde para que todo el equipo lo vea.'}</p>`;
+      return;
+    }
+
+    cont.innerHTML = lista.map(o => {
+      const f = o.fecha ? new Date(o.fecha) : null;
+      const cuando = f ? f.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' +
+        f.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : '';
+      const mes = (o.mes !== '' && o.mes !== null && o.mes !== undefined && MESES_LARGOS[o.mes])
+        ? `<span class="obs-tag">${MESES_LARGOS[o.mes].charAt(0).toUpperCase() + MESES_LARGOS[o.mes].slice(1)}</span>` : '<span class="obs-tag obs-tag-gen">General</span>';
+      const borrar = soloLectura ? '' :
+        `<button type="button" onclick="borrarObservacion('${o.id}')" title="Eliminar" style="background:none; border:none; color:var(--texto-suave); font-size:15px; line-height:1; cursor:pointer; padding:0 2px;">&times;</button>`;
+      return `<div class="obs-item">
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px;">
+          <strong style="font-size:12.5px;">${escapeHtml(o.autor || 'Sin autor')}</strong>
+          ${mes}
+          <span style="font-size:11px; color:var(--texto-suave);">${cuando}</span>
+          <span style="flex-grow:1;"></span>
+          ${borrar}
+        </div>
+        <div style="font-size:13px; white-space:pre-wrap; line-height:1.5;">${escapeHtml(o.texto || '')}</div>
+      </div>`;
+    }).join('');
+  }
+
+  async function agregarObservacion() {
+    const txt = document.getElementById('obs-texto');
+    const texto = txt.value.trim();
+    if (!texto) { txt.focus(); return; }
+    const autor = document.getElementById('obs-autor').value || '';
+    const mesVal = document.getElementById('obs-mes').value;
+    const est = document.getElementById('obs-estado');
+    if (!db || !firestoreFns) {
+      est.style.display = 'block';
+      est.textContent = 'No hay conexión con Firebase: la observación no se puede compartir. Recarga la página.';
+      return;
+    }
+    const obs = {
+      id: 'obs' + Date.now() + Math.random().toString(36).slice(2, 6),
+      texto, autor,
+      mes: mesVal === '' ? '' : parseInt(mesVal, 10),
+      fecha: Date.now()
+    };
+    localStorage.setItem('hh-obs-autor', autor);
+    const btn = document.getElementById('obs-btn');
+    btn.disabled = true;
+    try {
+      const { setDoc, arrayUnion } = firestoreFns;
+      // arrayUnion: si dos personas escriben a la vez, no se pisan
+      await setDoc(obsRef(), { lista: arrayUnion(obs) }, { merge: true });
+      txt.value = '';
+      est.style.display = 'none';
+    } catch (err) {
+      console.error('Error guardando observación:', err);
+      est.style.display = 'block';
+      est.textContent = 'No se pudo guardar la observación. Tu texto sigue en el recuadro, intenta otra vez.';
+    }
+    btn.disabled = false;
+  }
+
+  async function borrarObservacion(id) {
+    const obs = observaciones.find(o => o.id === id);
+    if (!obs) return;
+    if (!confirm('¿Eliminar esta observación? Se borra para todo el equipo.')) return;
+    try {
+      const { setDoc, arrayRemove } = firestoreFns;
+      await setDoc(obsRef(), { lista: arrayRemove(obs) }, { merge: true });
+    } catch (err) {
+      console.error('Error borrando observación:', err);
+      alert('No se pudo eliminar. Revisa la conexión.');
+    }
+  }
+
+  function obsTeclado(ev) {
+    if (ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey)) { ev.preventDefault(); agregarObservacion(); }
+  }
+
   async function iniciar() {
     const estadoDiv = document.getElementById('estado-carga');
     try {
@@ -11413,6 +11684,7 @@ function closeBackupModal(){
       estadoDiv.textContent = 'Cargando datos guardados...';
 
       await cargarTodoDesdeFirebase();
+      escucharObservaciones();
 
       estadoDiv.style.display = 'none';
     } catch (err) {
@@ -11422,6 +11694,7 @@ function closeBackupModal(){
       estadoDiv.textContent = 'No se pudo conectar a Firebase — revisa la configuración. Trabajando solo en memoria por ahora.';
     }
     render();
+    renderObservaciones();
   }
 
   iniciar();
@@ -11717,6 +11990,14 @@ function closeBackupModal(){
   window.eliminarManifiesto = eliminarManifiesto;
   window.adjuntarActaManifiesto = adjuntarActaManifiesto;
   window.procesarActaManifiesto = procesarActaManifiesto;
+  window.agregarObservacion = agregarObservacion;
+  window.borrarObservacion = borrarObservacion;
+  window.renderObservaciones = renderObservaciones;
+  window.obsTeclado = obsTeclado;
+  window.cafToggle = cafToggle;
+  window.cafSubir = cafSubir;
+  window.cafNuevoManifiesto = cafNuevoManifiesto;
+  window.cafDescargarMes = cafDescargarMes;
   window.abrirSoportesCafeteria = abrirSoportesCafeteria;
   window.cerrarSoportesCafeteria = cerrarSoportesCafeteria;
   window.cafAdjuntar = cafAdjuntar;
