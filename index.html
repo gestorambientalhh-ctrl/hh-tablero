@@ -1380,25 +1380,21 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
           </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:3px">
-          <label style="font-size:11px;color:var(--text2)">Fecha límite</label>
+          <label style="font-size:11px;color:var(--text2)">Fecha</label>
           <input id="fl-date" type="date" style="height:32px;font-size:12px;border:1px solid var(--border);border-radius:8px;padding:0 8px;font-family:inherit;outline:none;color:var(--text);background:var(--bg2)">
         </div>
-        <div style="display:flex;flex-direction:column;gap:3px">
-          <label style="font-size:11px;color:var(--text2)">Responsable</label>
-          <select id="fl-who" style="height:32px;font-size:12px;border:1px solid var(--border);border-radius:8px;padding:0 8px;font-family:inherit;color:var(--text);background:var(--bg2)"></select>
-        </div>
         <div style="flex:1;min-width:120px;display:flex;flex-direction:column;gap:3px">
-          <label style="font-size:11px;color:var(--text2)">Soporte requerido</label>
-          <input id="fl-soporte" type="text" placeholder="Ej: Factura, recibo..." style="height:32px;font-size:13px;border:1px solid var(--border);border-radius:8px;padding:0 10px;font-family:inherit;outline:none;color:var(--text);background:var(--bg2)">
+          <label style="font-size:11px;color:var(--text2)">Soporte (opcional)</label>
+          <input id="fl-soporte-file" type="file" accept="image/*,.pdf" multiple onchange="flSoporteCambio()" style="height:32px;font-size:12px;border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-family:inherit;color:var(--text2);background:var(--bg2)">
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#eef2f9;border-radius:8px;font-size:11px;color:#2d4a7a;margin-bottom:10px">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        Esta tarea se añadirá al <strong id="fl-biz-hint" style="margin:0 3px">Tablero</strong> como tarea de flujo con soporte requerido.
+        <span id="fl-soporte-hint">Sin soporte: se registra en el Sheet de <strong id="fl-biz-hint" style="margin:0 3px">Gestor HH</strong> como pendiente de soporte (fila amarilla). No se envía al Tablero.</span>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button onclick="closeFlujoForm()" style="height:32px;padding:0 14px;font-size:12px;border:1px solid var(--border);border-radius:8px;background:none;cursor:pointer;color:var(--text2);font-family:inherit">Cancelar</button>
-        <button onclick="saveFlujoTask()" style="height:32px;padding:0 16px;font-size:12px;font-weight:500;background:#2d4a7a;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit">Crear y enviar al tablero →</button>
+        <button onclick="saveFlujoTask()" style="height:32px;padding:0 16px;font-size:12px;font-weight:500;background:#2d4a7a;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit">Crear y registrar →</button>
       </div>
     </div>
     <!-- Body -->
@@ -4547,6 +4543,7 @@ function getFiltered(){
   const who=document.getElementById('fwho').value;
   return tasks.filter(t=>{
     if(t.originId) return false; // subtareas no se muestran en el kanban
+    if(t.fromFlujo) return false; // los movimientos de Flujo viven solo en Flujo
     if(_bizFilter!==-1?t.biz!==_bizFilter:(biz<3&&t.biz!==biz))return false;
     if(q&&!t.title.toLowerCase().includes(q))return false;
     if(who&&t.who!==who)return false;
@@ -5314,6 +5311,7 @@ function renderGlobal(){
 
   // Filter tasks — vencidas siempre se muestran sin importar filtros
   let filtered = tasks.filter(t => {
+    if(t.fromFlujo) return false; // los movimientos de Flujo viven solo en Flujo
     if(who && t.who !== who) return false;
     if(_globalBizFilter !== '' && t.biz !== parseInt(_globalBizFilter)) return false;
     // Vencidas: siempre visibles
@@ -5570,6 +5568,7 @@ function setDashFilter(key, val){
 function getTasksForDash(){
   if(window.tasks && window.tasks.length > 0) tasks = window.tasks;
   return tasks.filter(t=>{
+    if(t.fromFlujo) return false;
     if(dashFilter.who && t.who!==dashFilter.who) return false;
     if(dashFilter.biz!=='' && t.biz!==parseInt(dashFilter.biz)) return false;
     if(!applyDashDateFilter(t)) return false;
@@ -5949,6 +5948,7 @@ const FLUJO_BIZ_VISIBLE = [0, 2];
 
 function setFlujoType(t){
   flujoType=t;
+  if(typeof flSoporteCambio==='function') setTimeout(flSoporteCambio,0);
   const pb=document.getElementById('fl-type-pago');
   const cb=document.getElementById('fl-type-cobro');
   if(pb){pb.style.background=t==='pago'?'#fef2f2':'var(--bg2)';pb.style.color=t==='pago'?'#dc2626':'var(--text2)';pb.style.fontWeight=t==='pago'?'600':'400';}
@@ -5964,47 +5964,119 @@ function setFlujoBiz(i){
 function openFlujoForm(){
   const f=document.getElementById('flujo-form');if(!f)return;
   f.style.display='block';
-  const sel=document.getElementById('fl-who');
-  if(sel) sel.innerHTML=getUsers().map(u=>`<option value="${u.name}">${u.name}</option>`).join('');
   const hint=document.getElementById('fl-biz-hint');if(hint)hint.textContent=BIZ_NAMES_F[flujoBiz];
   setFlujoType('pago');
-  ['fl-title','fl-entidad','fl-value','fl-date','fl-soporte'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['fl-title','fl-entidad','fl-value','fl-date','fl-soporte-file'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const flDate=document.getElementById('fl-date'); if(flDate) flDate.value=new Date().toISOString().split('T')[0];
+  flSoporteCambio();
   setTimeout(()=>document.getElementById('fl-title').focus(),100);
 }
 function closeFlujoForm(){
   const f=document.getElementById('flujo-form');if(f)f.style.display='none';
 }
-function saveFlujoTask(){
+function flSoporteCambio(){
+  const inp=document.getElementById('fl-soporte-file');
+  const hint=document.getElementById('fl-soporte-hint');
+  if(!hint) return;
+  const n=inp&&inp.files?inp.files.length:0;
+  const biz=escapeHtml(BIZ_NAMES_F[flujoBiz]||'');
+  hint.innerHTML = n
+    ? `Con soporte (${n} archivo${n>1?'s':''}): se sube a Drive, se registra en el Sheet de <strong id="fl-biz-hint" style="margin:0 3px">${biz}</strong> y queda como ${flujoType==='cobro'?'cobrado':'pagado'}. No se envía al Tablero.`
+    : `Sin soporte: se registra en el Sheet de <strong id="fl-biz-hint" style="margin:0 3px">${biz}</strong> como pendiente de soporte (fila amarilla). No se envía al Tablero.`;
+}
+function _fileABase64(file){
+  return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});
+}
+let _flGuardando=false;
+async function saveFlujoTask(){
+  if(_flGuardando) return;
   const title=document.getElementById('fl-title').value.trim();
   if(!title){document.getElementById('fl-title').focus();return;}
   const entidad=document.getElementById('fl-entidad').value.trim();
   const valueRaw=document.getElementById('fl-value').value;
   const value=valueRaw?parseFloat(valueRaw):null;
   const date=document.getElementById('fl-date').value;
-  const who=document.getElementById('fl-who').value;
-  const soporte=document.getElementById('fl-soporte').value.trim();
+  const who='';
+  const inpFiles=document.getElementById('fl-soporte-file');
+  const files=Array.from((inpFiles&&inpFiles.files)||[]);
+
+  const urlDestino=(Number(flujoBiz)===2)?APPS_SCRIPT_URL_MONTEVRA:APPS_SCRIPT_URL;
+  if(Number(flujoBiz)===2 && (!APPS_SCRIPT_URL_MONTEVRA || APPS_SCRIPT_URL_MONTEVRA.includes('PEGA_AQUI'))){
+    alert('Falta configurar el Apps Script de Montevra (APPS_SCRIPT_URL_MONTEVRA).');
+    return;
+  }
+
+  const hoy=new Date().toISOString().split('T')[0];
   const nuevaTarea = {
     id:Date.now()+'_fl_'+Math.random().toString(36).slice(2),
     title,who,pri:'normal',date,status:'p',biz:flujoBiz,
     entidad: entidad || title,
     isPayment:true,flujoType,flujoValue:value,
-    supportDesc:soporte||(flujoType==='pago'?'Comprobante de pago':'Comprobante de cobro'),
-    supportDone:false,fromFlujo:true,
+    supportDesc:(flujoType==='pago'?'Comprobante de pago':'Comprobante de cobro'),
+    supportDone:false,fromFlujo:true,soportes:[],
   };
-  // Agregar a AMBAS referencias
+
+  _flGuardando=true;
+  const btns=document.querySelectorAll('#flujo-form button');
+  btns.forEach(b=>b.disabled=true);
+  const ind=document.getElementById('fl-soporte-hint');
+  if(ind) ind.textContent = files.length ? 'Subiendo soporte a Drive y registrando en el Sheet…' : 'Registrando en el Sheet…';
+
+  // Envío directo al Sheet/Drive
+  let subidos=0, errores=0, registradoSinSoporte=false;
+  if(files.length){
+    for(let i=0;i<files.length;i++){
+      const file=files[i];
+      try{
+        const base64=await _fileABase64(file);
+        const resp=await fetch(urlDestino,{method:'POST',body:JSON.stringify({
+          file:base64, filename:file.name, mimeType:file.type,
+          fecha: date||hoy,
+          entidad: nuevaTarea.entidad,
+          descripcion: title + (files.length>1?` (${i+1}/${files.length})`:''),
+          tipo: flujoType,
+          valor: subidos===0 ? (value||0) : 0   // solo el primer archivo lleva el valor
+        })});
+        const data=await resp.json();
+        if(data&&data.ok){ nuevaTarea.soportes.push({url:data.url,nombre:file.name,fecha:Date.now()}); nuevaTarea.soporteUrl=data.url; subidos++; }
+        else errores++;
+      }catch(e){ errores++; }
+    }
+  }
+  if(subidos>0){
+    nuevaTarea.supportDone=true;
+    nuevaTarea.status='c';
+    nuevaTarea.enviadoSheet=true;
+  } else {
+    // Sin soporte (o falló la subida): igual queda la fila en el Sheet, marcada sin soporte
+    try{
+      const resp=await fetch(urlDestino,{method:'POST',body:JSON.stringify({
+        sinSoporte:true, fecha: date||hoy, entidad: nuevaTarea.entidad,
+        descripcion: title, tipo: flujoType, valor: value||0
+      })});
+      const data=await resp.json().catch(()=>({ok:true}));
+      if(data&&data.ok!==false){ nuevaTarea.enviadoSheet=true; registradoSinSoporte=true; }
+    }catch(e){ /* queda pendiente de envío */ }
+  }
+  nuevaTarea.enviadoFecha=Date.now();
+
   tasks.push(nuevaTarea);
   window.tasks = tasks;
-  // 🔧 Asegurar que permanentDeletedIds esté cargado antes de persistir
   if(!window.permanentDeletedIds || window.permanentDeletedIds.size === 0){
     const saved = JSON.parse(localStorage.getItem('hh-blacklist-ids')||'[]');
     if(saved.length > 0) window.permanentDeletedIds = new Set(saved);
   }
-  // Guardar en localStorage inmediatamente
   localStorage.setItem('hh-socios-v3', JSON.stringify(tasks));
-  // Escritura inmediata a Firebase (sin debounce — evita pérdida si se cierra rápido)
   if(window.persistTasksImmediate) window.persistTasksImmediate([...tasks]);
+
+  _flGuardando=false;
+  btns.forEach(b=>b.disabled=false);
   closeFlujoForm();
   renderFlujoBody();
+
+  if(subidos>0) alert(`✅ Registrado con soporte (${subidos} archivo${subidos>1?'s':''}) en Drive y en el Sheet.`+(errores?` ⚠️ ${errores} archivo(s) no se pudieron subir.`:''));
+  else if(registradoSinSoporte) alert(files.length?'⚠️ No se pudo subir el soporte. Quedó registrado en el Sheet SIN soporte; súbelo desde "Pendientes de soporte".':'✅ Registrado en el Sheet sin soporte. Queda en "Pendientes de soporte".');
+  else alert('⚠️ El movimiento quedó guardado en Flujo, pero no se pudo enviar al Sheet (revisa la conexión). Queda en "Pendientes de soporte".');
 }
 function renderFlujo(){
   if(window.tasks&&window.tasks.length>0)tasks=window.tasks;
@@ -6067,7 +6139,7 @@ async function subirSoporte(input){
 
     // SOLO el primer soporte de la PRIMERA tanda lleva el valor; los demás van en $0
     // (evita que el valor se repita en cada fila del Sheet y se duplique el total)
-    const esPrimerSoporte = (i === 0) && !yaHabiaSoportes;
+    const esPrimerSoporte = (i === 0) && !yaHabiaSoportes && !t.enviadoSheet;
     const numFactura = t.soportes.length + 1;
     let base64;
     try {
@@ -6094,9 +6166,10 @@ async function subirSoporte(input){
       const resp = await fetch(urlDestino, { method:'POST', body: JSON.stringify(payload) });
       const data = await resp.json();
       if(data.ok){
-        t.soportes.push({ url: data.url, nombre: file.name });
+        t.soportes.push({ url: data.url, nombre: file.name, fecha: Date.now() });
         t.soporteUrl = data.url; // compatibilidad
         t.supportDone = true;
+        if(t.fromFlujo) t.status = 'c'; // en Flujo, soporte cargado = movimiento cerrado
         subidos++;
       } else {
         errores++;
@@ -6127,6 +6200,77 @@ async function subirSoporte(input){
 function fmtMoney(v){
   if(!v)return'—';
   return '$'+Math.round(v).toLocaleString('es-CO');
+}
+// Pendientes de soporte (por mes) y últimos soportes enviados — parte baja de Flujo
+function flujoSoportesHtml(){
+  const MESL=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const todas=tasks.filter(t=>t.isPayment && t.biz===flujoBiz);
+  const tieneSoporte=t=> t.supportDone || (t.soportes&&t.soportes.length) || t.soporteUrl
+    || (t.pagosParciales||[]).some(p=>(p.urls&&p.urls.length)||p.url);
+  const pend=todas.filter(t=>!tieneSoporte(t));
+  const mesDe=t=>(t.date||(t.enviadoFecha?new Date(t.enviadoFecha).toISOString():'')||'').slice(0,7)||'sin-fecha';
+  const grupos={};
+  pend.forEach(t=>{ const k=mesDe(t); (grupos[k]=grupos[k]||[]).push(t); });
+  const fmtMesK=k=>{ if(k==='sin-fecha') return 'Sin fecha'; const [y,m]=k.split('-'); return MESL[parseInt(m)-1]+' '+y; };
+  const ro=typeof isViewer!=='undefined'&&isViewer;
+
+  const pendHtml = pend.length ? Object.keys(grupos).sort().reverse().map(k=>{
+    const lista=grupos[k].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    const total=lista.reduce((s,t)=>s+(t.flujoValue||0),0);
+    return `<div style="border-top:1px solid #fde68a">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px;background:#fffbeb">
+        <span style="font-size:12px;font-weight:700;color:#78350f">${fmtMesK(k)}</span>
+        <span style="font-size:11px;color:#92400e">${lista.length} sin soporte · ${fmtMoney(total)}</span>
+      </div>
+      ${lista.map(t=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-top:1px solid #fef3c7">
+        <span style="font-size:13px;color:${t.flujoType==='cobro'?'#16a34a':'#dc2626'}">${t.flujoType==='cobro'?'↑':'↓'}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:600;color:#1a1a1a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(t.title)}</div>
+          <div style="font-size:10px;color:#888">${t.date?fmtDate(t.date):'sin fecha'}${t.entidad?' · '+escapeHtml(t.entidad):''}${t.enviadoSheet?' · en el Sheet':' · <span style="color:#dc2626;font-weight:600">no enviado al Sheet</span>'}</div>
+        </div>
+        <span style="font-size:12px;font-weight:700;color:${t.flujoType==='cobro'?'#16a34a':'#dc2626'}">${fmtMoney(t.flujoValue||0)}</span>
+        ${ro?'':`<button id="soporte-btn-${t.id}" onclick="abrirSoporte('${t.id}')" style="height:26px;padding:0 10px;font-size:11px;font-weight:600;background:#2d4a7a;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit">📎 Subir</button>`}
+      </div>`).join('')}
+    </div>`;
+  }).join('') : '<div style="padding:14px;font-size:12px;color:#166534">✓ Todo tiene soporte.</div>';
+
+  // Últimos soportes enviados (archivos de la tarea y de sus pagos parciales)
+  const docs=[];
+  todas.forEach(t=>{
+    const base=t.date?Date.parse(t.date+'T12:00:00'):(t.enviadoFecha||0);
+    const lst=(t.soportes&&t.soportes.length)?t.soportes:(t.soporteUrl?[{url:t.soporteUrl,nombre:'Soporte'}]:[]);
+    lst.forEach(d=>docs.push({t,url:d.url,nombre:d.nombre||'Soporte',cuando:d.fecha||base}));
+    (t.pagosParciales||[]).forEach(p=>{
+      const urls=(p.urls&&p.urls.length)?p.urls:(p.url?[p.url]:[]);
+      const c=p.fecha?Date.parse(p.fecha+'T12:00:00'):base;
+      urls.forEach(u=>docs.push({t,url:u,nombre:p.desc||'Pago parcial',cuando:c}));
+    });
+  });
+  docs.sort((a,b)=>(b.cuando||0)-(a.cuando||0));
+  const ult=docs.slice(0,10);
+  const ultHtml = ult.length ? ult.map(d=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-top:1px solid #eef2f7">
+      <span style="font-size:11px;color:#888;width:62px;flex-shrink:0">${d.cuando?new Date(d.cuando).toLocaleDateString('es-CO',{day:'2-digit',month:'short'}):'—'}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:600;color:#1a1a1a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(d.t.title)}</div>
+        <div style="font-size:10px;color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(d.nombre)}${d.t.entidad?' · '+escapeHtml(d.t.entidad):''}</div>
+      </div>
+      <span style="font-size:12px;font-weight:600;color:${d.t.flujoType==='cobro'?'#16a34a':'#dc2626'}">${fmtMoney(d.t.flujoValue||0)}</span>
+      <a href="${d.url}" target="_blank" rel="noopener" style="font-size:11px;color:#2d4a7a;border:1px solid #c5d3e8;border-radius:5px;padding:2px 8px;text-decoration:none">📄 Ver</a>
+    </div>`).join('') : '<div style="padding:14px;font-size:12px;color:var(--text3)">Todavía no hay soportes enviados.</div>';
+
+  return `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;margin-top:20px">
+    <div style="background:#fff;border:1.5px solid #f59e0b;border-radius:12px;overflow:hidden">
+      <div style="padding:10px 14px;display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:12px;font-weight:700;color:#92400e">⚠️ Pendientes de soporte por mes</span>
+        <span style="font-size:11px;background:#fef3c7;color:#92400e;border-radius:10px;padding:1px 8px">${pend.length}</span>
+      </div>
+      ${pendHtml}
+    </div>
+    <div style="background:#fff;border:1.5px solid #c5d3e8;border-radius:12px;overflow:hidden">
+      <div style="padding:10px 14px;font-size:12px;font-weight:700;color:#2d4a7a">📎 Últimos soportes enviados</div>
+      ${ultHtml}
+    </div>
+  </div>`;
 }
 function renderFlujoBody(){
   if(window.tasks&&window.tasks.length>0)tasks=window.tasks;
@@ -6313,6 +6457,8 @@ function renderFlujoBody(){
     <div><div style="font-size:11px;font-weight:600;color:#16a34a;margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px;display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#16a34a;display:inline-block"></span>Cobros / Ingresos</div>
     <div style="background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden">${mkCards(cobros.filter(t=>t.status!=='c'),'cobro')}</div></div>
   </div>
+
+  ${flujoSoportesHtml()}
 
   <!-- 🔧 CAJA DE PAGOS REALIZADOS -->
   ${(()=>{
@@ -7487,7 +7633,8 @@ function savePagoSinSoporte(){
   closePagoParcial();
 
   // Enviar la fila a la hoja de Google SIN soporte (columna soporte vacía → sale amarilla)
-  try {
+  // Si el movimiento ya se registró en el Sheet al crearlo, no se repite la fila.
+  if(!t.enviadoSheet) try {
     fetch((Number(t.biz) === 2 ? APPS_SCRIPT_URL_MONTEVRA : APPS_SCRIPT_URL), {
       method:'POST',
       body: JSON.stringify({
@@ -7541,7 +7688,7 @@ async function subirSoporteParcial(input){
 
     // SOLO el primer archivo de la PRIMERA tanda lleva el valor; todos los demás van en $0
     // (evita que el valor se repita en cada fila del Sheet y se duplique el total)
-    const esPrimero = (i === 0) && !yaHabiaSoportes;
+    const esPrimero = (i === 0) && !yaHabiaSoportes && !t.enviadoSheet;
     const payload = {
       file: base64,
       filename: `pago_parcial_${pago.id}_${file.name}`,
