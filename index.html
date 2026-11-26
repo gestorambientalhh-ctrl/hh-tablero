@@ -9940,6 +9940,71 @@ function closeBackupModal(){
     renderFilasActaManual();
   }
 
+  // ─── PDF DEL ACTA (2 hojas: Aprovechable / No aprovechable) ───
+  function construirPdfActa(mesLargoTxt, anio, aprovechable, disposicion) {
+    const jsPDFctor = (window.jspdf || {}).jsPDF;
+    if (!jsPDFctor) throw new Error('El generador de PDF aún no cargó');
+    const doc = new jsPDFctor({ orientation: 'portrait', unit: 'pt', format: 'letter' });
+    const logo = (document.querySelector('.lock-card img') || document.querySelector('img[src^="data:image"]') || {}).src;
+    const fmt = v => (v === '' || v == null || isNaN(Number(v))) ? '' : Number(v).toLocaleString('es-CO', { maximumFractionDigits: 2 });
+    const AZUL = [45, 74, 122];
+
+    function encabezado(subtitulo) {
+      let tx = 40;
+      if (logo) { try { doc.addImage(logo, 'JPEG', 40, 28, 44, 44); tx = 96; } catch (e) {} }
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(...AZUL);
+      doc.text('ACTA DE ENTREGA DE MATERIALES', tx, 44);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(80, 80, 80);
+      doc.text('Nestlé Purina — ' + mesLargoTxt + ' ' + anio, tx, 60);
+      doc.text('HH Gestor Ambiental · Hernández e Hijos 2023 S.A.S. · NIT 901.759.697-1', tx, 74);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(...AZUL);
+      doc.text(subtitulo, 40, 108);
+    }
+
+    function firmas() {
+      const y = 690;
+      doc.setDrawColor(120); doc.setLineWidth(0.6);
+      doc.line(60, y, 260, y); doc.line(352, y, 552, y);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(60, 60, 60);
+      doc.text('Entrega — Nestlé Purina', 160, y + 14, { align: 'center' });
+      doc.text('Recibe — HH Gestor Ambiental', 452, y + 14, { align: 'center' });
+    }
+
+    function tabla(head, body, foot) {
+      doc.autoTable({
+        startY: 120, head: [head], body, foot: foot ? [foot] : undefined, theme: 'grid',
+        styles: { fontSize: 10, cellPadding: 5 },
+        headStyles: { fillColor: AZUL, textColor: 255, fontStyle: 'bold' },
+        footStyles: { fillColor: [235, 240, 247], textColor: 30, fontStyle: 'bold' },
+        columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' } },
+        margin: { left: 40, right: 40, bottom: 130 }
+      });
+    }
+
+    // Hoja 1 — Aprovechable: Estibas de primeras con Kg y unidades al frente
+    encabezado('Material Aprovechable');
+    const filasAprov = ordenarEstibasPrimero(aprovechable).map(f => {
+      const enKg = esEstiba(f.nombre) || f.unidad !== 'Und';
+      return [f.nombre, enKg ? fmt(f.cantidad) : '', esEstiba(f.nombre) ? fmt(f.unidades) : (f.unidad === 'Und' ? fmt(f.cantidad) : '')];
+    });
+    const totalKgAprov = aprovechable.reduce((s2, f) => s2 + ((esEstiba(f.nombre) || f.unidad !== 'Und') && f.cantidad !== '' ? Number(f.cantidad) : 0), 0);
+    tabla(['Material', 'Cantidad (Kg)', 'Unidades'],
+      filasAprov.length ? filasAprov : [['Sin material aprovechable este mes', '', '']],
+      ['Total', fmt(totalKgAprov), '']);
+    firmas();
+
+    // Hoja 2 — No aprovechable (Disposición)
+    doc.addPage();
+    encabezado('Material No Aprovechable (Disposición)');
+    const filasDisp = disposicion.map(f => [f.nombre, fmt(f.cantidad), f.unidad || 'Kg']);
+    const totalKgDisp = disposicion.reduce((s2, f) => s2 + (f.unidad !== 'Und' ? Number(f.cantidad) || 0 : 0), 0);
+    tabla(['Material', 'Cantidad', 'Unidad'],
+      filasDisp.length ? filasDisp : [['Sin material de disposición este mes', '', '']],
+      ['Total Kg', fmt(totalKgDisp), 'Kg']);
+    firmas();
+    return doc;
+  }
+
   async function generarActaManualCliente() {
     const estadoDiv = document.getElementById('estado-acta-manual');
     const mesIndex = parseInt(document.getElementById('select-mes-acta-manual').value, 10);
@@ -9996,26 +10061,20 @@ function closeBackupModal(){
     estadoDiv.textContent = 'Acta guardada en la sábana — generando el PDF...';
 
     try {
-      const resp = await fetch(APPS_SCRIPT_DRIVE_URL, {
-        method: 'POST',
-        body: JSON.stringify({
-          accion: 'generar_acta', anio: AÑO_ACTUAL, mes: MESES[mesIndex],
-          mesLargo: MESES_LARGOS[mesIndex].charAt(0).toUpperCase() + MESES_LARGOS[mesIndex].slice(1),
-          // Estibas va de primeras: cantidad en Kg y "unidades" al frente
-          aprovechable: aprovechable.map(f => ({ nombre: f.nombre, cantidad: f.cantidad, unidad: f.unidad,
-            unidades: esEstiba(f.nombre) && f.unidades !== '' && f.unidades != null ? f.unidades : null })),
-          disposicion: disposicion.map(f => ({ nombre: f.nombre, cantidad: f.cantidad, unidad: f.unidad })),
-          // El PDF lleva Aprovechable en una hoja y No aprovechable (Disposición) en otra
-          hojasSeparadas: true
-        })
-      });
-      const data = await resp.json();
-
-      if (!data.ok) {
+      // El PDF se arma aquí mismo (2 hojas) y se sube a Drive como acta del mes
+      const mesLargoTxt = MESES_LARGOS[mesIndex].charAt(0).toUpperCase() + MESES_LARGOS[mesIndex].slice(1);
+      const docActa = construirPdfActa(mesLargoTxt, AÑO_ACTUAL, aprovechable, disposicion);
+      const mm = String(mesIndex + 1).padStart(2, '0');
+      const nombrePdf = `${AÑO_ACTUAL}-${mm}_Acta_Purina_${mesLargoTxt}.pdf`;
+      const archivoPdf = new File([docActa.output('blob')], nombrePdf, { type: 'application/pdf' });
+      const urlActa = await subirArchivoADrive(archivoPdf, 'acta', mesIndex);
+      if (!urlActa) {
+        docActa.save(nombrePdf);
         estadoDiv.className = 'actas-estado-carga actas-estado-error';
-        estadoDiv.textContent = 'El acta ya quedó guardada en la sábana, pero no se pudo generar el PDF: ' + (data.error || 'error desconocido');
+        estadoDiv.textContent = 'El acta quedó guardada en la sábana y el PDF se descargó en tu equipo, pero no se pudo subir a Drive.';
         return;
       }
+      const data = { url: urlActa };
 
       nuevaActa.urlDrive = data.url;
       render();
