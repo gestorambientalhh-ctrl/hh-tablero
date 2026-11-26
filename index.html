@@ -9681,11 +9681,15 @@ function closeBackupModal(){
     'Latas', 'Empaque', 'Cartón', 'Chatarra', 'Cobre encauchetado', 'Vidrio'
   ];
   const MATERIALES_DISPOSICION_DEFAULT = [
-    'Cafetería y Sanitarios', 'Madera', 'Retal de Madera', 'Disposición Latas', 'Bolsas Lad',
+    'Cafetería', 'Sanitarios', 'Madera', 'Retal de Madera', 'Disposición Latas', 'Bolsas Lad',
     'Orgánicos', 'Lonas en mal estado', 'Material Peligroso', 'Biosanitarios y Cortopunzante',
     'Manifiestos',
-    'Transporte Cafetería y sanitarios'
+    'Transporte Cafetería', 'Transporte Sanitarios'
   ];
+  // Cafetería y Sanitarios se escriben por separado en el acta y la orden de compra,
+  // pero en la sábana quedan en UNA fila (suma de kg) porque el manifiesto los trae juntos.
+  const PARTES_CAFETERIA = ['Cafetería', 'Sanitarios'];
+  const esParteCafeteria = nombre => PARTES_CAFETERIA.some(p => normalizar(p) === normalizar(nombre || ''));
 
   function toggleCrearActa() {
     const panel = document.getElementById('panel-crear-acta');
@@ -9699,7 +9703,7 @@ function closeBackupModal(){
           nombre, cantidad: '', unidad: 'Kg', unidades: '', mostrarOtro: false
         }));
       }
-      const unidadDe = nombre => (nombre === 'Transporte Cafetería y sanitarios' || nombre === 'Manifiestos') ? 'Und' : 'Kg';
+      const unidadDe = nombre => (/transporte/i.test(nombre) || nombre === 'Manifiestos') ? 'Und' : 'Kg';
       if (filasActaManual.disposicion.length === 0) {
         filasActaManual.disposicion = MATERIALES_DISPOSICION_DEFAULT.map(nombre => ({
           nombre, cantidad: '', unidad: unidadDe(nombre), mostrarOtro: false
@@ -9975,7 +9979,14 @@ function closeBackupModal(){
         agregarRegistro(nuevaActa.id, 'Aprovechable', f.nombre, Number(f.cantidad), f.unidad);
       }
     });
-    disposicion.forEach(f => agregarRegistro(nuevaActa.id, 'Disposición', f.nombre, Number(f.cantidad), f.unidad));
+    const partesCaf = disposicion.filter(f => esParteCafeteria(f.nombre));
+    disposicion.filter(f => !esParteCafeteria(f.nombre))
+      .forEach(f => agregarRegistro(nuevaActa.id, 'Disposición', f.nombre, Number(f.cantidad), f.unidad));
+    if (partesCaf.length) {
+      const totalCaf = partesCaf.reduce((sum, f) => sum + Number(f.cantidad), 0);
+      agregarRegistro(nuevaActa.id, 'Disposición', 'Cafetería y Sanitarios', Math.round(totalCaf * 100) / 100, 'Kg');
+      registros[registros.length - 1].detalle = partesCaf.map(f => ({ nombre: f.nombre, cantidad: Number(f.cantidad), unidad: 'Kg' }));
+    }
     reconciliarMaterialesSinActa(mesIndex);
     render();
     guardarMes(mesIndex);
@@ -10124,7 +10135,10 @@ function closeBackupModal(){
     // Todo lo de Disposición del acta, incluido el transporte: la cantidad
     // sale del acta tal cual, no se calcula aparte.
     const registrosDelMes = registros.filter(r => r.actaId === acta.id && r.grupo === 'Disposición');
-    const materiales = registrosDelMes.map(r => {
+    // Cafetería y Sanitarios van en líneas separadas (mismo precio que tenía la línea unida)
+    const materiales = registrosDelMes.flatMap(r =>
+      Array.isArray(r.detalle) && r.detalle.length ? r.detalle.map(d => ({ ...r, nombre: d.nombre, cantidadActa: d.cantidad })) : [r]
+    ).map(r => {
       const item = { nombre: r.nombre, cantidad: r.cantidadActa };
       if (esConceptoSinCertificado(r.nombre)) {
         item.precioUnitario = PRECIO_TRANSPORTE_CAFETERIA;
@@ -11970,7 +11984,7 @@ function closeBackupModal(){
   // Cafetería y Sanitarios. Poner en true para volver a mostrarla.
   const MOSTRAR_FILA_MANIFIESTOS = false;
 
-  // Precio por viaje del transporte de Cafetería y sanitarios (orden de compra)
+  // Precio por viaje de cada transporte (Transporte Cafetería y Transporte Sanitarios) en la orden de compra
   const PRECIO_TRANSPORTE_CAFETERIA = 350000;
 
   const APPS_SCRIPT_DRIVE_URL = "https://script.google.com/macros/s/AKfycbxkrdZXgnkidnsKPCxMCkPyUMNju7MOxa3TMpO0afUusKo8Dd4F0LxwHq0fRzs4GXCd5Q/exec";
