@@ -689,6 +689,16 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
   .actas-dif-sin-cert { color: var(--texto-suave); cursor: pointer; text-decoration: underline dotted; }
   .actas-total { font-weight: 600; }
   .actas-nota { font-size: 12px; color: var(--texto-suave); margin-top: 16px; }
+  /* Columna de materiales fija a la izquierda al desplazar los meses */
+  #tabla-sabana td.actas-nombre-material, #tabla-sabana th.actas-col-material {
+    position: sticky; left: 0; z-index: 2; background: #fff; box-shadow: 2px 0 0 var(--borde);
+  }
+  #tabla-sabana th.actas-col-material { z-index: 3; }
+  #tabla-sabana tr.caf-sub td.actas-nombre-material { background: #f7f9fc; }
+  #tabla-sabana .actas-fila-grupo td .actas-grupo-txt { position: sticky; left: 6px; }
+  .sabana-filtro { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin: 4px 0 8px; font-size:12.5px; }
+  .sabana-filtro-btn.activo { background: var(--rojo-bg); color: var(--rojo-texto); border-color: var(--rojo-texto); }
+  .sabana-ok-mini { color: var(--verde-texto); font-size: 11px; opacity: .55; }
 
   .actas-fila-ensenar { padding:8px 10px; font-size:12.5px; border-bottom:1px solid var(--borde); cursor:pointer; }
   .actas-fila-ensenar:hover { background: var(--gris-calido); }
@@ -1957,6 +1967,10 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
   </div>
   <div id="estado-carga" class="actas-estado-carga"></div>
 
+  <div class="sabana-filtro">
+    <button id="btn-solo-faltantes" class="actas-btn-sec sabana-filtro-btn" onclick="toggleSoloFaltantes()">🔎 Ver solo lo que falta</button>
+    <span id="resumen-faltantes" style="color:var(--texto-suave);"></span>
+  </div>
   <div class="actas-tabla-wrap">
     <table id="tabla-sabana"></table>
   </div>
@@ -12100,6 +12114,29 @@ function closeBackupModal(){
     }
   }
 
+  // ── Filtro "solo lo que falta": oculta los materiales que ya cuadran ──
+  let _soloFaltantes = localStorage.getItem('hh-sabana-solo-faltantes') === '1';
+  function toggleSoloFaltantes() {
+    _soloFaltantes = !_soloFaltantes;
+    try { localStorage.setItem('hh-sabana-solo-faltantes', _soloFaltantes ? '1' : '0'); } catch (e) {}
+    render();
+  }
+  // 'falta' = le falta acta, certificado o no cuadra · 'ok' = cuadra · 'nada' = no aplica
+  function estadoCeldaMaterial(mat, mesIndex) {
+    if (esConceptoSinCertificado(mat.nombre)) return 'nada';
+    const acta = actaActivaDeMes(mesIndex);
+    if (!acta) {
+      return materialesSinActa.some(m => m.mesIndex === mesIndex && coincideNombre(mat.nombre, m.nombre)) ? 'falta' : 'nada';
+    }
+    const reg = registros.find(r => r.actaId === acta.id && mismoMaterial(r.nombre, mat.nombre) && r.grupo === mat.grupo);
+    if (!reg) return 'nada';
+    if (esCafeteria(reg.nombre)) return resumenCafeteria(mesIndex).clase === 'ok' ? 'ok' : 'falta';
+    const confirmadas = reg.entregas.filter(e => !e.provisional);
+    if (confirmadas.length === 0) return 'falta';
+    const base = reg.unidadActa === 'Und' ? totalEntregasUnidades(reg) : totalEntregasKg(reg);
+    return (reg.cantidadActa - base) !== 0 ? 'falta' : 'ok';
+  }
+
   function render() {
     const tabla = document.getElementById('tabla-sabana');
     let html = '<thead><tr><th class="actas-col-material">Concepto</th>';
@@ -12124,10 +12161,24 @@ function closeBackupModal(){
       ((orden[a.grupo] ?? 2) - (orden[b.grupo] ?? 2)) ||
       ((/estiba/i.test(b.nombre) ? 1 : 0) - (/estiba/i.test(a.nombre) ? 1 : 0)));
 
-    materialesOrdenados.forEach(mat => {
+    const estadosPorMat = new Map(materialesOrdenados.map(mat => [mat, MESES.map((m, i) => estadoCeldaMaterial(mat, i))]));
+    const conFaltantes = materialesOrdenados.filter(mat => estadosPorMat.get(mat).includes('falta'));
+    const celdasFaltantes = conFaltantes.reduce((n, mat) => n + estadosPorMat.get(mat).filter(e => e === 'falta').length, 0);
+    const btnF = document.getElementById('btn-solo-faltantes');
+    if (btnF) {
+      btnF.classList.toggle('activo', _soloFaltantes);
+      btnF.textContent = _soloFaltantes ? '✕ Ver todo' : '🔎 Ver solo lo que falta';
+    }
+    const resF = document.getElementById('resumen-faltantes');
+    if (resF) resF.innerHTML = conFaltantes.length
+      ? `Faltan <b>${conFaltantes.length}</b> material${conFaltantes.length > 1 ? 'es' : ''} (${celdasFaltantes} mes${celdasFaltantes > 1 ? 'es' : ''} por cuadrar)`
+      : '<span class="actas-dif-ok">Todo cuadra ✓</span>';
+    const materialesVisibles = _soloFaltantes ? conFaltantes : materialesOrdenados;
+
+    materialesVisibles.forEach(mat => {
       if (mat.grupo !== grupoActual) {
         grupoActual = mat.grupo;
-        html += `<tr class="actas-fila-grupo"><td colspan="${MESES.length + 2}">${grupoActual}</td></tr>`;
+        html += `<tr class="actas-fila-grupo"><td colspan="${MESES.length + 2}"><span class="actas-grupo-txt">${grupoActual}</span></td></tr>`;
       }
       html += `<tr><td class="actas-nombre-material">${mat.nombre}${(() => {
         const conEntrega = registros.find(r => mismoMaterial(r.nombre, mat.nombre) && r.grupo === mat.grupo && r.entregas.length > 0);
@@ -12136,7 +12187,10 @@ function closeBackupModal(){
       })()}</td>`;
       let total = 0, conCert = false, sufijoTotal = 'kg';
       for (let i = 0; i < MESES.length; i++) {
-        html += celdaMaterial(mat, i);
+        // En "solo lo que falta", lo que ya cuadra se muestra como ✓ tenue
+        html += (_soloFaltantes && estadosPorMat.get(mat)[i] !== 'falta')
+          ? `<td>${estadosPorMat.get(mat)[i] === 'ok' ? '<span class="sabana-ok-mini">✓</span>' : '<span class="actas-dif-vacio">—</span>'}</td>`
+          : celdaMaterial(mat, i);
         const acta = actaActivaDeMes(i);
         if (acta) {
           const reg = registros.find(r => r.actaId === acta.id && mismoMaterial(r.nombre, mat.nombre) && r.grupo === mat.grupo);
@@ -12166,6 +12220,8 @@ function closeBackupModal(){
 
     if (materialesOrdenados.length === 0) {
       html += `<tr><td colspan="${MESES.length + 2}" style="text-align:center; padding:24px; color:var(--texto-suave);">Sube el primer PDF de acta para empezar a llenar la tabla</td></tr>`;
+    } else if (_soloFaltantes && conFaltantes.length === 0) {
+      html += `<tr><td colspan="${MESES.length + 2}" style="text-align:center; padding:24px;"><span class="actas-dif-ok">No falta nada: todos los materiales cuadran con su acta ✓</span></td></tr>`;
     }
 
     html += '</tbody>';
@@ -12778,6 +12834,7 @@ function closeBackupModal(){
   window.actualizarFilaMaterial = actualizarFilaMaterial;
   window.generarActaManualCliente = generarActaManualCliente;
   window.cargarActaEnFormulario = cargarActaEnFormulario;
+  window.toggleSoloFaltantes = toggleSoloFaltantes;
   window.actaActivaDeMesGlobal = m => !isNaN(m) && !!actaActivaDeMes(m);
   window.agregarMaterialConocido = agregarMaterialConocido;
   window.eliminarMaterialConocido = eliminarMaterialConocido;
