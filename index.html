@@ -9676,8 +9676,9 @@ function closeBackupModal(){
   }
 
   const MATERIALES_APROVECHABLE_DEFAULT = [
+    'Estibas en Buen Estado',
     'Producto Tipo 1 Seco', 'Producto Tipo 2 Húmedo', 'Grasas', 'Plegadiza', 'Plástico',
-    'Latas', 'Estibas en Buen Estado', 'Empaque', 'Cartón', 'Chatarra', 'Cobre encauchetado', 'Vidrio'
+    'Latas', 'Empaque', 'Cartón', 'Chatarra', 'Cobre encauchetado', 'Vidrio'
   ];
   const MATERIALES_DISPOSICION_DEFAULT = [
     'Cafetería y Sanitarios', 'Madera', 'Retal de Madera', 'Disposición Latas', 'Bolsas Lad',
@@ -9695,7 +9696,7 @@ function closeBackupModal(){
       MATERIALES_DISPOSICION_DEFAULT.forEach(n => { if (!materialesConocidos.includes(n)) materialesConocidos.push(n); });
       if (filasActaManual.aprovechable.length === 0) {
         filasActaManual.aprovechable = MATERIALES_APROVECHABLE_DEFAULT.map(nombre => ({
-          nombre, cantidad: '', unidad: nombre === 'Estibas en Buen Estado' ? 'Und' : 'Kg', mostrarOtro: false
+          nombre, cantidad: '', unidad: 'Kg', unidades: '', mostrarOtro: false
         }));
       }
       const unidadDe = nombre => (nombre === 'Transporte Cafetería y sanitarios' || nombre === 'Manifiestos') ? 'Und' : 'Kg';
@@ -9848,6 +9849,10 @@ function closeBackupModal(){
 
   // ─── CREAR ACTA A MANO ────────────────────────────────────
   let filasActaManual = { aprovechable: [], disposicion: [] };
+  // Estibas: se registran en Kg y, al frente, la cantidad en unidades
+  const esEstiba = nombre => /estiba/i.test(nombre || '');
+  // Estibas siempre de primeras dentro de Aprovechable
+  const ordenarEstibasPrimero = lista => [...lista].sort((a, b) => (esEstiba(b.nombre) ? 1 : 0) - (esEstiba(a.nombre) ? 1 : 0));
 
   function poblarSelectMesActaManual() {
     const select = document.getElementById('select-mes-acta-manual');
@@ -9884,10 +9889,14 @@ function closeBackupModal(){
           </select>
           ${f.mostrarOtro ? `<input type="text" placeholder="Nombre del material nuevo" value="${f.nombre}" oninput="actualizarFilaMaterial('aprovechable', ${i}, 'nombre', this.value)" style="flex:2; height:32px; border-radius:6px; border:1px solid var(--borde); padding:0 8px; font-size:12.5px;">` : ''}
           <input type="number" placeholder="Cantidad" value="${f.cantidad}" oninput="actualizarFilaMaterial('aprovechable', ${i}, 'cantidad', this.value)" style="flex:1; min-width:80px; height:32px; border-radius:6px; border:1px solid var(--borde); padding:0 8px; font-size:12.5px;">
-          <select onchange="actualizarFilaMaterial('aprovechable', ${i}, 'unidad', this.value)" style="width:70px; height:32px; border-radius:6px; border:1px solid var(--borde); font-size:12.5px;">
+          ${esEstiba(f.nombre)
+            ? `<span style="width:30px; font-size:12px; color:var(--texto-suave); align-self:center;">Kg</span>
+          <input type="number" placeholder="Unidades" value="${f.unidades || ''}" oninput="actualizarFilaMaterial('aprovechable', ${i}, 'unidades', this.value)" style="flex:1; min-width:80px; height:32px; border-radius:6px; border:1px solid var(--borde); padding:0 8px; font-size:12.5px;">
+          <span style="width:30px; font-size:12px; color:var(--texto-suave); align-self:center;">Und</span>`
+            : `<select onchange="actualizarFilaMaterial('aprovechable', ${i}, 'unidad', this.value)" style="width:70px; height:32px; border-radius:6px; border:1px solid var(--borde); font-size:12.5px;">
             <option value="Kg" ${f.unidad === 'Kg' ? 'selected' : ''}>Kg</option>
             <option value="Und" ${f.unidad === 'Und' ? 'selected' : ''}>Und</option>
-          </select>
+          </select>`}
           <button onclick="eliminarFilaMaterial('aprovechable', ${i})" style="background:none; border:none; color:var(--rojo-texto); cursor:pointer; font-size:16px; padding:0 6px;">✕</button>
         </div>`;
       }).join('');
@@ -9922,6 +9931,7 @@ function closeBackupModal(){
     } else {
       filasActaManual[grupo][i].mostrarOtro = false;
       filasActaManual[grupo][i].nombre = valor;
+      if (esEstiba(valor)) filasActaManual[grupo][i].unidad = 'Kg';
     }
     renderFilasActaManual();
   }
@@ -9929,7 +9939,8 @@ function closeBackupModal(){
   async function generarActaManualCliente() {
     const estadoDiv = document.getElementById('estado-acta-manual');
     const mesIndex = parseInt(document.getElementById('select-mes-acta-manual').value, 10);
-    const aprovechable = filasActaManual.aprovechable.filter(f => f.nombre && f.cantidad !== '');
+    const aprovechable = ordenarEstibasPrimero(filasActaManual.aprovechable.filter(f => f.nombre && (f.cantidad !== '' || (esEstiba(f.nombre) && f.unidades))));
+    aprovechable.forEach(f => { if (esEstiba(f.nombre)) f.unidad = 'Kg'; });
     const disposicion = filasActaManual.disposicion.filter(f => f.nombre && f.cantidad !== '');
 
     if (isNaN(mesIndex) || (aprovechable.length === 0 && disposicion.length === 0)) {
@@ -9956,7 +9967,14 @@ function closeBackupModal(){
     guardarMaterialesConocidos();
 
     const nuevaActa = crearActaParaMes(mesIndex);
-    aprovechable.forEach(f => agregarRegistro(nuevaActa.id, 'Aprovechable', f.nombre, Number(f.cantidad), f.unidad));
+    aprovechable.forEach(f => {
+      if (esEstiba(f.nombre)) {
+        if (f.cantidad !== '') agregarRegistro(nuevaActa.id, 'Aprovechable', f.nombre, Number(f.cantidad), 'Kg');
+        if (f.unidades !== '' && f.unidades != null) agregarRegistro(nuevaActa.id, 'Aprovechable', f.nombre, Number(f.unidades), 'Und');
+      } else {
+        agregarRegistro(nuevaActa.id, 'Aprovechable', f.nombre, Number(f.cantidad), f.unidad);
+      }
+    });
     disposicion.forEach(f => agregarRegistro(nuevaActa.id, 'Disposición', f.nombre, Number(f.cantidad), f.unidad));
     reconciliarMaterialesSinActa(mesIndex);
     render();
@@ -9972,8 +9990,12 @@ function closeBackupModal(){
         body: JSON.stringify({
           accion: 'generar_acta', anio: AÑO_ACTUAL, mes: MESES[mesIndex],
           mesLargo: MESES_LARGOS[mesIndex].charAt(0).toUpperCase() + MESES_LARGOS[mesIndex].slice(1),
-          aprovechable: aprovechable.map(f => ({ nombre: f.nombre, cantidad: f.cantidad, unidad: f.unidad })),
-          disposicion: disposicion.map(f => ({ nombre: f.nombre, cantidad: f.cantidad, unidad: f.unidad }))
+          // Estibas va de primeras: cantidad en Kg y "unidades" al frente
+          aprovechable: aprovechable.map(f => ({ nombre: f.nombre, cantidad: f.cantidad, unidad: f.unidad,
+            unidades: esEstiba(f.nombre) && f.unidades !== '' && f.unidades != null ? f.unidades : null })),
+          disposicion: disposicion.map(f => ({ nombre: f.nombre, cantidad: f.cantidad, unidad: f.unidad })),
+          // El PDF lleva Aprovechable en una hoja y No aprovechable (Disposición) en otra
+          hojasSeparadas: true
         })
       });
       const data = await resp.json();
@@ -11890,7 +11912,9 @@ function closeBackupModal(){
 
     let grupoActual = "";
     const orden = { "Aprovechable": 0, "Disposición": 1 };
-    const materialesOrdenados = nombresUnicosDeMateriales().sort((a, b) => (orden[a.grupo] ?? 2) - (orden[b.grupo] ?? 2));
+    const materialesOrdenados = nombresUnicosDeMateriales().sort((a, b) =>
+      ((orden[a.grupo] ?? 2) - (orden[b.grupo] ?? 2)) ||
+      ((/estiba/i.test(b.nombre) ? 1 : 0) - (/estiba/i.test(a.nombre) ? 1 : 0)));
 
     materialesOrdenados.forEach(mat => {
       if (mat.grupo !== grupoActual) {
