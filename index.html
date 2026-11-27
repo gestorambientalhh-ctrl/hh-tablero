@@ -1812,6 +1812,26 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
       <button onclick="cargarActaEnFormulario()" class="actas-btn-sec">✏️ Editar acta de este mes</button>
     </div>
 
+    <div style="margin:4px 0 10px;">
+      <button onclick="abrirNuevoMaterial('Aprovechable')" class="actas-btn-sec">➕ Nuevo material</button>
+    </div>
+    <div id="form-nuevo-material" style="display:none; background:#fff; border:1px solid var(--borde); border-radius:9px; padding:12px 14px; margin-bottom:12px; font-size:12.5px;">
+      <p style="margin:0 0 8px; font-weight:600;">Nuevo material</p>
+      <input id="nm-nombre" type="text" placeholder="Nombre del material" style="width:100%; max-width:340px; height:32px; border-radius:6px; border:1px solid var(--borde); padding:0 8px; font-size:12.5px; margin-bottom:8px;">
+      <div style="display:flex; gap:16px; margin-bottom:8px; flex-wrap:wrap;">
+        <label><input type="radio" name="nm-grupo" value="Aprovechable" onchange="nmCambioGrupo()" checked> Aprovechable</label>
+        <label><input type="radio" name="nm-grupo" value="Disposición" onchange="nmCambioGrupo()"> No aprovechable (Disposición)</label>
+      </div>
+      <div id="nm-precio-wrap" style="display:none; margin-bottom:8px;">
+        Precio de venta por kg (orden de compra): $
+        <input id="nm-precio" type="number" min="0" placeholder="ej. 920" style="width:110px; height:30px; border-radius:6px; border:1px solid var(--borde); padding:0 6px; font-size:12.5px;">
+      </div>
+      <label style="display:block; margin-bottom:10px;"><input id="nm-unidades" type="checkbox"> Lleva también cantidad en unidades (kg y und)</label>
+      <button onclick="guardarNuevoMaterial()" class="actas-btn" style="padding:6px 14px;">Agregar</button>
+      <button onclick="document.getElementById('form-nuevo-material').style.display='none'" class="actas-btn-sec">Cancelar</button>
+      <span id="nm-error" style="color:var(--rojo-texto); margin-left:8px;"></span>
+    </div>
+
     <p style="font-size:12.5px; font-weight:600; margin:8px 0 6px;">Material Aprovechable</p>
     <div id="filas-aprovechable"></div>
     <button onclick="agregarFilaMaterial('aprovechable')" style="background:none; border:1px solid var(--borde); border-radius:7px; padding:5px 10px; font-size:12px; cursor:pointer; margin-bottom:10px;">+ agregar material</button>
@@ -9628,6 +9648,13 @@ function closeBackupModal(){
   const proveedoresConocidos = [];
   const perfilesAprendidos = [];
   const materialesConocidos = [];
+  // Materiales nuevos creados desde "Nuevo material": { nombre, grupo, precio, conUnidades }
+  const materialesPersonalizados = [];
+  try {
+    const guardados = JSON.parse(localStorage.getItem('hh-materiales-personalizados') || '[]');
+    if (Array.isArray(guardados)) materialesPersonalizados.push(...guardados);
+  } catch (e) {}
+  const materialPersonalizado = nombre => materialesPersonalizados.find(m => normalizar(m.nombre) === normalizar(nombre || ''));
   let materialesSinActa = [];
   let resolverModalProveedorFn = null;
 
@@ -9696,7 +9723,7 @@ function closeBackupModal(){
   }
 
   const MATERIALES_APROVECHABLE_DEFAULT = [
-    'Estibas en Buen Estado',
+    'Estibas en Buen Estado', 'Big Bag',
     'Producto Tipo 1 Seco', 'Producto Tipo 2 Húmedo', 'Grasas', 'Plegadiza', 'Plástico',
     'Latas', 'Empaque', 'Cartón', 'Chatarra', 'Cobre encauchetado', 'Vidrio'
   ];
@@ -9704,33 +9731,101 @@ function closeBackupModal(){
     'Cafetería', 'Sanitarios', 'Madera', 'Retal de Madera', 'Disposición Latas', 'Bolsas Lad',
     'Orgánicos', 'Lonas en mal estado', 'Material Peligroso', 'Biosanitarios y Cortopunzante',
     'Manifiestos',
-    'Transporte Cafetería', 'Transporte Sanitarios'
+    'Transporte Cafetería y Sanitarios'
   ];
   // Cafetería y Sanitarios se escriben por separado en el acta y la orden de compra,
   // pero en la sábana quedan en UNA fila (suma de kg) porque el manifiesto los trae juntos.
   const PARTES_CAFETERIA = ['Cafetería', 'Sanitarios'];
   const esParteCafeteria = nombre => PARTES_CAFETERIA.some(p => normalizar(p) === normalizar(nombre || ''));
 
+  // Listas del formulario: las fijas + los materiales nuevos de cada grupo
+  const listaAprovechable = () => [...MATERIALES_APROVECHABLE_DEFAULT,
+    ...materialesPersonalizados.filter(m => m.grupo === 'Aprovechable' && !MATERIALES_APROVECHABLE_DEFAULT.some(d => normalizar(d) === normalizar(m.nombre))).map(m => m.nombre)];
+  const listaDisposicion = () => [...MATERIALES_DISPOSICION_DEFAULT,
+    ...materialesPersonalizados.filter(m => m.grupo === 'Disposición' && !MATERIALES_DISPOSICION_DEFAULT.some(d => normalizar(d) === normalizar(m.nombre))).map(m => m.nombre)];
+
+  // ─── NUEVO MATERIAL: pregunta grupo, precio de venta y si lleva unidades ───
+  function abrirNuevoMaterial(grupo) {
+    const form = document.getElementById('form-nuevo-material');
+    form.style.display = 'block';
+    document.getElementById('nm-nombre').value = '';
+    document.getElementById('nm-precio').value = '';
+    document.getElementById('nm-unidades').checked = false;
+    document.getElementById('nm-error').textContent = '';
+    document.querySelectorAll('input[name="nm-grupo"]').forEach(r => { r.checked = r.value === grupo; });
+    nmCambioGrupo();
+    document.getElementById('nm-nombre').focus();
+  }
+
+  function nmCambioGrupo() {
+    const grupo = (document.querySelector('input[name="nm-grupo"]:checked') || {}).value;
+    document.getElementById('nm-precio-wrap').style.display = grupo === 'Disposición' ? 'block' : 'none';
+  }
+
+  async function guardarMaterialesPersonalizados() {
+    try { localStorage.setItem('hh-materiales-personalizados', JSON.stringify(materialesPersonalizados)); } catch (e) {}
+    if (!db) return;
+    try {
+      const { doc, setDoc } = firestoreFns;
+      await setDoc(doc(db, 'hh-actas-meta', 'materiales-personalizados'), { lista: materialesPersonalizados });
+    } catch (err) { console.error('Error guardando materiales nuevos:', err); }
+  }
+
+  function guardarNuevoMaterial() {
+    const err = document.getElementById('nm-error');
+    const nombre = document.getElementById('nm-nombre').value.trim();
+    const grupo = (document.querySelector('input[name="nm-grupo"]:checked') || {}).value;
+    const precioTxt = document.getElementById('nm-precio').value;
+    const conUnidades = document.getElementById('nm-unidades').checked;
+    if (!nombre) { err.textContent = 'Escribe el nombre del material.'; return; }
+    if (!grupo) { err.textContent = 'Indica si es aprovechable o no aprovechable.'; return; }
+    const precio = precioTxt === '' ? null : Number(precioTxt);
+    if (grupo === 'Disposición' && (precio === null || isNaN(precio) || precio <= 0)) {
+      err.textContent = 'Pon el precio de venta por kg para la orden de compra.'; return;
+    }
+
+    // Si ya existía con ese nombre, se actualiza (sirve para cambiar el precio)
+    const previo = materialPersonalizado(nombre);
+    const datos = { nombre, grupo, precio: grupo === 'Disposición' ? precio : null, conUnidades };
+    if (previo) Object.assign(previo, datos); else materialesPersonalizados.push(datos);
+    guardarMaterialesPersonalizados();
+    if (!materialesConocidos.includes(nombre)) { materialesConocidos.push(nombre); guardarMaterialesConocidos(); }
+
+    // Agregar la fila al formulario del acta en su grupo
+    const clave = grupo === 'Disposición' ? 'disposicion' : 'aprovechable';
+    if (!filasActaManual[clave].some(f => normalizar(f.nombre) === normalizar(nombre))) {
+      filasActaManual[clave].push({ nombre, cantidad: '', unidad: 'Kg', unidades: '', mostrarOtro: false });
+    }
+    document.getElementById('form-nuevo-material').style.display = 'none';
+    renderFilasActaManual();
+    const est = document.getElementById('estado-acta-manual');
+    est.className = 'actas-estado-carga actas-estado-ok';
+    est.style.display = 'block';
+    est.textContent = `"${nombre}" ${previo ? 'actualizado' : 'agregado'} en ${grupo === 'Disposición' ? 'No aprovechable' : 'Aprovechable'}`
+      + (grupo === 'Disposición' ? ` — $${precio.toLocaleString('es-CO')} por kg en la orden de compra` : '')
+      + (conUnidades ? ' — con kg y unidades' : '') + '. Ponle la cantidad abajo.';
+  }
+
   function toggleCrearActa() {
     const panel = document.getElementById('panel-crear-acta');
     const abrir = panel.style.display === 'none';
     panel.style.display = abrir ? 'block' : 'none';
     if (abrir) {
-      MATERIALES_APROVECHABLE_DEFAULT.forEach(n => { if (!materialesConocidos.includes(n)) materialesConocidos.push(n); });
-      MATERIALES_DISPOSICION_DEFAULT.forEach(n => { if (!materialesConocidos.includes(n)) materialesConocidos.push(n); });
+      listaAprovechable().forEach(n => { if (!materialesConocidos.includes(n)) materialesConocidos.push(n); });
+      listaDisposicion().forEach(n => { if (!materialesConocidos.includes(n)) materialesConocidos.push(n); });
       if (filasActaManual.aprovechable.length === 0) {
-        filasActaManual.aprovechable = MATERIALES_APROVECHABLE_DEFAULT.map(nombre => ({
+        filasActaManual.aprovechable = listaAprovechable().map(nombre => ({
           nombre, cantidad: '', unidad: 'Kg', unidades: '', mostrarOtro: false
         }));
       }
       const unidadDe = nombre => (/transporte/i.test(nombre) || nombre === 'Manifiestos') ? 'Und' : 'Kg';
       if (filasActaManual.disposicion.length === 0) {
-        filasActaManual.disposicion = MATERIALES_DISPOSICION_DEFAULT.map(nombre => ({
-          nombre, cantidad: '', unidad: unidadDe(nombre), mostrarOtro: false
+        filasActaManual.disposicion = listaDisposicion().map(nombre => ({
+          nombre, cantidad: '', unidad: unidadDe(nombre), unidades: '', mostrarOtro: false
         }));
       } else {
         // Asegurar que los materiales por defecto (p. ej. Manifiestos) aparezcan aunque ya hubiera filas guardadas
-        MATERIALES_DISPOSICION_DEFAULT.forEach(nombre => {
+        listaDisposicion().forEach(nombre => {
           if (!filasActaManual.disposicion.some(f => f.nombre === nombre)) {
             filasActaManual.disposicion.push({ nombre, cantidad: '', unidad: unidadDe(nombre), mostrarOtro: false });
           }
@@ -9880,10 +9975,13 @@ function closeBackupModal(){
 
   // ─── CREAR ACTA A MANO ────────────────────────────────────
   let filasActaManual = { aprovechable: [], disposicion: [] };
-  // Estibas: se registran en Kg y, al frente, la cantidad en unidades
-  const esEstiba = nombre => /estiba/i.test(nombre || '');
+  // Materiales que se registran en Kg y, al frente, la cantidad en unidades:
+  // Estibas, Big Bag y los materiales nuevos marcados "lleva unidades"
+  const esEstibaReal = nombre => /estiba/i.test(nombre || '');
+  const esEstiba = nombre => esEstibaReal(nombre) || /big\s*-?bag/i.test(nombre || '')
+    || !!(materialPersonalizado(nombre) || {}).conUnidades;
   // Estibas siempre de primeras dentro de Aprovechable
-  const ordenarEstibasPrimero = lista => [...lista].sort((a, b) => (esEstiba(b.nombre) ? 1 : 0) - (esEstiba(a.nombre) ? 1 : 0));
+  const ordenarEstibasPrimero = lista => [...lista].sort((a, b) => (esEstibaReal(b.nombre) ? 1 : 0) - (esEstibaReal(a.nombre) ? 1 : 0));
 
   function poblarSelectMesActaManual() {
     const select = document.getElementById('select-mes-acta-manual');
@@ -9949,18 +10047,22 @@ function closeBackupModal(){
               ? `<span style="${nameStyle}">${esMani ? '📄 ' : ''}${f.nombre}</span>`
               : `<input type="text" placeholder="Nombre del material" value="${f.nombre}" oninput="actualizarFilaMaterial('disposicion', ${i}, 'nombre', this.value)" style="flex:1.4; height:30px; border-radius:6px; border:1px solid var(--borde); padding:0 6px; font-size:12px;">`}
             <input type="number" placeholder="Cantidad" value="${f.cantidad}" oninput="actualizarFilaMaterial('disposicion', ${i}, 'cantidad', this.value)" style="width:80px; height:30px; border-radius:6px; border:1px solid ${esMani ? '#d7c8f5' : 'var(--borde)'}; padding:0 6px; font-size:12px;">
-            <span style="font-size:11px; color:var(--texto-suave); width:26px;">${f.unidad}</span>
+            <span style="font-size:11px; color:var(--texto-suave); width:26px;">${esEstiba(f.nombre) ? 'Kg' : f.unidad}</span>
+            ${esEstiba(f.nombre) ? `<input type="number" placeholder="Und" value="${f.unidades || ''}" oninput="actualizarFilaMaterial('disposicion', ${i}, 'unidades', this.value)" style="width:64px; height:30px; border-radius:6px; border:1px solid var(--borde); padding:0 6px; font-size:12px;"><span style="font-size:11px; color:var(--texto-suave);">Und</span>` : ''}
           </div>`;
         }).join('') +
         '</div>' +
-        '<button onclick="agregarFilaMaterial(\'disposicion\')" style="background:none; border:1px solid var(--borde); border-radius:7px; padding:5px 10px; font-size:12px; cursor:pointer; margin-top:8px;">+ otro material de Disposición</button>';
+        '<button onclick="abrirNuevoMaterial(\'Disposición\')" style="background:none; border:1px solid var(--borde); border-radius:7px; padding:5px 10px; font-size:12px; cursor:pointer; margin-top:8px;">➕ Nuevo material de Disposición</button>';
     }
   }
 
   function actualizarNombreDesdeSelect(grupo, i, valor) {
     if (valor === '__otro__') {
-      filasActaManual[grupo][i].mostrarOtro = true;
-      filasActaManual[grupo][i].nombre = '';
+      // Un material nuevo se crea con el formulario (pregunta grupo, precio y unidades)
+      filasActaManual[grupo].splice(i, 1);
+      renderFilasActaManual();
+      abrirNuevoMaterial('Aprovechable');
+      return;
     } else {
       filasActaManual[grupo][i].mostrarOtro = false;
       filasActaManual[grupo][i].nombre = valor;
@@ -10104,7 +10206,9 @@ function closeBackupModal(){
     // ── Hoja 2 ──
     doc.addPage();
     ponerFondo();
-    const filasDisp = disposicion.map(f => [f.nombre, fmt(f.cantidad), f.unidad || 'Kg']);
+    const filasDisp = disposicion.map(f => esEstiba(f.nombre)
+      ? [f.nombre, fmt(f.cantidad), 'Kg' + ((f.unidades !== '' && f.unidades != null) ? `  /  ${fmt(f.unidades)} Und` : '')]
+      : [f.nombre, fmt(f.cantidad), f.unidad || 'Kg']);
     let y = tabla('MATERIAL PARA DISPOSICIÓN', filasDisp.length ? filasDisp : [['—', '', '']], 160);
 
     if (y > 560) { doc.addPage(); ponerFondo(); y = 150; }
@@ -10136,9 +10240,9 @@ function closeBackupModal(){
     const mismo = (a, b) => normalizar(a || '') === normalizar(b || '');
 
     // Aprovechable: Estibas junta Kg y Und en una sola fila
-    const aprov = MATERIALES_APROVECHABLE_DEFAULT.map(nombre => ({ nombre, cantidad: '', unidad: 'Kg', unidades: '', mostrarOtro: false }));
+    const aprov = listaAprovechable().map(nombre => ({ nombre, cantidad: '', unidad: 'Kg', unidades: '', mostrarOtro: false }));
     regs.filter(r => r.grupo !== 'Disposición').forEach(r => {
-      let fila = aprov.find(f => mismo(f.nombre, r.nombre) || (esEstiba(f.nombre) && esEstiba(r.nombre)));
+      let fila = aprov.find(f => mismo(f.nombre, r.nombre) || (esEstibaReal(f.nombre) && esEstibaReal(r.nombre)));
       if (!fila) { fila = { nombre: r.nombre, cantidad: '', unidad: 'Kg', unidades: '', mostrarOtro: false }; aprov.push(fila); }
       if (esEstiba(r.nombre)) {
         if (r.unidadActa === 'Und') fila.unidades = String(r.cantidadActa); else fila.cantidad = String(r.cantidadActa);
@@ -10150,10 +10254,14 @@ function closeBackupModal(){
 
     // Disposición: Cafetería y Sanitarios vuelve a separarse si se guardó el detalle
     const unidadDe = nombre => (/transporte/i.test(nombre) || nombre === 'Manifiestos') ? 'Und' : 'Kg';
-    const disp = MATERIALES_DISPOSICION_DEFAULT.map(nombre => ({ nombre, cantidad: '', unidad: unidadDe(nombre), mostrarOtro: false }));
+    const disp = listaDisposicion().map(nombre => ({ nombre, cantidad: '', unidad: unidadDe(nombre), unidades: '', mostrarOtro: false }));
     const ponerDisp = (nombre, cantidad, unidad) => {
-      let fila = disp.find(f => mismo(f.nombre, nombre));
-      if (!fila) { fila = { nombre, cantidad: '', unidad: unidad || unidadDe(nombre), mostrarOtro: false }; disp.push(fila); }
+      let fila = disp.find(f => mismo(f.nombre, nombre) || (/transporte/i.test(f.nombre) && /transporte/i.test(nombre)));
+      if (!fila) { fila = { nombre, cantidad: '', unidad: unidad || unidadDe(nombre), unidades: '', mostrarOtro: false }; disp.push(fila); }
+      // Materiales con kg y und: la fila Und va al campo de unidades
+      if (esEstiba(nombre) && unidad === 'Und') { fila.unidades = String(cantidad); return; }
+      // Transportes viejos separados (Cafetería / Sanitarios) se suman en el transporte único
+      if (/transporte/i.test(nombre) && fila.cantidad !== '') { fila.cantidad = String(Number(fila.cantidad) + Number(cantidad)); return; }
       fila.cantidad = String(cantidad);
     };
     regs.filter(r => r.grupo === 'Disposición').forEach(r => {
@@ -10173,7 +10281,7 @@ function closeBackupModal(){
     const mesIndex = parseInt(document.getElementById('select-mes-acta-manual').value, 10);
     const aprovechable = ordenarEstibasPrimero(filasActaManual.aprovechable.filter(f => f.nombre && (f.cantidad !== '' || (esEstiba(f.nombre) && f.unidades))));
     aprovechable.forEach(f => { if (esEstiba(f.nombre)) f.unidad = 'Kg'; });
-    const disposicion = filasActaManual.disposicion.filter(f => f.nombre && f.cantidad !== '');
+    const disposicion = filasActaManual.disposicion.filter(f => f.nombre && (f.cantidad !== '' || (esEstiba(f.nombre) && f.unidades)));
 
     if (isNaN(mesIndex) || (aprovechable.length === 0 && disposicion.length === 0)) {
       estadoDiv.className = 'actas-estado-carga actas-estado-error';
@@ -10208,8 +10316,14 @@ function closeBackupModal(){
       }
     });
     const partesCaf = disposicion.filter(f => esParteCafeteria(f.nombre));
-    disposicion.filter(f => !esParteCafeteria(f.nombre))
-      .forEach(f => agregarRegistro(nuevaActa.id, 'Disposición', f.nombre, Number(f.cantidad), f.unidad));
+    disposicion.filter(f => !esParteCafeteria(f.nombre)).forEach(f => {
+      if (esEstiba(f.nombre)) {
+        if (f.cantidad !== '') agregarRegistro(nuevaActa.id, 'Disposición', f.nombre, Number(f.cantidad), 'Kg');
+        if (f.unidades !== '' && f.unidades != null) agregarRegistro(nuevaActa.id, 'Disposición', f.nombre, Number(f.unidades), 'Und');
+      } else {
+        agregarRegistro(nuevaActa.id, 'Disposición', f.nombre, Number(f.cantidad), f.unidad);
+      }
+    });
     if (partesCaf.length) {
       const totalCaf = partesCaf.reduce((sum, f) => sum + Number(f.cantidad), 0);
       agregarRegistro(nuevaActa.id, 'Disposición', 'Cafetería y Sanitarios', Math.round(totalCaf * 100) / 100, 'Kg');
@@ -10359,7 +10473,7 @@ function closeBackupModal(){
       }
       const p = precioOrdenCompra(r.nombre);
       return { nombre: r.nombre, cantidad: r.cantidadActa, unidad: r.unidadActa === 'Und' ? 'Und' : 'Kg', precio: p.precio, conIva: true, sinPrecio: p.sinPrecio };
-    }).filter(it => Number(it.cantidad) > 0);
+    }).filter(it => Number(it.cantidad) > 0 && !(it.unidad === 'Und' && esEstiba(it.nombre)));   // la fila en und es informativa: se cobra por kg
 
     if (items.length === 0) {
       estadoDiv.className = 'actas-estado-carga actas-estado-error';
@@ -12263,7 +12377,7 @@ function closeBackupModal(){
   // Cafetería y Sanitarios. Poner en true para volver a mostrarla.
   const MOSTRAR_FILA_MANIFIESTOS = false;
 
-  // Precio por viaje de cada transporte (Transporte Cafetería y Transporte Sanitarios) en la orden de compra
+  // Precio por viaje del Transporte Cafetería y Sanitarios (un solo concepto) en la orden de compra
   const PRECIO_TRANSPORTE_CAFETERIA = 350000;
   // Precios por kg de la orden de compra Purina (antes vivían en el Apps Script).
   // Para cambiar un precio o agregar un material, edítalo aquí.
@@ -12275,6 +12389,8 @@ function closeBackupModal(){
     'Lonas en mal estado': 80
   };
   function precioOrdenCompra(nombre) {
+    const pers = materialPersonalizado(nombre);
+    if (pers && pers.precio != null && pers.precio !== '') return { precio: Number(pers.precio), sinPrecio: false };
     const n = normalizar(nombre || '');
     for (const k in PRECIOS_ORDEN_COMPRA) if (normalizar(k) === n) return { precio: PRECIOS_ORDEN_COMPRA[k], sinPrecio: false };
     if (/retal|madera/.test(n)) return { precio: PRECIOS_ORDEN_COMPRA['Retal de Madera'], sinPrecio: false };
@@ -12409,6 +12525,17 @@ function closeBackupModal(){
         perfilesAprendidos.push(...formDoc.data().lista);
       }
     } catch (err) { /* sin formatos aprendidos aún */ }
+
+    try {
+      const persDoc = await getDoc(doc(db, 'hh-actas-meta', 'materiales-personalizados'));
+      if (persDoc.exists() && Array.isArray(persDoc.data().lista)) {
+        persDoc.data().lista.forEach(m => {
+          const ya = materialPersonalizado(m.nombre);
+          if (ya) Object.assign(ya, m); else materialesPersonalizados.push(m);
+        });
+        try { localStorage.setItem('hh-materiales-personalizados', JSON.stringify(materialesPersonalizados)); } catch (e) {}
+      }
+    } catch (err) { /* sin materiales nuevos guardados aún */ }
 
     try {
       const matDoc = await getDoc(doc(db, 'hh-actas-meta', 'materiales'));
@@ -12863,6 +12990,9 @@ function closeBackupModal(){
   window.actualizarFilaMaterial = actualizarFilaMaterial;
   window.generarActaManualCliente = generarActaManualCliente;
   window.cargarActaEnFormulario = cargarActaEnFormulario;
+  window.abrirNuevoMaterial = abrirNuevoMaterial;
+  window.nmCambioGrupo = nmCambioGrupo;
+  window.guardarNuevoMaterial = guardarNuevoMaterial;
   window.toggleSoloFaltantes = toggleSoloFaltantes;
   window.actaActivaDeMesGlobal = m => !isNaN(m) && !!actaActivaDeMes(m);
   window.agregarMaterialConocido = agregarMaterialConocido;
