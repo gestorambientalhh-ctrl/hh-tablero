@@ -10947,11 +10947,18 @@ function closeBackupModal(){
 
     if (acta) {
       registros.filter(r => r.actaId === acta.id && !esConceptoSinCertificado(r.nombre)).forEach(r => {
+        // Lo que ya está certificado con otros certificados: solo se pide lo que falta
+        const esUnd = r.unidadActa === 'Und';
+        const yaCert = r.entregas.filter(e => !e.provisional)
+          .reduce((t, e) => t + (Number(esUnd ? e.unidades : e.pesoKg) || 0), 0);
         _certPanel.mats.push({
           nombre: r.nombre, grupo: r.grupo || 'Aprovechable',
-          cantidadActa: r.cantidadActa, unidad: r.unidadActa === 'Und' ? 'und' : 'kg', reg: r
+          cantidadActa: r.cantidadActa, unidad: esUnd ? 'und' : 'kg', reg: r,
+          yaCert, pendiente: Math.round((r.cantidadActa - yaCert) * 100) / 100
         });
       });
+      // Primero lo que falta, después lo que ya cuadra
+      _certPanel.mats.sort((a, b) => (a.grupo === b.grupo ? 0 : (a.grupo === 'Aprovechable' ? -1 : 1)) || ((b.pendiente > 0) - (a.pendiente > 0)));
     } else {
       materialesConocidos.filter(n => !esConceptoSinCertificado(n)).forEach(n => {
         _certPanel.mats.push({ nombre: n, grupo: 'Aprovechable', cantidadActa: null, unidad: 'kg', reg: null });
@@ -10976,15 +10983,22 @@ function closeBackupModal(){
       return;
     }
 
-    let html = '<div class="cert-fila cert-fila-cab"><span>Material</span><span style="text-align:right;">Según el acta</span><span>Certificado</span><span>Estado</span></div>';
+    const yaCuadran = _certPanel.mats.filter(m => m.pendiente != null && m.pendiente <= 0).length;
+    let html = '<div class="cert-fila cert-fila-cab"><span>Material</span><span style="text-align:right;">Falta por certificar</span><span>Este certificado</span><span>Estado</span></div>';
     let grupoActual = '';
     _certPanel.mats.forEach((m, i) => {
+      // Los que ya cuadran se ocultan (salvo que estén marcados o se pida verlos)
+      if (!_certPanel.verTodos && m.pendiente != null && m.pendiente <= 0 && !_certPanel.sel[i]) return;
       if (m.grupo !== grupoActual) {
         grupoActual = m.grupo;
         html += `<div class="cert-grupo">${escapeHtml(grupoActual)}</div>`;
       }
       const sel = !!_certPanel.sel[i];
-      const actaTxt = m.cantidadActa === null ? '—' : `${_certFmt(m.cantidadActa)} ${m.unidad}`;
+      let actaTxt;
+      if (m.cantidadActa === null) actaTxt = '—';
+      else if (!m.yaCert) actaTxt = `${_certFmt(m.cantidadActa)} ${m.unidad}`;
+      else if (m.pendiente <= 0) actaTxt = `<span style="color:var(--verde-texto);">ya cuadra ✓</span><br><small style="color:var(--texto-suave);">acta ${_certFmt(m.cantidadActa)} ${m.unidad}</small>`;
+      else actaTxt = `<b>${_certFmt(m.pendiente)} ${m.unidad}</b><br><small style="color:var(--texto-suave);">acta ${_certFmt(m.cantidadActa)} · ya ${_certFmt(m.yaCert)}</small>`;
       html += `<div class="cert-fila" id="cert-fila-${i}">
         <div style="display:flex; align-items:center; gap:9px; min-width:0;">
           <input type="checkbox" id="cert-chk-${i}" ${sel ? 'checked' : ''} onchange="certToggle(${i})">
@@ -10998,6 +11012,9 @@ function closeBackupModal(){
         <span class="cert-estado" id="cert-estado-${i}"></span>
       </div>`;
     });
+    if (yaCuadran > 0) {
+      html += `<div style="padding:10px 2px; font-size:12px;"><a href="#" onclick="event.preventDefault(); certVerTodos();" style="color:var(--azul);">${_certPanel.verTodos ? 'Ocultar' : 'Mostrar'} ${yaCuadran === 1 ? 'el que ya cuadra' : 'los ' + yaCuadran + ' que ya cuadran'}</a></div>`;
+    }
     cont.innerHTML = html;
     _certPanel.mats.forEach((m, i) => certActualizarFila(i));
     certActualizarResumen();
@@ -11023,12 +11040,12 @@ function closeBackupModal(){
       fila.style.background = 'var(--gris-calido)';
       est.style.color = 'var(--texto-suave)';
       est.textContent = 'queda esperando acta';
-    } else if (escrito === m.cantidadActa) {
+    } else if (escrito === (m.pendiente ?? m.cantidadActa)) {
       fila.style.background = 'var(--verde-bg)';
       est.style.color = 'var(--verde-texto)';
-      est.textContent = 'cuadra';
+      est.textContent = m.yaCert ? 'completa el acta' : 'cuadra';
     } else {
-      const dif = m.cantidadActa - escrito;
+      const dif = (m.pendiente ?? m.cantidadActa) - escrito;
       fila.style.background = 'var(--rojo-bg)';
       est.style.color = 'var(--rojo-texto)';
       est.textContent = (dif > 0 ? 'faltan ' : 'sobran ') + _certFmt(Math.abs(dif)) + ' ' + m.unidad;
@@ -11055,7 +11072,8 @@ function closeBackupModal(){
     _certPanel.sel[i] = !_certPanel.sel[i];
     const m = _certPanel.mats[i];
     if (_certPanel.sel[i] && !_certPanel.val[i] && m.cantidadActa !== null) {
-      _certPanel.val[i] = _certFmt(m.cantidadActa);
+      const sugerido = m.pendiente ?? m.cantidadActa;
+      if (sugerido > 0) _certPanel.val[i] = _certFmt(sugerido);
     }
     const inp = document.getElementById('cert-val-' + i);
     if (inp) {
@@ -11065,6 +11083,12 @@ function closeBackupModal(){
     }
     certActualizarFila(i);
     certActualizarResumen();
+  }
+
+  function certVerTodos() {
+    if (!_certPanel) return;
+    _certPanel.verTodos = !_certPanel.verTodos;
+    certRenderLista();
   }
 
   function certEscribir(i, valor) {
@@ -11077,8 +11101,10 @@ function closeBackupModal(){
   function certMarcarTodos() {
     if (!_certPanel) return;
     _certPanel.mats.forEach((m, i) => {
+      if (m.pendiente != null && m.pendiente <= 0) return;   // los que ya cuadran no se marcan
       _certPanel.sel[i] = true;
-      if (!_certPanel.val[i] && m.cantidadActa !== null) _certPanel.val[i] = _certFmt(m.cantidadActa);
+      const sugerido = m.pendiente ?? m.cantidadActa;
+      if (!_certPanel.val[i] && sugerido !== null && sugerido > 0) _certPanel.val[i] = _certFmt(sugerido);
     });
     certRenderLista();
   }
@@ -12856,6 +12882,7 @@ function closeBackupModal(){
   window.certToggle = certToggle;
   window.certEscribir = certEscribir;
   window.certMarcarTodos = certMarcarTodos;
+  window.certVerTodos = certVerTodos;
   window.guardarCertificadoManual = guardarCertificadoManual;
   window.cargarPDF = cargarPDF;
   window.subirManifiestoMes = subirManifiestoMes;
