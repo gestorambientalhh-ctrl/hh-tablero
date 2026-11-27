@@ -1850,6 +1850,12 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
       Sube el PDF del acta del mes. Si ya existía una acta para ese mes, la nueva la reemplaza y los certificados que ya tenías registrados se pasan solos a la nueva.
     </div>
     <div>
+      <select id="select-mes-acta-pdf" title="Mes en que se guarda el acta" style="height:34px; border-radius:7px; border:1px solid var(--borde); font-size:12.5px; margin-right:6px;">
+        <option value="auto">Mes: el que diga el PDF</option>
+        <option value="0">Enero</option><option value="1">Febrero</option><option value="2">Marzo</option><option value="3">Abril</option>
+        <option value="4">Mayo</option><option value="5">Junio</option><option value="6">Julio</option><option value="7">Agosto</option>
+        <option value="8">Septiembre</option><option value="9">Octubre</option><option value="10">Noviembre</option><option value="11">Diciembre</option>
+      </select>
       <label class="actas-btn" for="input-pdf">Adjuntar acta (PDF)</label>
       <input type="file" id="input-pdf" accept="application/pdf" onchange="cargarPDF(event)">
     </div>
@@ -9323,6 +9329,69 @@ function closeBackupModal(){
     return isNaN(fecha.getTime()) ? null : fecha.getTime();
   }
 
+  // ─── Lectura de las filas de un acta (PDF con texto) ───
+  // Agrupa las palabras por renglón; cada renglón de tabla es: NOMBRE · CANTIDAD · UNIDAD,
+  // donde UNIDAD puede ser "Kg", "Und" o "525 Und" (kg + unidades, p. ej. Estibas, Big Bags).
+  // El grupo (Aprovechable / Disposición) sale del título que esté ENCIMA de cada fila.
+  function leerFilasActa(paginas) {
+    const esNum = t => /^\d{1,3}(\.\d{3})+(,\d+)?$/.test(t) || /^\d+(,\d+)?$/.test(t) || /^\d+\.\d{1,2}$/.test(t);
+    const aNum = t => /^\d+\.\d{1,2}$/.test(t) ? parseFloat(t) : parseFloat(t.replace(/\./g, '').replace(',', '.'));
+    const filas = [];
+    let grupo = null, enTabla = false, fin = false;
+
+    paginas.forEach(items => {
+      if (fin) return;
+      // renglones: palabras con la misma altura (y) ± 3
+      const renglones = [];
+      [...items].sort((a, b) => b.y - a.y || a.x - b.x).forEach(it => {
+        const r = renglones.find(r => Math.abs(r.y - it.y) <= 3);
+        if (r) r.palabras.push(it); else renglones.push({ y: it.y, palabras: [it] });
+      });
+      renglones.forEach(r => {
+        if (fin) return;
+        // separar tokens: "525 Und" puede venir junto en una sola palabra
+        const toks = [];
+        r.palabras.sort((a, b) => a.x - b.x).forEach(p => p.text.split(/\s+/).filter(Boolean).forEach(t => toks.push(t)));
+        const linea = toks.join(' ');
+        const up = linea.toUpperCase();
+
+        if (/CORDIALMENTE|^FIRMA:?/.test(up)) { fin = true; return; }
+        if (/PARA DISPOSICI|NO APROVECHABLE/.test(up)) { grupo = 'Disposición'; enTabla = false; return; }
+        if (/APROVECHABLE/.test(up) && !/NO APROVECHABLE/.test(up)) { grupo = 'Aprovechable'; enTabla = false; return; }
+        if (/\bMATERIAL\b/.test(up) && /CANTIDAD|UNIDAD/.test(up)) { enTabla = true; return; }   // encabezado de la tabla
+        if (!grupo || !enTabla) return;
+
+        // La cantidad es el número que va justo antes de la unidad (el nombre puede tener
+        // números, p. ej. "Producto Tipo 2 Húmedo")
+        const n = toks.length;
+        const esKg = t => /^kg\.?$/i.test(t), esUnd = t => /^und\.?$/i.test(t);
+        let iCant = -1, unidad = 'Kg', unidades = null;
+        if (n >= 2 && esKg(toks[n - 1]) && esNum(toks[n - 2])) { iCant = n - 2; }
+        else if (n >= 3 && esUnd(toks[n - 1]) && esNum(toks[n - 2]) && esNum(toks[n - 3])) { iCant = n - 3; unidades = aNum(toks[n - 2]); }   // kg + und
+        else if (n >= 2 && esUnd(toks[n - 1]) && esNum(toks[n - 2])) { iCant = n - 2; unidad = 'Und'; }
+        else { for (let k = n - 1; k > 0; k--) if (esNum(toks[k])) { iCant = k; break; } }
+        if (iCant <= 0) {
+          // renglón sin cantidad dentro de la tabla: continuación del nombre anterior
+          if (!toks.some(esNum) && filas.length && filas[filas.length - 1].grupo === grupo) filas[filas.length - 1].nombre += ' ' + linea;
+          return;
+        }
+        const nombre = toks.slice(0, iCant).join(' ').trim();
+        const cantidad = aNum(toks[iCant]);
+        filas.push({ grupo: /transporte/i.test(nombre) ? 'Disposición' : grupo, nombre, cantidad, unidad, unidades });
+      });
+    });
+    return filas;
+  }
+
+  // Usa el nombre ya conocido del material ("Big Bags" → "Big Bag", mayúsculas, tildes)
+  function nombreCanonicoMaterial(nombre) {
+    const sinS = t => normalizar(t).replace(/s\b/g, '');
+    const conocidos = [...listaAprovechable(), ...listaDisposicion(), ...materialesConocidos];
+    return conocidos.find(c => normalizar(c) === normalizar(nombre))
+      || conocidos.find(c => sinS(c) === sinS(nombre))
+      || nombre;
+  }
+
   async function cargarPDF(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -9344,11 +9413,13 @@ function closeBackupModal(){
 
       let mesDetectado = null;
       let grupoActual = null;
-      const materialesExtraidos = [];
+      let materialesExtraidos = [];
+      const paginasActa = [];
 
       for (let p = 1; p <= doc.numPages; p++) {
         const page = await doc.getPage(p);
         const items = await extraerPalabras(page);
+        paginasActa.push(items);
 
         if (mesDetectado === null) mesDetectado = detectarMes(items);
 
@@ -9403,9 +9474,32 @@ function closeBackupModal(){
         });
       }
 
+      // Lectura por renglones (formato HH): grupo por título, kg + unidades, nombres con números
+      const filasLeidas = leerFilasActa(paginasActa);
+      if (filasLeidas.length > 0) materialesExtraidos = filasLeidas;
+      materialesExtraidos.forEach(m => { m.nombre = nombreCanonicoMaterial(m.nombre); });
+
+      // Mes: el que escojas en la lista, o el que diga el PDF
+      const selMesPdf = document.getElementById('select-mes-acta-pdf');
+      const mesElegido = selMesPdf && selMesPdf.value !== 'auto' ? parseInt(selMesPdf.value, 10) : null;
+      if (mesElegido !== null) {
+        if (mesDetectado !== null && mesDetectado !== mesElegido &&
+            !confirm(`El PDF dice ${MESES_LARGOS[mesDetectado]}, pero escogiste ${MESES_LARGOS[mesElegido]}.\n\n¿Guardarla en ${MESES_LARGOS[mesElegido]}?`)) {
+          estadoDiv.className = 'actas-estado-carga actas-estado-error';
+          estadoDiv.textContent = 'Carga cancelada.';
+          return;
+        }
+        mesDetectado = mesElegido;
+      }
+
       if (mesDetectado === null) {
         estadoDiv.className = 'actas-estado-carga actas-estado-error';
-        estadoDiv.textContent = 'No pude identificar a qué mes corresponde el acta. Revisa que el PDF diga el mes en el título.';
+        estadoDiv.textContent = 'No pude identificar a qué mes corresponde el acta. Escoge el mes en la lista junto a "Adjuntar acta" y súbela otra vez.';
+        return;
+      }
+      if (materialesExtraidos.length === 0) {
+        estadoDiv.className = 'actas-estado-carga actas-estado-error';
+        estadoDiv.textContent = 'No encontré materiales en el acta. Revisa que el PDF tenga la tabla de materiales con texto (no escaneado).';
         return;
       }
 
@@ -9419,13 +9513,35 @@ function closeBackupModal(){
         }
       }
       const nuevaActa = crearActaParaMes(mesDetectado);
-      materialesExtraidos.forEach(m => agregarRegistro(nuevaActa.id, m.grupo, m.nombre, m.cantidad, m.unidad));
+      // Cafetería y Sanitarios por separado → una fila en la sábana con su detalle (igual que el acta a mano)
+      const partesCafPdf = materialesExtraidos.filter(m => m.grupo === 'Disposición' && esParteCafeteria(m.nombre));
+      materialesExtraidos.filter(m => !(m.grupo === 'Disposición' && esParteCafeteria(m.nombre))).forEach(m => {
+        agregarRegistro(nuevaActa.id, m.grupo, m.nombre, m.cantidad, m.unidad);
+        if (m.unidades != null) agregarRegistro(nuevaActa.id, m.grupo, m.nombre, m.unidades, 'Und');   // kg + unidades
+      });
+      if (partesCafPdf.length) {
+        const totalCafPdf = partesCafPdf.reduce((t, m) => t + Number(m.cantidad), 0);
+        agregarRegistro(nuevaActa.id, 'Disposición', 'Cafetería y Sanitarios', Math.round(totalCafPdf * 100) / 100, 'Kg');
+        registros[registros.length - 1].detalle = partesCafPdf.map(m => ({ nombre: m.nombre, cantidad: Number(m.cantidad), unidad: 'Kg' }));
+      }
       reconciliarMaterialesSinActa(mesDetectado);
+      const yaConocidos = new Set([...materialesConocidos, ...listaAprovechable(), ...listaDisposicion()].map(normalizar));
+      const nuevosNombres = [...new Set(materialesExtraidos.map(m => m.nombre))].filter(n => !yaConocidos.has(normalizar(n)));
+      const nuevosSinPrecio = materialesExtraidos.filter(m => m.grupo === 'Disposición' && !/transporte/i.test(m.nombre) && nuevosNombres.includes(m.nombre)).map(m => m.nombre);
+      nuevosNombres.forEach(n => materialesConocidos.push(n));
+      if (nuevosNombres.length) guardarMaterialesConocidos();
 
       estadoDiv.className = 'actas-estado-carga actas-estado-ok';
-      estadoDiv.textContent = eraCorreccion
-        ? `Listo — el acta de ${MESES[mesDetectado]} 2026 se reemplazó (${materialesExtraidos.length} materiales). Los certificados que ya tenías se conservaron.`
-        : `Listo — se cargaron ${materialesExtraidos.length} materiales de ${MESES[mesDetectado]} 2026 automáticamente.`;
+      const nAprov = materialesExtraidos.filter(m => m.grupo === 'Aprovechable').length;
+      const nDisp = materialesExtraidos.length - nAprov;
+      let msgPdf = (eraCorreccion
+        ? `Listo — el acta de ${MESES_LARGOS[mesDetectado]} 2026 se reemplazó`
+        : `Listo — acta de ${MESES_LARGOS[mesDetectado]} 2026 cargada`)
+        + `: ${nAprov} aprovechables y ${nDisp} de disposición.` + (eraCorreccion ? ' Los certificados que ya tenías se conservaron.' : '');
+      if (nuevosNombres.length) msgPdf += ` Materiales nuevos: ${nuevosNombres.join(', ')}.`;
+      if (nuevosSinPrecio.length) msgPdf += ` Ponles precio con ➕ Nuevo material (en Crear acta) para la orden de compra: ${nuevosSinPrecio.join(', ')}.`;
+      estadoDiv.textContent = msgPdf;
+      if (selMesPdf) selMesPdf.value = 'auto';
       render();
       guardarMes(mesDetectado);
 
