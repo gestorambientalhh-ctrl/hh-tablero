@@ -702,6 +702,24 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
   .sabana-filtro { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin: 4px 0 8px; font-size:12.5px; }
   .sabana-filtro-btn.activo { background: var(--rojo-bg); color: var(--rojo-texto); border-color: var(--rojo-texto); }
   .sabana-ok-mini { color: var(--verde-texto); font-size: 11px; opacity: .55; }
+  /* ── Liquidación del conductor ── */
+  .cond-wrap { max-width: 1050px; }
+  .cond-bloque { background:#fff; border:1px solid var(--borde); border-radius:10px; padding:14px 16px; margin-bottom:12px; }
+  .cond-tit { font-size:13.5px; font-weight:600; color:var(--azul); margin:0 0 8px; }
+  .cond-grid { display:grid; grid-template-columns:repeat(4, minmax(150px, 1fr)); gap:8px 12px; }
+  .cond-grid label { display:flex; flex-direction:column; gap:3px; font-size:11.5px; color:var(--texto-suave); font-weight:600; }
+  .cond-grid input, .cond-grid select, .cond-tabla input { height:30px; border:1px solid var(--borde); border-radius:6px; padding:0 7px; font-size:12.5px; font-family:inherit; background:#fff; }
+  .cond-tabla { width:100%; border-collapse:collapse; font-size:12.5px; margin-bottom:8px; }
+  .cond-tabla th { text-align:left; font-size:10.5px; text-transform:uppercase; color:var(--texto-suave); font-weight:600; padding:5px 6px; border-bottom:1px solid var(--borde); background:var(--gris-calido); }
+  .cond-tabla td { padding:4px 6px; border-bottom:1px solid var(--borde); }
+  .cond-tabla td.num, .cond-tabla th.num { text-align:right; }
+  .cond-tabla tr.tot td { font-weight:700; border-top:1.5px solid #333; }
+  .cond-tabla input { width:100%; box-sizing:border-box; }
+  .cond-tabla input.n { text-align:right; }
+  .cond-x { background:none; border:none; color:var(--rojo-texto); cursor:pointer; font-size:15px; }
+  .cond-total { display:flex; justify-content:space-between; font-size:15px; font-weight:700; border-top:2px solid #333; border-bottom:2px solid #333; padding:7px 4px; margin-top:6px; }
+  .cond-alerta { font-size:12px; padding:6px 10px; border-radius:7px; margin-top:6px; background:var(--amarillo-bg); color:var(--amarillo-texto); }
+  @media (max-width: 700px) { .cond-grid { grid-template-columns: 1fr 1fr; } }
 
   .actas-fila-ensenar { padding:8px 10px; font-size:12.5px; border-bottom:1px solid var(--borde); cursor:pointer; }
   .actas-fila-ensenar:hover { background: var(--gris-calido); }
@@ -960,6 +978,7 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
         <button class="sec-tab" id="sec-reuniones" onclick="showSection('reuniones')" style="display:none">📋 Reuniones</button>
         <button class="sec-tab" id="sec-flujo" onclick="showSection('flujo')">💸 Flujo</button>
         <button class="sec-tab" id="sec-actas" onclick="showSection('actas')">📑 Actas</button>
+        <button class="sec-tab" id="sec-conductor" onclick="showSection('conductor')">🚚 Conductor</button>
         <div style="width:1px;height:18px;background:var(--border);margin:0 4px"></div>
         <button onclick="toggleForm()" style="display:flex;align-items:center;gap:5px;height:28px;padding:0 12px;background:#2d4a7a;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -1711,6 +1730,73 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
       <div id="hitos-list"></div>
     </div>
   </div>
+  <!-- ═══════════ SECCIÓN LIQUIDACIÓN CONDUCTOR ═══════════ -->
+  <div id="section-conductor" style="display:none;position:fixed;top:52px;left:0;right:0;bottom:0;flex-direction:column;overflow-y:auto;z-index:50;background:#f7f6f3;padding:16px">
+    <div style="max-width:1050px;margin:0 auto 12px;">
+      <button onclick="showSection('tablero')" style="display:flex;align-items:center;gap:5px;height:30px;padding:0 10px;font-size:12px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);cursor:pointer;font-family:inherit">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        Inicio
+      </button>
+    </div>
+    <div class="actas-contenedor cond-wrap">
+      <div class="actas-encabezado">
+        <div>
+          <h2 style="margin:0;font-size:19px;color:var(--azul);">🚚 Liquidación del conductor</h2>
+          <p style="margin:2px 0 0;font-size:12.5px;color:var(--texto-suave);">Escribe los kilos de cada día; el tablero calcula, revisa y genera el PDF de la quincena.</p>
+        </div>
+      </div>
+
+      <div class="cond-bloque">
+        <div class="cond-grid">
+          <label>Quincena<select id="cond-periodo" onchange="condCambioPeriodo()"></select></label>
+          <label>Beneficiario<input id="cond-nombre" oninput="condCampo('nombre', this.value)"></label>
+          <label>Cédula<input id="cond-cc" oninput="condCampo('cc', this.value)"></label>
+          <label>Entrega<input id="cond-entrega" oninput="condCampo('entrega', this.value)"></label>
+        </div>
+        <div class="cond-grid" style="margin-top:8px;">
+          <label>Recolección $/kg<input id="cond-t-kg" type="number" oninput="condTarifa('kg', this.value)"></label>
+          <label>Finca interna $/kg<input id="cond-t-finca" type="number" oninput="condTarifa('finca', this.value)"></label>
+          <label>Báscula $/pesaje<input id="cond-t-bascula" type="number" oninput="condTarifa('bascula', this.value)"></label>
+          <span style="font-size:11.5px;color:var(--texto-suave);align-self:end;">Las tarifas quedan guardadas con cada quincena.</span>
+        </div>
+      </div>
+
+      <div class="cond-bloque">
+        <p class="cond-tit">1. Recolección Purina – Ruta Funza</p>
+        <div id="cond-funza"></div>
+        <button class="actas-btn-sec" onclick="condAgregar('funza')">+ día</button>
+      </div>
+
+      <div class="cond-bloque">
+        <p class="cond-tit">2. Recolección Funza – Ruta Madrid <span style="font-weight:400;font-size:11.5px;color:var(--texto-suave);">· neto = bruto − húmedo · báscula: 1 pesaje, 2 si hubo húmedo</span></p>
+        <div id="cond-madrid"></div>
+        <button class="actas-btn-sec" onclick="condAgregar('madrid')">+ día</button>
+      </div>
+
+      <div class="cond-bloque">
+        <p class="cond-tit">3. Recolección de corrugado y estibas</p>
+        <div id="cond-servicios"></div>
+        <button class="actas-btn-sec" onclick="condAgregar('servicios')">+ servicio</button>
+      </div>
+
+      <div class="cond-bloque">
+        <p class="cond-tit">4. Otros conceptos</p>
+        <div id="cond-otros"></div>
+      </div>
+
+      <div class="cond-bloque">
+        <p class="cond-tit">5. Resumen de la quincena</p>
+        <div id="cond-resumen"></div>
+        <div id="cond-alertas"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+          <button class="actas-btn" onclick="condGenerarPdf()">Generar liquidación (PDF)</button>
+          <button class="actas-btn-sec" onclick="condLimpiar()">Vaciar quincena</button>
+        </div>
+        <div id="cond-estado" class="actas-estado-carga"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ═══════════ SECCIÓN ACTAS ═══════════ -->
   <div id="section-actas" style="display:none;position:fixed;top:52px;left:0;right:0;bottom:0;flex-direction:column;overflow-y:auto;z-index:50;background:#f7f6f3;padding:16px">
     <div style="max-width:1150px;margin:0 auto 12px;">
@@ -2083,6 +2169,10 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       Actas
     </button>
+    <button class="mob-nav-btn" id="mobnav-conductor" onclick="showSection('conductor')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="6" width="14" height="10" rx="1"/><path d="M15 9h4l3 3v4h-7z"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+      Conductor
+    </button>
     <button class="mob-nav-btn" id="mobnav-nueva" onclick="toggleForm()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Nueva
@@ -2202,13 +2292,13 @@ function showSection(s){
   curSection=s;
 
   // ── Tabs desktop
-  ['tablero','dashboard','reuniones','flujo','actas'].forEach(sec=>{
+  ['tablero','dashboard','reuniones','flujo','actas','conductor'].forEach(sec=>{
     const el=document.getElementById('sec-'+sec);
     if(el) el.classList.toggle('act',sec===s);
   });
 
   // ── Tabs mobile
-  ['tablero','dashboard','reuniones','flujo','checklist','actas'].forEach(sec=>{
+  ['tablero','dashboard','reuniones','flujo','checklist','actas','conductor'].forEach(sec=>{
     const el=document.getElementById('mobnav-'+sec);
     if(el) el.classList.toggle('act',sec===s);
   });
@@ -2222,6 +2312,8 @@ function showSection(s){
   if(secReu) secReu.style.display=s==='reuniones'?'flex':'none';
   if(secFl)  secFl.style.display=s==='flujo'?'flex':'none';
   if(secAc)  secAc.style.display=s==='actas'?'flex':'none';
+  const secCond=document.getElementById('section-conductor');
+  if(secCond) secCond.style.display=s==='conductor'?'flex':'none';
 
   // ── Buttons
   document.getElementById('btn-add').style.display=(s==='tablero'&&biz<3)?'flex':'none';
@@ -2243,6 +2335,8 @@ function showSection(s){
     renderFlujo();
   } else if(s==='actas'){
     // el módulo de Actas maneja su propio render internamente
+  } else if(s==='conductor'){
+    if (window.condInicializar) window.condInicializar();
   } else {
     renderCurrent();
   }
@@ -12642,6 +12736,8 @@ function closeBackupModal(){
       }
     } catch (err) { /* sin formatos aprendidos aún */ }
 
+    await condCargarFirebase();
+
     try {
       const persDoc = await getDoc(doc(db, 'hh-actas-meta', 'materiales-personalizados'));
       if (persDoc.exists() && Array.isArray(persDoc.data().lista)) {
@@ -13105,7 +13201,334 @@ function closeBackupModal(){
   window.eliminarFilaMaterial = eliminarFilaMaterial;
   window.actualizarFilaMaterial = actualizarFilaMaterial;
   window.generarActaManualCliente = generarActaManualCliente;
+  // ═══════════ LIQUIDACIÓN DEL CONDUCTOR ═══════════
+  // Una liquidación por quincena: Ruta Funza (kg), Ruta Madrid (bruto − húmedo), servicios,
+  // báscula y transporte a finca interna (= húmedo descontado). Todo se calcula aquí.
+  const COND_MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const COND_DEFAULT = { nombre: 'Julio Cesar Gonzalez', cc: '3.101.141', entrega: 'Anderson Bustos', tarifas: { kg: 43, finca: 20, bascula: 10000 } };
+  let condLiqs = {};
+  try { condLiqs = JSON.parse(localStorage.getItem('hh-conductor-liq') || '{}') || {}; } catch (e) { condLiqs = {}; }
+  let condKey = null;
+
+  const condPeso = v => '$ ' + Math.round(Number(v) || 0).toLocaleString('es-CO');
+  const condKgTxt = v => (Number(v) || 0).toLocaleString('es-CO', { maximumFractionDigits: 2 });
+  const condN = v => { const n = parseFloat(String(v ?? '').replace(/\./g, '').replace(',', '.')); return isNaN(n) ? 0 : n; };
+  const condFechaTxt = iso => { if (!iso) return ''; const [y, m, d] = iso.split('-'); return `${d}/${m}/${y}`; };
+
+  function condRango(key) {
+    const [y, m, q] = key.split('-').map(Number);
+    const ultimo = new Date(y, m, 0).getDate();
+    const desde = q === 1 ? 1 : 16, hasta = q === 1 ? 15 : ultimo;
+    return { y, m, q, desde, hasta, texto: `${desde} – ${hasta} de ${COND_MESES[m - 1]} de ${y}` };
+  }
+
+  function condNueva(key) {
+    // Datos del conductor y tarifas: los de la última quincena guardada
+    const ultima = Object.keys(condLiqs).sort().map(k => condLiqs[k]).pop() || COND_DEFAULT;
+    return {
+      nombre: ultima.nombre, cc: ultima.cc, entrega: ultima.entrega,
+      tarifas: { ...COND_DEFAULT.tarifas, ...(ultima.tarifas || {}) },
+      funza: [], madrid: [], servicios: [], fincaKg: null
+    };
+  }
+
+  const condLiq = () => (condLiqs[condKey] = condLiqs[condKey] || condNueva(condKey));
+
+  let _condTimer = null;
+  function condGuardar() {
+    try { localStorage.setItem('hh-conductor-liq', JSON.stringify(condLiqs)); } catch (e) {}
+    clearTimeout(_condTimer);
+    _condTimer = setTimeout(async () => {
+      if (!db || !firestoreFns) return;
+      try {
+        const { doc, setDoc } = firestoreFns;
+        await setDoc(doc(db, 'hh-actas-meta', 'conductor'), { liqs: condLiqs });
+      } catch (err) { console.error('Error guardando liquidación del conductor:', err); }
+    }, 800);
+  }
+
+  async function condCargarFirebase() {
+    if (!db || !firestoreFns) return;
+    try {
+      const { doc, getDoc } = firestoreFns;
+      const snap = await getDoc(doc(db, 'hh-actas-meta', 'conductor'));
+      if (snap.exists() && snap.data().liqs) {
+        condLiqs = { ...snap.data().liqs, ...condLiqs };
+        try { localStorage.setItem('hh-conductor-liq', JSON.stringify(condLiqs)); } catch (e) {}
+      }
+    } catch (err) { /* sin liquidaciones guardadas */ }
+  }
+
+  // ── Cálculos ──
+  function condCalcular(L) {
+    const t = L.tarifas;
+    const funzaKg = L.funza.reduce((s, r) => s + condN(r.kg), 0);
+    const madrid = L.madrid.map(r => {
+      const bruto = condN(r.bruto), humedo = condN(r.humedo), neto = bruto - humedo;
+      const pesajes = (r.pesajes !== '' && r.pesajes != null) ? condN(r.pesajes) : (bruto ? (humedo > 0 ? 2 : 1) : 0);
+      return { ...r, bruto, humedo, neto, valor: neto * t.kg, pesajes, bascula: pesajes * t.bascula };
+    });
+    const mBruto = madrid.reduce((s, r) => s + r.bruto, 0);
+    const mHumedo = madrid.reduce((s, r) => s + r.humedo, 0);
+    const mNeto = madrid.reduce((s, r) => s + r.neto, 0);
+    const pesajes = madrid.reduce((s, r) => s + r.pesajes, 0);
+    const serv = L.servicios.reduce((s, r) => s + condN(r.valor), 0);
+    const fincaKg = (L.fincaKg !== '' && L.fincaKg != null) ? condN(L.fincaKg) : mHumedo;
+    const lineas = {
+      funza: funzaKg * t.kg, madrid: mNeto * t.kg, servicios: serv,
+      bascula: pesajes * t.bascula, finca: fincaKg * t.finca
+    };
+    const total = Object.values(lineas).reduce((a, b) => a + b, 0);
+    return { funzaKg, madrid, mBruto, mHumedo, mNeto, pesajes, serv, fincaKg, lineas, total };
+  }
+
+  function condAlertas(L, C) {
+    const r = condRango(condKey), out = [];
+    const fuera = f => { if (!f) return false; const [y, m, d] = f.split('-').map(Number); return y !== r.y || m !== r.m || d < r.desde || d > r.hasta; };
+    const revisar = (lista, ruta) => {
+      const vistas = {};
+      lista.forEach(x => {
+        if (!x.fecha) out.push(`${ruta}: hay una fila sin fecha.`);
+        else {
+          if (fuera(x.fecha)) out.push(`${ruta}: ${condFechaTxt(x.fecha)} está fuera de la quincena (${r.texto}).`);
+          if (vistas[x.fecha]) out.push(`${ruta}: el ${condFechaTxt(x.fecha)} está repetido.`);
+          vistas[x.fecha] = true;
+        }
+      });
+    };
+    revisar(L.funza, 'Ruta Funza'); revisar(L.madrid, 'Ruta Madrid'); revisar(L.servicios, 'Servicios');
+    L.funza.forEach(x => { if (x.fecha && !condN(x.kg)) out.push(`Ruta Funza: el ${condFechaTxt(x.fecha)} no tiene kilos.`); });
+    C.madrid.forEach(x => {
+      if (x.fecha && !x.bruto) out.push(`Ruta Madrid: el ${condFechaTxt(x.fecha)} no tiene peso bruto.`);
+      if (x.humedo > x.bruto) out.push(`Ruta Madrid: el ${condFechaTxt(x.fecha)} tiene más húmedo que bruto.`);
+    });
+    if (L.fincaKg !== '' && L.fincaKg != null && condN(L.fincaKg) !== C.mHumedo)
+      out.push(`Finca interna: escribiste ${condKgTxt(L.fincaKg)} kg, pero el húmedo descontado en Madrid suma ${condKgTxt(C.mHumedo)} kg.`);
+    return out;
+  }
+
+  // ── Pantalla ──
+  function condInicializar() {
+    const sel = document.getElementById('cond-periodo');
+    if (!sel) return;
+    const hoy = new Date();
+    const opciones = [];
+    for (let y = 2026; y <= hoy.getFullYear(); y++) {
+      const mFin = y === hoy.getFullYear() ? hoy.getMonth() + 1 : 12;
+      for (let m = 1; m <= mFin; m++) for (const q of [1, 2]) opciones.push(`${y}-${String(m).padStart(2, '0')}-${q}`);
+    }
+    Object.keys(condLiqs).forEach(k => { if (!opciones.includes(k)) opciones.push(k); });
+    opciones.sort().reverse();
+    if (!condKey) condKey = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${hoy.getDate() <= 15 ? 1 : 2}`;
+    sel.innerHTML = opciones.map(k => `<option value="${k}">${condRango(k).texto}${condLiqs[k] ? ' ✓' : ''}</option>`).join('');
+    sel.value = condKey;
+    condRender();
+  }
+
+  function condCambioPeriodo() {
+    condKey = document.getElementById('cond-periodo').value;
+    condRender();
+  }
+
+  function condCampo(campo, valor) { condLiq()[campo] = valor; condGuardar(); condRecalcular(); }
+  function condTarifa(campo, valor) { condLiq().tarifas[campo] = condN(valor); condGuardar(); condRender(true); }
+
+  function condAgregar(lista) {
+    const L = condLiq(), r = condRango(condKey);
+    // Sugiere el día siguiente al último escrito
+    const ult = L[lista].length ? L[lista][L[lista].length - 1].fecha : null;
+    let fecha = '';
+    if (ult) { const d = new Date(ult + 'T12:00:00'); d.setDate(d.getDate() + 1); fecha = d.toISOString().slice(0, 10); }
+    else fecha = `${r.y}-${String(r.m).padStart(2, '0')}-${String(r.desde).padStart(2, '0')}`;
+    const fila = lista === 'funza' ? { fecha, kg: '' } : lista === 'madrid' ? { fecha, bruto: '', humedo: '', pesajes: '' } : { fecha, servicio: '', valor: '' };
+    L[lista].push(fila);
+    condGuardar(); condRender();
+  }
+
+  function condQuitar(lista, i) { condLiq()[lista].splice(i, 1); condGuardar(); condRender(); }
+  function condEditar(lista, i, campo, valor) { condLiq()[lista][i][campo] = valor; condGuardar(); condRecalcular(); }
+  function condFinca(valor) { condLiq().fincaKg = valor; condGuardar(); condRecalcular(); }
+
+  function condLimpiar() {
+    if (!confirm(`¿Vaciar la liquidación de ${condRango(condKey).texto}?`)) return;
+    delete condLiqs[condKey]; condGuardar(); condInicializar();
+  }
+
+  function condRender(soloCalculos) {
+    const L = condLiq(), t = L.tarifas;
+    if (!soloCalculos) {
+      document.getElementById('cond-nombre').value = L.nombre || '';
+      document.getElementById('cond-cc').value = L.cc || '';
+      document.getElementById('cond-entrega').value = L.entrega || '';
+      document.getElementById('cond-t-kg').value = t.kg;
+      document.getElementById('cond-t-finca').value = t.finca;
+      document.getElementById('cond-t-bascula').value = t.bascula;
+    }
+    const inp = (lista, i, campo, v, extra = '') => `<input ${extra} value="${escapeHtml(String(v ?? ''))}" oninput="condEditar('${lista}', ${i}, '${campo}', this.value)">`;
+    const x = (lista, i) => `<button class="cond-x" onclick="condQuitar('${lista}', ${i})" title="Quitar">✕</button>`;
+
+    document.getElementById('cond-funza').innerHTML = `<table class="cond-tabla"><tr><th>Fecha</th><th class="num">Cantidad (kg)</th><th class="num">Valor/kg</th><th class="num">Valor total</th><th></th></tr>`
+      + L.funza.map((r, i) => `<tr><td>${inp('funza', i, 'fecha', r.fecha, 'type="date"')}</td><td>${inp('funza', i, 'kg', r.kg, 'class="n" inputmode="decimal"')}</td><td class="num">${condPeso(t.kg)}</td><td class="num" id="cond-f-${i}"></td><td>${x('funza', i)}</td></tr>`).join('')
+      + `<tr class="tot"><td>TOTAL</td><td class="num" id="cond-f-kg"></td><td></td><td class="num" id="cond-f-val"></td><td></td></tr></table>`;
+
+    document.getElementById('cond-madrid').innerHTML = `<table class="cond-tabla"><tr><th>Fecha</th><th class="num">Bruto (kg)</th><th class="num">Húmedo desc.</th><th class="num">Neto (kg)</th><th class="num">Valor total</th><th class="num">Pesajes</th><th class="num">Báscula</th><th></th></tr>`
+      + L.madrid.map((r, i) => `<tr><td>${inp('madrid', i, 'fecha', r.fecha, 'type="date"')}</td><td>${inp('madrid', i, 'bruto', r.bruto, 'class="n" inputmode="decimal"')}</td><td>${inp('madrid', i, 'humedo', r.humedo, 'class="n" inputmode="decimal" placeholder="–"')}</td><td class="num" id="cond-m-neto-${i}"></td><td class="num" id="cond-m-val-${i}"></td><td>${inp('madrid', i, 'pesajes', r.pesajes, 'class="n" style="width:60px" placeholder="auto" title="Vacío = 1, o 2 si hubo húmedo"')}</td><td class="num" id="cond-m-bas-${i}"></td><td>${x('madrid', i)}</td></tr>`).join('')
+      + `<tr class="tot"><td>TOTAL</td><td class="num" id="cond-m-bruto"></td><td class="num" id="cond-m-hum"></td><td class="num" id="cond-m-neto"></td><td class="num" id="cond-m-valt"></td><td class="num" id="cond-m-pes"></td><td class="num" id="cond-m-bast"></td><td></td></tr></table>`;
+
+    document.getElementById('cond-servicios').innerHTML = `<table class="cond-tabla"><tr><th>Fecha</th><th>Servicio</th><th class="num">Valor total</th><th></th></tr>`
+      + L.servicios.map((r, i) => `<tr><td>${inp('servicios', i, 'fecha', r.fecha, 'type="date"')}</td><td>${inp('servicios', i, 'servicio', r.servicio, 'placeholder="ej. Santa Lucía"')}</td><td>${inp('servicios', i, 'valor', r.valor, 'class="n" inputmode="decimal"')}</td><td>${x('servicios', i)}</td></tr>`).join('')
+      + `<tr class="tot"><td colspan="2" id="cond-s-txt">TOTAL</td><td class="num" id="cond-s-val"></td><td></td></tr></table>`;
+
+    document.getElementById('cond-otros').innerHTML = `<table class="cond-tabla"><tr><th>Concepto</th><th class="num">Cantidad (kg)</th><th class="num">Valor/kg</th><th class="num">Valor total</th></tr>
+      <tr><td>Transporte finca interna</td><td><input class="n" value="${escapeHtml(String(L.fincaKg ?? ''))}" id="cond-finca-in" oninput="condFinca(this.value)" title="Vacío = el húmedo descontado en Ruta Madrid"></td><td class="num">${condPeso(t.finca)}</td><td class="num" id="cond-o-val"></td></tr></table>`;
+
+    condRecalcular();
+  }
+
+  function condRecalcular() {
+    const L = condLiq(), C = condCalcular(L), t = L.tarifas;
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    L.funza.forEach((r, i) => set(`cond-f-${i}`, condPeso(condN(r.kg) * t.kg)));
+    set('cond-f-kg', condKgTxt(C.funzaKg) + ' Kg'); set('cond-f-val', condPeso(C.lineas.funza));
+    C.madrid.forEach((r, i) => { set(`cond-m-neto-${i}`, condKgTxt(r.neto)); set(`cond-m-val-${i}`, condPeso(r.valor)); set(`cond-m-bas-${i}`, condPeso(r.bascula)); });
+    set('cond-m-bruto', condKgTxt(C.mBruto)); set('cond-m-hum', condKgTxt(C.mHumedo)); set('cond-m-neto', condKgTxt(C.mNeto) + ' Kg');
+    set('cond-m-valt', condPeso(C.lineas.madrid)); set('cond-m-pes', C.pesajes); set('cond-m-bast', condPeso(C.lineas.bascula));
+    set('cond-s-txt', `TOTAL (${L.servicios.length} servicio${L.servicios.length === 1 ? '' : 's'})`); set('cond-s-val', condPeso(C.serv));
+    set('cond-o-val', condPeso(C.lineas.finca));
+    const fi = document.getElementById('cond-finca-in'); if (fi && (L.fincaKg === '' || L.fincaKg == null)) fi.placeholder = condKgTxt(C.mHumedo) + ' (húmedo)';
+
+    const filas = condResumenFilas(L, C);
+    document.getElementById('cond-resumen').innerHTML = `<table class="cond-tabla">${filas.map(([c, v]) => `<tr><td>${escapeHtml(c)}</td><td class="num">${condPeso(v)}</td></tr>`).join('')}</table>
+      <div class="cond-total"><span>TOTAL QUINCENA A PAGAR</span><span>${condPeso(C.total)}</span></div>
+      <p style="font-size:12px;margin:6px 0 0;"><b>Valor en letras:</b> ${escapeHtml(condEnLetras(C.total))}</p>`;
+    const al = condAlertas(L, C);
+    document.getElementById('cond-alertas').innerHTML = al.length
+      ? al.map(a => `<div class="cond-alerta">⚠️ ${escapeHtml(a)}</div>`).join('')
+      : (C.total ? '<div class="cond-alerta" style="background:var(--verde-bg);color:var(--verde-texto);">✓ Revisada: fechas dentro de la quincena, sin días repetidos y cuentas calculadas.</div>' : '');
+  }
+
+  function condResumenFilas(L, C) {
+    const t = L.tarifas;
+    return [
+      [`Recolección Purina – Ruta Funza (${condKgTxt(C.funzaKg)} Kg)`, C.lineas.funza],
+      [`Recolección Funza – Ruta Madrid (${condKgTxt(C.mNeto)} Kg netos)`, C.lineas.madrid],
+      [`Recolección de corrugado y estibas (${L.servicios.length} servicio${L.servicios.length === 1 ? '' : 's'})`, C.lineas.servicios],
+      [`Báscula (${C.pesajes} pesaje${C.pesajes === 1 ? '' : 's'})`, C.lineas.bascula],
+      [`Transporte finca interna (${condKgTxt(C.fincaKg)} Kg x ${condPeso(t.finca)})`, C.lineas.finca]
+    ];
+  }
+
+  // ── Número en letras (pesos colombianos) ──
+  function condEnLetras(valor) {
+    const U = ['', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve', 'diez', 'once', 'doce', 'trece', 'catorce', 'quince', 'dieciséis', 'diecisiete', 'dieciocho', 'diecinueve', 'veinte', 'veintiuno', 'veintidós', 'veintitrés', 'veinticuatro', 'veinticinco', 'veintiséis', 'veintisiete', 'veintiocho', 'veintinueve'];
+    const D = ['', '', '', 'treinta', 'cuarenta', 'cincuenta', 'sesenta', 'setenta', 'ochenta', 'noventa'];
+    const C = ['', 'ciento', 'doscientos', 'trescientos', 'cuatrocientos', 'quinientos', 'seiscientos', 'setecientos', 'ochocientos', 'novecientos'];
+    const menorMil = n => {
+      if (n === 0) return '';
+      if (n === 100) return 'cien';
+      const c = Math.floor(n / 100), r = n % 100;
+      let s = C[c];
+      if (r) s += (s ? ' ' : '') + (r < 30 ? U[r] : D[Math.floor(r / 10)] + (r % 10 ? ' y ' + U[r % 10] : ''));
+      return s;
+    };
+    const n = Math.round(Number(valor) || 0);
+    if (n === 0) return 'Cero pesos M/Cte.';
+    const mill = Math.floor(n / 1e6), miles = Math.floor((n % 1e6) / 1000), resto = n % 1000;
+    const partes = [];
+    if (mill) partes.push(mill === 1 ? 'un millón' : menorMil(mill).replace(/uno$/, 'un') + ' millones');
+    if (miles) partes.push(miles === 1 ? 'mil' : menorMil(miles).replace(/uno$/, 'un') + ' mil');
+    if (resto) partes.push(menorMil(resto));
+    let txt = partes.join(' ');
+    txt += (!miles && !resto && mill) ? ' de pesos M/Cte.' : ' pesos M/Cte.';
+    return txt.charAt(0).toUpperCase() + txt.slice(1);
+  }
+
+  // ── PDF de la liquidación (mismo formato de siempre) ──
+  function condGenerarPdf() {
+    const L = condLiq(), C = condCalcular(L), t = L.tarifas, r = condRango(condKey);
+    const est = document.getElementById('cond-estado');
+    est.style.display = 'block';
+    if (!L.funza.length && !L.madrid.length && !L.servicios.length) {
+      est.className = 'actas-estado-carga actas-estado-error'; est.textContent = 'Agrega al menos un día antes de generar la liquidación.'; return;
+    }
+    const alertas = condAlertas(L, C);
+    if (alertas.length && !confirm(`La liquidación tiene ${alertas.length} aviso(s):\n\n- ${alertas.join('\n- ')}\n\n¿Generar el PDF de todas formas?`)) return;
+    const jsPDFctor = (window.jspdf || {}).jsPDF;
+    if (!jsPDFctor) { est.className = 'actas-estado-carga actas-estado-error'; est.textContent = 'El generador de PDF aún no cargó; intenta de nuevo.'; return; }
+
+    const doc = new jsPDFctor({ unit: 'pt', format: 'a4' });
+    const X = 22, W = 595 - 44;
+    const hoy = new Date();
+    const emision = `${hoy.getDate()} de ${COND_MESES[hoy.getMonth()]} de ${hoy.getFullYear()}`;
+    const GRIS = [238, 238, 238];
+    const base = { theme: 'plain', margin: { left: X, right: X }, tableWidth: W,
+      styles: { font: 'helvetica', fontSize: 8, cellPadding: { top: 3.2, bottom: 3.2, left: 4, right: 4 }, textColor: 30, lineColor: [215, 215, 215], lineWidth: { bottom: 0.4 } },
+      headStyles: { fillColor: GRIS, fontStyle: 'bold', fontSize: 6.8, textColor: 40 } };
+    const titulo = (txt, y) => { doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(20); doc.text(txt, X, y); return y + 5; };
+    const der = cols => Object.fromEntries(cols.map(c => [c, { halign: 'right' }]));
+    // Encabezados alineados igual que su columna
+    const cab = (titulos, derecha, centro = []) => [titulos.map((c, i) => ({ content: c, styles: { halign: derecha.includes(i) ? 'right' : (centro.includes(i) ? 'center' : 'left') } }))];
+    const totStyle = { fontStyle: 'bold', lineWidth: { top: 1, bottom: 1 }, lineColor: 30 };
+
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(110);
+    doc.text(`Liquidación periodo ${r.texto} · Precio recolección: ${condPeso(t.kg)} / Kg · Emitido el ${emision}`, X, 22);
+    doc.setDrawColor(200); doc.line(X, 28, X + W, 28);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(20); doc.text('LIQUIDACIÓN DE PAGO', X, 48);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(90); doc.text(`Periodo facturado: ${r.texto}`, X, 59);
+
+    doc.autoTable({ ...base, startY: 66, head: [['BENEFICIARIO', 'IDENTIFICACIÓN', 'FECHA DE EMISIÓN']], body: [[L.nombre, 'C.C. ' + L.cc, emision]],
+      columnStyles: { 0: { cellWidth: W * 0.38 }, 1: { cellWidth: W * 0.3 } } });
+
+    let y = titulo('1. Recolección Purina – Ruta Funza', doc.lastAutoTable.finalY + 16);
+    doc.autoTable({ ...base, startY: y, head: cab(['FECHA', 'CANTIDAD (KG)', 'VALOR/KG', 'VALOR TOTAL'], [1, 2, 3]),
+      body: [...L.funza.map(f => [condFechaTxt(f.fecha), condKgTxt(condN(f.kg)), condPeso(t.kg), condPeso(condN(f.kg) * t.kg)]),
+        [{ content: 'TOTAL', styles: totStyle }, { content: condKgTxt(C.funzaKg) + ' Kg', styles: totStyle }, { content: '', styles: totStyle }, { content: condPeso(C.lineas.funza), styles: totStyle }]],
+      columnStyles: der([1, 2, 3]) });
+
+    y = titulo('2. Recolección Funza – Ruta Madrid', doc.lastAutoTable.finalY + 16);
+    doc.setFont('helvetica', 'italic'); doc.setFontSize(6.8); doc.setTextColor(100);
+    doc.text('Aclaración: del peso bruto recogido se descuenta el peso del húmedo del día; la liquidación se calcula sobre el peso neto.', X, y + 6);
+    doc.autoTable({ ...base, startY: y + 10, head: cab(['FECHA', 'BRUTO (KG)', 'HÚMEDO DESC.', 'NETO (KG)', 'VALOR/KG', 'VALOR TOTAL', 'BÁSCULA'], [1, 2, 3, 4, 5, 6]),
+      body: [...C.madrid.map(m => [condFechaTxt(m.fecha), condKgTxt(m.bruto), m.humedo ? condKgTxt(m.humedo) : '–', condKgTxt(m.neto), condPeso(t.kg), condPeso(m.valor), condPeso(m.bascula)]),
+        ['TOTAL', condKgTxt(C.mBruto), condKgTxt(C.mHumedo), condKgTxt(C.mNeto) + ' Kg', '', condPeso(C.lineas.madrid), condPeso(C.lineas.bascula)].map(v => ({ content: v, styles: totStyle }))],
+      columnStyles: der([1, 2, 3, 4, 5, 6]) });
+
+    y = titulo('3. Recolección de corrugado y estibas', doc.lastAutoTable.finalY + 16);
+    doc.autoTable({ ...base, startY: y, head: cab(['FECHA', 'SERVICIO', 'VALOR TOTAL'], [2], [1]),
+      body: [...L.servicios.map(s => [condFechaTxt(s.fecha), s.servicio, condPeso(condN(s.valor))]),
+        [{ content: `TOTAL (${L.servicios.length} servicio${L.servicios.length === 1 ? '' : 's'})`, styles: totStyle }, { content: '', styles: totStyle }, { content: condPeso(C.serv), styles: totStyle }]],
+      columnStyles: { 1: { halign: 'center' }, 2: { halign: 'right' } } });
+
+    y = titulo('4. Otros conceptos', doc.lastAutoTable.finalY + 16);
+    doc.autoTable({ ...base, startY: y, head: cab(['CONCEPTO', 'CANTIDAD (KG)', 'VALOR/KG', 'VALOR TOTAL'], [1, 2, 3]),
+      body: [['Transporte finca interna', condKgTxt(C.fincaKg) + ' Kg', condPeso(t.finca), condPeso(C.lineas.finca)]],
+      columnStyles: der([1, 2, 3]) });
+
+    y = titulo('5. Resumen de la quincena', doc.lastAutoTable.finalY + 16);
+    doc.autoTable({ ...base, startY: y, head: cab(['CONCEPTO', 'VALOR'], [1]),
+      body: [...condResumenFilas(L, C).map(([c, v]) => [c, condPeso(v)]),
+        [{ content: 'TOTAL QUINCENA A PAGAR', styles: { ...totStyle, fontSize: 10, fillColor: GRIS } }, { content: condPeso(C.total), styles: { ...totStyle, fontSize: 10, fillColor: GRIS } }]],
+      columnStyles: { 1: { halign: 'right' } } });
+
+    y = doc.lastAutoTable.finalY + 16;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(20); doc.text('Valor en letras:', X, y);
+    doc.setFont('helvetica', 'normal'); doc.text(condEnLetras(C.total), X + 60, y);
+    y += 40;
+    doc.setDrawColor(60); doc.setLineWidth(0.6);
+    doc.line(X + 10, y, X + 210, y); doc.line(X + 240, y, X + W - 10, y);
+    doc.setFontSize(7.2); doc.setTextColor(40);
+    doc.text(`Entrega – ${L.entrega}`, X + 110, y + 11, { align: 'center' });
+    doc.text(`Recibe – ${L.nombre} · C.C. ${L.cc}`, X + 240 + (W - 250) / 2, y + 11, { align: 'center' });
+
+    const iso = hoy.toISOString().slice(0, 10);
+    const nombreArchivo = `${iso}_CuentaCobro_${(L.nombre || 'Conductor').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '')}_${r.desde}-${r.hasta}${COND_MESES[r.m - 1]}_v1.pdf`;
+    doc.save(nombreArchivo);
+    est.className = 'actas-estado-carga actas-estado-ok';
+    est.textContent = `Liquidación generada: ${nombreArchivo} — total ${condPeso(C.total)}.`;
+  }
+
   window.cargarActaEnFormulario = cargarActaEnFormulario;
+  Object.assign(window, { condInicializar, condCambioPeriodo, condCampo, condTarifa, condAgregar, condQuitar, condEditar, condFinca, condLimpiar, condGenerarPdf });
   window.abrirNuevoMaterial = abrirNuevoMaterial;
   window.nmCambioGrupo = nmCambioGrupo;
   window.guardarNuevoMaterial = guardarNuevoMaterial;
