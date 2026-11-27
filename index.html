@@ -693,7 +693,10 @@ body{background:#f0f4f8;color:#1a1a1a;min-height:100vh;overflow-x:hidden}
   #tabla-sabana td.actas-nombre-material, #tabla-sabana th.actas-col-material {
     position: sticky; left: 0; z-index: 2; background: #fff; box-shadow: 2px 0 0 var(--borde);
   }
-  #tabla-sabana th.actas-col-material { z-index: 3; }
+  #tabla-sabana th.actas-col-material { z-index: 4; left: 0; }
+  /* Encabezado (meses) fijo arriba al bajar: la tabla tiene su propio scroll */
+  .actas-tabla-wrap { overflow: auto; max-height: calc(100vh - 150px); }
+  #tabla-sabana thead th { position: sticky; top: 0; z-index: 3; background: #fff; box-shadow: 0 2px 0 var(--borde); }
   #tabla-sabana tr.caf-sub td.actas-nombre-material { background: #f7f9fc; }
   #tabla-sabana .actas-fila-grupo td .actas-grupo-txt { position: sticky; left: 6px; }
   .sabana-filtro { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin: 4px 0 8px; font-size:12.5px; }
